@@ -74,7 +74,7 @@ void app_task_entry(void *argument)
     osMessageQueueReset(moving_ctrl_queueHandle);
     for(;;) {
         
-        //printf("msg: %c\r\n", msg);
+        printf("msg: %c\r\n", msg);
 		if(osMessageQueueGet(moving_ctrl_queueHandle, &msg, &msg_prio, osWaitForever) != osOK) {
 			continue;
 		}

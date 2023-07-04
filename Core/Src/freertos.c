@@ -173,7 +173,7 @@ const osMessageQueueAttr_t lvgl_event_queue_attributes = {
 };
 /* Definitions for moving_ctrl_queue */
 osMessageQueueId_t moving_ctrl_queueHandle;
-uint8_t moving_ctrl_queueBuffer[ 16 * sizeof( char ) ];
+uint8_t moving_ctrl_queueBuffer[ 32 * sizeof( char ) ];
 osStaticMessageQDef_t moving_ctrl_queueControlBlock;
 const osMessageQueueAttr_t moving_ctrl_queue_attributes = {
   .name = "moving_ctrl_queue",
@@ -408,7 +408,7 @@ void MX_FREERTOS_Init(void) {
   lvgl_event_queueHandle = osMessageQueueNew (16, sizeof(void*), &lvgl_event_queue_attributes);
 
   /* creation of moving_ctrl_queue */
-  moving_ctrl_queueHandle = osMessageQueueNew (16, sizeof(char), &moving_ctrl_queue_attributes);
+  moving_ctrl_queueHandle = osMessageQueueNew (32, sizeof(char), &moving_ctrl_queue_attributes);
 
   /* creation of bluetooth_tx_queue */
   bluetooth_tx_queueHandle = osMessageQueueNew (8, 8, &bluetooth_tx_queue_attributes);
