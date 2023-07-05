@@ -2372,6 +2372,11 @@
               <FilePath>..\Hiwonder\System\pid.c</FilePath>
             </File>
             <File>
+              <FileName>battery_handle.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Hiwonder\System\battery_handle.c</FilePath>
+            </File>
+            <File>
               <FileName>gui_handle.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Hiwonder\System\gui_handle.c</FilePath>

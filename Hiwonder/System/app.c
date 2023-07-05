@@ -44,17 +44,13 @@ void button_event_callback(ButtonObjectTypeDef *button,  ButtonEventIDEnum event
     }
 }
 
-void battery_check_timer_callback(void *argument) {
-	HAL_ADC_Start(&hadc1);
-}
-
 
 void app_task_entry(void *argument)
 {
     extern osTimerId_t led_timerHandle;
     extern osTimerId_t buzzer_timerHandle;
     extern osTimerId_t button_timerHandle;
-	extern osTimerId_t battery_check_timerHandle;
+    extern osTimerId_t battery_check_timerHandle;
     extern osMessageQueueId_t moving_ctrl_queueHandle;
     extern osMessageQueueId_t bluetooth_tx_queueHandle;
 
@@ -68,35 +64,25 @@ void app_task_entry(void *argument)
     osTimerStart(led_timerHandle, LED_TASK_PERIOD);
     osTimerStart(buzzer_timerHandle, BUZZER_TASK_PERIOD);
     osTimerStart(button_timerHandle, BUTTON_TASK_PERIOD);
-	//osTimerStart(battery_check_timerHandle, 100);
+    osTimerStart(battery_check_timerHandle, BATTERY_TASK_PERIOD);
+    HAL_ADC_Start(&hadc1);
+
     char msg = '\0';
     uint8_t msg_prio;
     osMessageQueueReset(moving_ctrl_queueHandle);
     for(;;) {
-        
+
+        if(osMessageQueueGet(moving_ctrl_queueHandle, &msg, &msg_prio, osWaitForever) != osOK) {
+            continue;
+        }
         printf("msg: %c\r\n", msg);
-		if(osMessageQueueGet(moving_ctrl_queueHandle, &msg, &msg_prio, osWaitForever) != osOK) {
-			continue;
-		}
+
         switch(msg) {
-			case 'M': {
-				for(int i = 0; i < 4; ++i) {
-					motors[i]->pid_controller.kp -= 1;
-				}
-				//printf("s:%f, e:%f\r\n", motors[1]->pid_controller.set_point, motors[1]->pid_controller.err);
-				break;
-			}
-			case 'J': {
-				for(int i = 0; i < 4; ++i) {
-					motors[i]->pid_controller.kp += 1;
-				}
-				//printf("s:%f, e:%f\r\n", motors[1]->pid_controller.set_point, motors[1]->pid_controller.err);
-				break;
-			}
-            case 'O': {
+
+            case 'I': {
                 encoder_set_speed(motors[0], 0);
                 encoder_set_speed(motors[1], 0);
-			    encoder_set_speed(motors[2], 0);
+                encoder_set_speed(motors[2], 0);
                 encoder_set_speed(motors[3], 0);
                 break;
             }

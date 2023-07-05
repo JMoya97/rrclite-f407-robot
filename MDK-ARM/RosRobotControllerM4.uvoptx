@@ -2734,7 +2734,7 @@
 
   <Group>
     <GroupName>Hiwonder/Peripherals</GroupName>
-    <tvExp>1</tvExp>
+    <tvExp>0</tvExp>
     <tvExpOptDlg>0</tvExpOptDlg>
     <cbSel>0</cbSel>
     <RteFlg>0</RteFlg>
@@ -2850,7 +2850,7 @@
 
   <Group>
     <GroupName>Hiwonder/Porting</GroupName>
-    <tvExp>1</tvExp>
+    <tvExp>0</tvExp>
     <tvExpOptDlg>0</tvExpOptDlg>
     <cbSel>0</cbSel>
     <RteFlg>0</RteFlg>
@@ -3002,7 +3002,7 @@
 
   <Group>
     <GroupName>Hiwonder/System</GroupName>
-    <tvExp>1</tvExp>
+    <tvExp>0</tvExp>
     <tvExpOptDlg>0</tvExpOptDlg>
     <cbSel>0</cbSel>
     <RteFlg>0</RteFlg>
@@ -3097,6 +3097,18 @@
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
+      <PathWithFileName>..\Hiwonder\System\battery_handle.c</PathWithFileName>
+      <FilenameWithoutPath>battery_handle.c</FilenameWithoutPath>
+      <RteFlg>0</RteFlg>
+      <bShared>0</bShared>
+    </File>
+    <File>
+      <GroupNumber>18</GroupNumber>
+      <FileNumber>229</FileNumber>
+      <FileType>1</FileType>
+      <tvExp>0</tvExp>
+      <tvExpOptDlg>0</tvExpOptDlg>
+      <bDave2>0</bDave2>
       <PathWithFileName>..\Hiwonder\System\gui_handle.c</PathWithFileName>
       <FilenameWithoutPath>gui_handle.c</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
@@ -3104,7 +3116,7 @@
     </File>
     <File>
       <GroupNumber>18</GroupNumber>
-      <FileNumber>229</FileNumber>
+      <FileNumber>230</FileNumber>
       <FileType>1</FileType>
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
@@ -3116,7 +3128,7 @@
     </File>
     <File>
       <GroupNumber>18</GroupNumber>
-      <FileNumber>230</FileNumber>
+      <FileNumber>231</FileNumber>
       <FileType>1</FileType>
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>

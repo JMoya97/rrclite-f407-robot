@@ -131,7 +131,6 @@ int main(void)
   MX_TIM9_Init();
   MX_TIM10_Init();
   MX_TIM11_Init();
-  MX_ADC1_Init();
   MX_I2C2_Init();
   MX_UART5_Init();
   MX_USART2_UART_Init();
@@ -143,6 +142,7 @@ int main(void)
   MX_TIM13_Init();
   MX_CRC_Init();
   MX_TIM12_Init();
+  MX_ADC1_Init();
 
   /* Initialize interrupts */
   MX_NVIC_Init();
