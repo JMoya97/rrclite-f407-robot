@@ -313,7 +313,7 @@
           </ArmAdsMisc>
           <Cads>
             <interw>1</interw>
-            <Optim>4</Optim>
+            <Optim>0</Optim>
             <oTime>0</oTime>
             <SplitLS>0</SplitLS>
             <OneElfS>1</OneElfS>
@@ -339,7 +339,7 @@
               <MiscControls>--locale=english</MiscControls>
               <Define>USE_HAL_DRIVER,STM32F407xx,LV_CONF_INCLUDE_SIMPLE,LV_LVGL_H_INCLUDE_SIMPLE</Define>
               <Undefine></Undefine>
-              <IncludePath>../Core/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F;../Drivers/CMSIS/Device/ST/STM32F4xx/Include;../Drivers/CMSIS/Include;../Hiwonder/Peripherals;../Hiwonder/Portings;../Hiwonder/System;../Third_Party/Fusion/Fusion;../Third_Party/Lw;../Third_Party/RTT;../USB_HOST/App;../USB_HOST/Target;../Middlewares/ST/STM32_USB_Host_Library/Core/Inc;../Middlewares/ST/STM32_USB_Host_Library/Class/HID/Inc;../Third_Party/LVGL/porting;../Third_Party/LVGL/src;../Third_Party/LVGL;../Hiwonder/USB_HOST;../Hiwonder/LVGL_UI;../Hiwonder/LVGL_UI/guider_customer_fonts;../Hiwonder/LVGL_UI/guider_fonts;../Hiwonder/LVGL_UI/images;../Third_Party</IncludePath>
+              <IncludePath>../Core/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F;../Drivers/CMSIS/Device/ST/STM32F4xx/Include;../Drivers/CMSIS/Include;../Hiwonder/Peripherals;../Hiwonder/Portings;../Hiwonder/System;../Third_Party/Fusion/Fusion;../Third_Party/Lw;../Third_Party/RTT;../USB_HOST/App;../USB_HOST/Target;../Middlewares/ST/STM32_USB_Host_Library/Core/Inc;../Middlewares/ST/STM32_USB_Host_Library/Class/HID/Inc;../Third_Party/LVGL/porting;../Third_Party/LVGL/src;../Third_Party/LVGL;../Hiwonder/USB_HOST;../Hiwonder/LVGL_UI;../Hiwonder/LVGL_UI/guider_customer_fonts;../Hiwonder/LVGL_UI/guider_fonts;../Hiwonder/LVGL_UI/images;../Third_Party;..\Hiwonder\Chassis</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -2269,6 +2269,36 @@
           </Files>
         </Group>
         <Group>
+          <GroupName>Hiwonder/Chassis</GroupName>
+          <Files>
+            <File>
+              <FileName>chassis.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Hiwonder\Chassis\chassis.h</FilePath>
+            </File>
+            <File>
+              <FileName>differential_chassis.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Hiwonder\Chassis\differential_chassis.c</FilePath>
+            </File>
+            <File>
+              <FileName>differential_chassis.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Hiwonder\Chassis\differential_chassis.h</FilePath>
+            </File>
+            <File>
+              <FileName>mecanum_chassis.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Hiwonder\Chassis\mecanum_chassis.c</FilePath>
+            </File>
+            <File>
+              <FileName>mecanum_chassis.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Hiwonder\Chassis\mecanum_chassis.h</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
           <GroupName>Hiwonder/Porting</GroupName>
           <Files>
             <File>
@@ -2295,6 +2325,11 @@
               <FileName>lcd_porting.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Hiwonder\Portings\lcd_porting.c</FilePath>
+            </File>
+            <File>
+              <FileName>motors_param.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Hiwonder\Portings\motors_param.h</FilePath>
             </File>
             <File>
               <FileName>motor_porting.c</FileName>
@@ -2330,6 +2365,11 @@
               <FileName>lwmem_porting.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\Hiwonder\Portings\lwmem_porting.h</FilePath>
+            </File>
+            <File>
+              <FileName>chassis_porting.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Hiwonder\Portings\chassis_porting.c</FilePath>
             </File>
           </Files>
         </Group>

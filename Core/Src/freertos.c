@@ -127,7 +127,7 @@ const osThreadAttr_t gui_task_attributes = {
 };
 /* Definitions for app_task */
 osThreadId_t app_taskHandle;
-uint32_t app_taskBuffer[ 128 ];
+uint32_t app_taskBuffer[ 512 ];
 osStaticThreadDef_t app_taskControlBlock;
 const osThreadAttr_t app_task_attributes = {
   .name = "app_task",

@@ -29,6 +29,8 @@
 #include "packet.h"
 #include "usbh_hid_gamepad.h"
 #include "object.h"
+#include "chassis.h"
+
 // 全系统全局变量
 
 
@@ -41,6 +43,8 @@ extern DisplayObjectTypeDef *lcd;
 extern IMU_ObjectTypeDef *imus[1];
 extern PWMServoObjectTypeDef *pwm_servos[4];
 extern EncoderMotorObjectTypeDef *motors[4];
+extern ChassisTypeDef *chassis;
+
 
 typedef struct{
 	ObjectTypeIDEnum type_id;
@@ -49,6 +53,7 @@ typedef struct{
 
 void global_init(void);
 
+void set_chassis_type(uint8_t chassis_type);
 
 
 #endif

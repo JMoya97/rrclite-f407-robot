@@ -14,7 +14,7 @@ void USBH_HID_EventCallback(USBH_HandleTypeDef *phost)
     extern osMessageQueueId_t moving_ctrl_queueHandle;
     static HID_GAMEPAD_Info_TypeDef last_info;
     static char last_direction_msg = 'I';
-    static char last_button = 'I';
+    static char last_button = 'R';
 
     switch(USBH_HID_GetDeviceType(phost)) {
         case 0xFF: {/* 手柄数据 */
@@ -44,22 +44,22 @@ void USBH_HID_EventCallback(USBH_HandleTypeDef *phost)
                 }
             }
             char button = A_T_C(info->rx, info->ry);
-            if(last_button != button) { /* 按下时触发 */
-                char msg = button - 'A' + 'J';
-                osMessageQueuePut(moving_ctrl_queueHandle, &msg, 0, 0);
-            }
+			if((last_button != 'I' && button == 'I') || button != 'I') {
+				char msg = button - 'A' + 'J';
+				osMessageQueuePut(moving_ctrl_queueHandle, &msg, 0, 0);
+			}
             last_button = button;
-
+            if(GAMEPAD_GET_BUTTON(info, GAMEPAD_BUTTON_MASK_CIRCLE)) {
+                osMessageQueuePut(moving_ctrl_queueHandle, "P", 0, 0);
+            }
+            if(GAMEPAD_GET_BUTTON(info, GAMEPAD_BUTTON_MASK_SQUARE)) {
+                osMessageQueuePut(moving_ctrl_queueHandle, "L", 0, 0);
+            }
             /** 按下时触发 */
             if(!GAMEPAD_GET_BUTTON(&last_info, GAMEPAD_BUTTON_MASK_TRIANGLE) && GAMEPAD_GET_BUTTON(info, GAMEPAD_BUTTON_MASK_TRIANGLE)) {
                 osMessageQueuePut(moving_ctrl_queueHandle, "J", 0, 0);
             }
-            if(!GAMEPAD_GET_BUTTON(&last_info, GAMEPAD_BUTTON_MASK_CIRCLE) && GAMEPAD_GET_BUTTON(info, GAMEPAD_BUTTON_MASK_CIRCLE)) {
-                osMessageQueuePut(moving_ctrl_queueHandle, "P", 0, 0);
-            }
-            if(!GAMEPAD_GET_BUTTON(&last_info, GAMEPAD_BUTTON_MASK_SQUARE) && GAMEPAD_GET_BUTTON(info, GAMEPAD_BUTTON_MASK_SQUARE)) {
-                osMessageQueuePut(moving_ctrl_queueHandle, "L", 0, 0);
-            }
+
             if(!GAMEPAD_GET_BUTTON(&last_info, GAMEPAD_BUTTON_MASK_CROSS) && GAMEPAD_GET_BUTTON(info, GAMEPAD_BUTTON_MASK_CROSS)) {
                 osMessageQueuePut(moving_ctrl_queueHandle, "N", 0, 0);
             }
@@ -87,6 +87,7 @@ void USBH_HID_EventCallback(USBH_HandleTypeDef *phost)
             if(!GAMEPAD_GET_BUTTON(&last_info, GAMEPAD_BUTTON_MASK_R3) && GAMEPAD_GET_BUTTON(info, GAMEPAD_BUTTON_MASK_R3)) {
                 osMessageQueuePut(moving_ctrl_queueHandle, "f", 0, 0);
             }
+			
             memcpy(&last_info, info, sizeof(HID_GAMEPAD_Info_TypeDef));
             break;
         }
