@@ -18,7 +18,7 @@ struct EncoderMotorObject {
 	float current_pulse;
 	uint8_t direct; // 旋转方向
 	pid_controller_t pid_controller;
-
+	float rps_limit;
 	// portting 接口函数
 	void (*set_pulse)(EncoderMotorObjectTypeDef *self, int speed); // 设置电机速度  -1000 ~ 1000
 };

@@ -4,13 +4,14 @@
 
 void encoder_set_speed(EncoderMotorObjectTypeDef *self, float rps)
 {
+	rps = rps > self->rps_limit ? self->rps_limit : (rps < -self->rps_limit ? -self->rps_limit : rps);
     self->pid_controller.set_point = rps;
 }
 
 void encoder_speed_control(EncoderMotorObjectTypeDef *self, float period)
 {
     float pulse = 0;
-    if(HAL_GPIO_ReadPin(MOTOR_ENABLE_GPIO_Port, MOTOR_ENABLE_Pin) != RESET) {
+    if(HAL_GPIO_ReadPin(MOTOR_ENABLE_GPIO_Port, MOTOR_ENABLE_Pin) == RESET) {
         pid_update(&self->pid_controller, self->rps, period);
         pulse = self->current_pulse + self->pid_controller.output;
         pulse = pulse > 1000 ?  1000 : pulse;

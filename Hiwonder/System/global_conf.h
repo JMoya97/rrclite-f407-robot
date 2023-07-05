@@ -2,14 +2,8 @@
 #define __GLOBAL_CONF_H
 
 
-#define KEY1_PUSHED_LEVEL 0
-#define KEY2_PUSHED_LEVEL 0
-#define LED_SYS_LEVEL_ON  0
-
-#define LED_TASK_PERIOD    30u /* LED状态刷新间隔 */
-#define BUZZER_TASK_PERIOD 30u /* 蜂鸣器状态刷新间隔 */
-#define BUTTON_TASK_PERIOD 30u /* 板载按键扫描间隔 */
-
+#define LITHIUM_ION_3S 1
+#define LITHIUM_ION_2S 2
 
 #define JGB520          1
 #define HE37_52012      1
@@ -21,9 +15,24 @@
 #define JGB528_R131_8V  4
 
 
-#ifndef MOTOR_TYPE
-#define MOTOR_TYPE JGB520
+#ifndef BATTERY_TYPE
+#define BATTERY_TYPE LITHIUM_ION_2S
 #endif
+
+#ifndef MOTOR_TYPE
+#define MOTOR_TYPE JGB37
+#endif
+
+
+
+#if BATTERY_TYPE==LITHIUM_ION_3S
+#define LOW_BATTERY_ALARM_THRESHOLD 9500
+#elif BATTERY_TYPE==LITHIUM_ION_2S
+#define LOW_BATTERY_ALARM_THRESHOLD 6300
+#else
+#define LOW_BATTERY_ALARM_THRESHOLD 0
+#endif
+
 
 
 #if MOTOR_TYPE==JGB520
@@ -34,6 +43,7 @@
 #define MOTOR_PID_KP  63.0f
 #define MOTOR_PID_KI  2.6f
 #define MOTOR_PID_KD  2.4f
+#define MOTOR_RPS_LIMIT 1.35f
 
 #elif MOTOR_TYPE==JGB37
 /* 电机轴每转产生11个脉冲,  计数器在AB相上升下降沿均计数即计数值为脉冲数的4倍, 减速比为45.0:1。
@@ -43,6 +53,7 @@
 #define MOTOR_PID_KP  40.0f
 #define MOTOR_PID_KI  2.0f
 #define MOTOR_PID_KD  2.0f
+#define MOTOR_RPS_LIMIT 3.0f
 
 #elif MOTOR_TYPE==JGA27
 /* 电机轴每转产生13个脉冲,  计数器在AB相上升下降沿均计数即计数值为脉冲数的4倍, 减速比为20.0:1。
@@ -52,6 +63,7 @@
 #define MOTOR_PID_KP  -36.0f
 #define MOTOR_PID_KI  -1.0f
 #define MOTOR_PID_KD  -1.0f
+#define MOTOR_RPS_LIMIT 5.6f 
 
 #elif MOTOR_TYPE==JGB528
 /* 电机轴每转产生11个脉冲,  计数器在AB相上升下降沿均计数即计数值为脉冲数的4倍, 减速比为131.0:1。
@@ -61,14 +73,25 @@
 #define MOTOR_PID_KP  300.0f
 #define MOTOR_PID_KI  2.0f
 #define MOTOR_PID_KD  12.0f
+#define MOTOR_RPS_LIMIT 1.0f 
 
 #else
 #define MOTOR_TICKS_PER_CIRCLE 3960.0f
 #define MOTOR_PID_KP  350.0f
 #define MOTOR_PID_KI  0.5f
 #define MOTOR_PID_KD  45.0f
+#define MOTOR_RPS_LIMIT 8.0f 
 
 #endif
+
+#define KEY1_PUSHED_LEVEL 0
+#define KEY2_PUSHED_LEVEL 0
+#define LED_SYS_LEVEL_ON  0
+
+#define LED_TASK_PERIOD    30u /* LED状态刷新间隔 */
+#define BUZZER_TASK_PERIOD 30u /* 蜂鸣器状态刷新间隔 */
+#define BUTTON_TASK_PERIOD 30u /* 板载按键扫描间隔 */
+#define BATTERY_TASK_PERIOD 50u /* 电池电量检测间隔 */
 
 #endif
 

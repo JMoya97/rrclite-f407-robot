@@ -18,6 +18,7 @@ void motors_init(void)
         motors[i] = LWMEM_CCM_MALLOC(sizeof( EncoderMotorObjectTypeDef));
         encoder_motor_object_init(motors[i]);
         motors[i]->ticks_per_circle = MOTOR_TICKS_PER_CIRCLE;
+		motors[i]->rps_limit = MOTOR_RPS_LIMIT;
         motors[i]->pid_controller.set_point = 0.0f;
         motors[i]->pid_controller.kp = MOTOR_PID_KP;
         motors[i]->pid_controller.ki = MOTOR_PID_KI;

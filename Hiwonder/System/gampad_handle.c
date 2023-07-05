@@ -14,7 +14,7 @@ void USBH_HID_EventCallback(USBH_HandleTypeDef *phost)
     extern osMessageQueueId_t moving_ctrl_queueHandle;
     static HID_GAMEPAD_Info_TypeDef last_info;
     static char last_direction_msg = 'I';
-    static char last_button = 'R';
+    static char last_button = 'I';
 
     switch(USBH_HID_GetDeviceType(phost)) {
         case 0xFF: {/* 手柄数据 */
