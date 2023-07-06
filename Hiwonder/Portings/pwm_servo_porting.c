@@ -1,6 +1,7 @@
 #include "global.h"
 #include <stdint.h>
 #include "tim.h"
+#include "lwmem_porting.h"
 
 PWMServoObjectTypeDef *pwm_servos[4];
 
@@ -26,8 +27,8 @@ static void pwm_servo4_write_pin(uint32_t new_state)
 
 void pwm_servos_init(void)
 {
-    
     for(int i = 0; i < 4; ++i) {
+	    pwm_servos[i] = LWMEM_CCM_MALLOC(sizeof(PWMServoObjectTypeDef));
         pwm_servo_object_init(pwm_servos[i]);  // 初始化PWM舵机对象内存
     }
     pwm_servos[0]->write_pin = pwm_servo1_write_pin;

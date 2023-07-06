@@ -17,6 +17,7 @@
 
 typedef struct PWMServoObject  PWMServoObjectTypeDef;
 struct PWMServoObject {
+	int id;
     int offset; // 舵机偏差
     int target_duty;  // 目标脉宽
     int current_duty; // 当前脉宽
@@ -42,6 +43,7 @@ struct PWMServoObject {
 
 
 void pwm_servo_object_init(PWMServoObjectTypeDef *object);
+void pwm_servo_duty_compare(PWMServoObjectTypeDef *self);   //脉宽变化比较及速度控制
 void pwm_servo_set_position (PWMServoObjectTypeDef *self, uint32_t duty, uint32_t duration);
 void pwm_servo_set_offset(PWMServoObjectTypeDef *self, int offset);
 

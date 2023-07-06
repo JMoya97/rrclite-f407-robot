@@ -13,7 +13,7 @@
 #include <string.h>
 #include "log.h"
 
-static void servo_duty_compare(PWMServoObjectTypeDef *self)   //脉宽变化比较及速度控制
+void pwm_servo_duty_compare(PWMServoObjectTypeDef *self)   //脉宽变化比较及速度控制
 {
     // 根据新设置的目标重新计算舵机控制参数
     if(self->duty_changed) {
@@ -62,7 +62,7 @@ void pwm_servo_object_init(PWMServoObjectTypeDef *obj)
     obj->duty_inc = 0;
     obj->current_duty = 1500;
     obj->duty_raw = 1500;
-    obj->refresh = servo_duty_compare;
+    obj->refresh = pwm_servo_duty_compare;
     obj->set_position = pwm_servo_set_position;
     obj->set_offset = pwm_servo_set_offset;
 }

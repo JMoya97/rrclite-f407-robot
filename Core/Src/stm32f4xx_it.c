@@ -415,18 +415,18 @@ void TIM8_BRK_TIM12_IRQHandler(void)
 void TIM8_UP_TIM13_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM8_UP_TIM13_IRQn 0 */
-    extern PWMServoObjectTypeDef *pwm_servos[];
+    extern PWMServoObjectTypeDef *pwm_servos[4];
     static uint32_t pwm_servo_index = 0;
 
     if(__HAL_TIM_GET_FLAG(&htim13, TIM_FLAG_CC1) != RESET) {
         __HAL_TIM_CLEAR_FLAG(&htim13, TIM_FLAG_CC1);
         pwm_servos[pwm_servo_index]->write_pin(0);
-        pwm_servo_index = pwm_servo_index >= 3 ? 0 : pwm_servo_index + 1;
+        pwm_servo_index = pwm_servo_index == 3 ? 0 : pwm_servo_index + 1;
     }
     if(__HAL_TIM_GET_FLAG(&htim13, TIM_FLAG_UPDATE) != RESET) {
         __HAL_TIM_CLEAR_FLAG(&htim13, TIM_FLAG_UPDATE);
         pwm_servos[pwm_servo_index]->write_pin(1);
-        pwm_servos[pwm_servo_index]->refresh(pwm_servos[pwm_servo_index]);
+        pwm_servo_duty_compare(pwm_servos[pwm_servo_index]);
         __HAL_TIM_SET_COMPARE(&htim13, TIM_CHANNEL_1, pwm_servos[pwm_servo_index]->duty_raw);
     }
   /* USER CODE END TIM8_UP_TIM13_IRQn 0 */
