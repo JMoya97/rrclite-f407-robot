@@ -42,6 +42,8 @@ struct PWMServoObject {
 
 
 void pwm_servo_object_init(PWMServoObjectTypeDef *object);
+void pwm_servo_set_position (PWMServoObjectTypeDef *self, uint32_t duty, uint32_t duration);
+void pwm_servo_set_offset(PWMServoObjectTypeDef *self, int offset);
 
 #endif
 

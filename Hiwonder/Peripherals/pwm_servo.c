@@ -42,7 +42,7 @@ static void servo_duty_compare(PWMServoObjectTypeDef *self)   //脉宽变化比�
     self->duty_raw = self->current_duty + self->offset; // 动作要加上舵机偏差
 }
 
-static void set_position (PWMServoObjectTypeDef *self, uint32_t duty, uint32_t duration)
+void pwm_servo_set_position (PWMServoObjectTypeDef *self, uint32_t duty, uint32_t duration)
 {
     duration = duration < 20 ? 20 : (duration > 30000 ? 30000 : duration);
     self->target_duty = duty;
@@ -50,7 +50,7 @@ static void set_position (PWMServoObjectTypeDef *self, uint32_t duty, uint32_t d
     self->duty_changed = true;
 }
 
-static void set_offset(PWMServoObjectTypeDef *self, int offset)
+void pwm_servo_set_offset(PWMServoObjectTypeDef *self, int offset)
 {
     offset = offset < -100 ? -100 : (offset > 100 ? 100 : offset);
     self->offset = offset;
@@ -63,6 +63,6 @@ void pwm_servo_object_init(PWMServoObjectTypeDef *obj)
     obj->current_duty = 1500;
     obj->duty_raw = 1500;
     obj->refresh = servo_duty_compare;
-    obj->set_position = set_position;
-    obj->set_offset = set_offset;
+    obj->set_position = pwm_servo_set_position;
+    obj->set_offset = pwm_servo_set_offset;
 }

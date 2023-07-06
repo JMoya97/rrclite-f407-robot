@@ -59,6 +59,7 @@ void app_task_entry(void *argument)
     extern osMessageQueueId_t bluetooth_tx_queueHandle;
 
     motors_init();
+	pwm_servos_init();
     leds_init();
     buzzers_init();
     buttons_init();
