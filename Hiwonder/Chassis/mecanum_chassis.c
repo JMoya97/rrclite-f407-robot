@@ -36,7 +36,6 @@ void mecanum_chassis_set_velocity(MecanumChassisTypeDef *self, float speed, floa
     v4 = linear_speed_to_rps(self, v4);
     v2 = linear_speed_to_rps(self, v2);
     v3 = linear_speed_to_rps(self, v3);
-	printf("%f, %f, %f, %f\r\n", v1, v4, v2, v3);
     self->set_motors(self, v1, v4, v2, v3);
 }
 
@@ -64,7 +63,6 @@ void mecanum_chassis_set_xy(MecanumChassisTypeDef *self, float vx, float vy, flo
     v4 = linear_speed_to_rps(self, v4);
     v2 = linear_speed_to_rps(self, v2);
     v3 = linear_speed_to_rps(self, v3);
-	printf("%f, %f, %f, %f\r\n", v1, v4, v2, v3);
     self->set_motors(self, v1, v4, v2, v3);
 }
 static void stop(void *self)

@@ -25,9 +25,9 @@
 #define KEY2_PUSHED_LEVEL 0
 #define LED_SYS_LEVEL_ON  0
 
-#define LED_TASK_PERIOD    30u /* LED状态刷新间隔 */
-#define BUZZER_TASK_PERIOD 30u /* 蜂鸣器状态刷新间隔 */
-#define BUTTON_TASK_PERIOD 30u /* 板载按键扫描间隔 */
+#define LED_TASK_PERIOD     30u /* LED状态刷新间隔 */
+#define BUZZER_TASK_PERIOD  30u /* 蜂鸣器状态刷新间隔 */
+#define BUTTON_TASK_PERIOD  30u /* 板载按键扫描间隔 */
 #define BATTERY_TASK_PERIOD 50u /* 电池电量检测间隔 */
 
 #endif

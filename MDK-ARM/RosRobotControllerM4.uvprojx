@@ -339,7 +339,7 @@
               <MiscControls>--locale=english</MiscControls>
               <Define>USE_HAL_DRIVER,STM32F407xx,LV_CONF_INCLUDE_SIMPLE,LV_LVGL_H_INCLUDE_SIMPLE</Define>
               <Undefine></Undefine>
-              <IncludePath>../Core/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F;../Drivers/CMSIS/Device/ST/STM32F4xx/Include;../Drivers/CMSIS/Include;../Hiwonder/Peripherals;../Hiwonder/Portings;../Hiwonder/System;../Third_Party/Fusion/Fusion;../Third_Party/Lw;../Third_Party/RTT;../USB_HOST/App;../USB_HOST/Target;../Middlewares/ST/STM32_USB_Host_Library/Core/Inc;../Middlewares/ST/STM32_USB_Host_Library/Class/HID/Inc;../Third_Party/LVGL/porting;../Third_Party/LVGL/src;../Third_Party/LVGL;../Hiwonder/USB_HOST;../Hiwonder/LVGL_UI;../Hiwonder/LVGL_UI/guider_customer_fonts;../Hiwonder/LVGL_UI/guider_fonts;../Hiwonder/LVGL_UI/images;../Third_Party;..\Hiwonder\Chassis</IncludePath>
+              <IncludePath>../Core/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc;../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy;../Middlewares/Third_Party/FreeRTOS/Source/include;../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2;../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F;../Drivers/CMSIS/Device/ST/STM32F4xx/Include;../Drivers/CMSIS/Include;../Hiwonder/Peripherals;../Hiwonder/Portings;../Hiwonder/System;../Third_Party/Fusion/Fusion;../Third_Party/Lw;../Third_Party/RTT;../USB_HOST/App;../USB_HOST/Target;../Middlewares/ST/STM32_USB_Host_Library/Core/Inc;../Middlewares/ST/STM32_USB_Host_Library/Class/HID/Inc;../Third_Party/LVGL/porting;../Third_Party/LVGL/src;../Third_Party/LVGL;../Hiwonder/USB_HOST;../Hiwonder/LVGL_UI;../Hiwonder/LVGL_UI/guider_customer_fonts;../Hiwonder/LVGL_UI/guider_fonts;../Hiwonder/LVGL_UI/images;../Third_Party;../Hiwonder/Chassis</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -2240,11 +2240,6 @@
               <FileName>display_st7735.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Hiwonder\Peripherals\display_st7735.c</FilePath>
-            </File>
-            <File>
-              <FileName>imu.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Hiwonder\Peripherals\imu.c</FilePath>
             </File>
             <File>
               <FileName>imu_mpu6050.c</FileName>
