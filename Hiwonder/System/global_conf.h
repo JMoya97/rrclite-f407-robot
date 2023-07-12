@@ -1,28 +1,11 @@
 #ifndef __GLOBAL_CONF_H
 #define __GLOBAL_CONF_H
 
-#define ENABLE_IMU  1
-#define ENABLE_LVGL 0
-
-
-
-#define LITHIUM_ION_3S 1
-#define LITHIUM_ION_2S 2
-
-
-#ifndef BATTERY_TYPE
-#define BATTERY_TYPE LITHIUM_ION_2S
-#endif
-
-
-#if BATTERY_TYPE==LITHIUM_ION_3S
-#define LOW_BATTERY_ALARM_THRESHOLD 9500
-#elif BATTERY_TYPE==LITHIUM_ION_2S
-#define LOW_BATTERY_ALARM_THRESHOLD 6300
-#else
-#define LOW_BATTERY_ALARM_THRESHOLD 0
-#endif
-
+#define ENABLE_IMU  1    /* IMU 任务是否启动 */
+#define ENABLE_LVGL 0    /* LVGL 任务是否启动 */
+#define ENABLE_BATTERY_LOW_ALARM 0  /* 低电压报警是否开启 */
+#define BATTERY_LOW_ALARM_THRESHOLD 6300  /* 低电压报警阈值, 单位毫伏 */
+// #define BATTERY_LOW_ALARM_THRESHOLD 9500
 
 
 #define KEY1_PUSHED_LEVEL 0
