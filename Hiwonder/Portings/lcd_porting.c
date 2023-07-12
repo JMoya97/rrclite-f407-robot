@@ -46,8 +46,7 @@ void tx_complete_callback(SPI_HandleTypeDef *arg) {
 // LCD 的适配接口
 static void lcd1_spi_write(ST7735ObjectTypeDef *self, uint8_t *data, size_t len)
 {
-		extern osSemaphoreId_t spi_tx_finishedHandle;
-   
+	extern osSemaphoreId_t spi_tx_finishedHandle;
 	HAL_SPI_Transmit(&hspi2, data, len, 0xFFFF);
 	//HAL_SPI_Transmit(&hspi2, 
 	//osSemaphoreAcquire(spi_tx_finishedHandle, osWaitForever);

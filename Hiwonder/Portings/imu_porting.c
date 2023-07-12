@@ -1,7 +1,7 @@
 #include "global.h"
 #include "lwmem_porting.h"
 #include "packet_reports.h"
-
+#include "global_conf.h"
 #include "imu.h"
 #include "imu_mpu6050.h"
 
@@ -21,11 +21,12 @@ void imus_init(void)
     imus[0] = (IMU_ObjectTypeDef*)mpu6050;
 }
 
-
+#if ENABLE_IMU
 /**
  * @brief  imu task 入口函数
  *
  */
+
 void imu_task_entry(void *argument)
 {
     extern osSemaphoreId_t mpu6050_data_readyHandle;
@@ -53,6 +54,7 @@ void imu_task_entry(void *argument)
     }
 }
 
+#endif
 
 
 static int i2c_write_byte_to_mem(MPU6050ObjectTypeDef *self, uint8_t reg_addr, uint8_t data)

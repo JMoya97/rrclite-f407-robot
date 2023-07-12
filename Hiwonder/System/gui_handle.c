@@ -19,6 +19,8 @@
 #include "button.h"
 #include "sbus.h"
 #include "lwmem_porting.h"
+#include "global_conf.h"
+
 
 lv_ui guider_ui;
 
@@ -38,8 +40,6 @@ void update_sbus_view(void)
 }
 
 
-
-
 void lvgl_timer_callback(void *argument)
 {
     extern osMessageQueueId_t lvgl_event_queueHandle;
@@ -47,6 +47,7 @@ void lvgl_timer_callback(void *argument)
     osMessageQueuePut(lvgl_event_queueHandle, &msg, 0, 10);
 }
 
+#if ENABLE_LVGL
 void gui_task_entry(void *arg)
 {
     extern osMessageQueueId_t lvgl_event_queueHandle;
@@ -98,5 +99,6 @@ void gui_task_entry(void *arg)
 			}
     }
 }
+#endif
 
 

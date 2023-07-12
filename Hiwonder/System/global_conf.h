@@ -1,6 +1,10 @@
 #ifndef __GLOBAL_CONF_H
 #define __GLOBAL_CONF_H
 
+#define ENABLE_IMU  1
+#define ENABLE_LVGL 0
+
+
 
 #define LITHIUM_ION_3S 1
 #define LITHIUM_ION_2S 2
