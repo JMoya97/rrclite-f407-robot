@@ -444,7 +444,7 @@ static lv_res_t lv_calendar_signal(lv_obj_t * calendar, lv_signal_t sign, void *
         info->result = lv_calendar_get_style(calendar, info->part);
         if(info->result != NULL) return LV_RES_OK;
         else return ancestor_signal(calendar, sign, param);
-        return LV_RES_OK;
+        // return LV_RES_OK;
     }
 
     /* Include the ancient signal function */

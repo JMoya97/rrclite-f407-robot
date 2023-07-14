@@ -5,7 +5,7 @@
 
 /* 全局变量 */
 EncoderMotorObjectTypeDef *motors[4];
-static void packet_handler(struct PacketRawFrame *frame);
+/* static void packet_handler(struct PacketRawFrame *frame); */
 
 static void motor1_set_pulse(EncoderMotorObjectTypeDef *self, int speed);
 static void motor2_set_pulse(EncoderMotorObjectTypeDef *self, int speed);
@@ -223,6 +223,7 @@ typedef struct {
 * @param frame 数据帧
 * @retval void
 */
+/*
 static void packet_handler(struct PacketRawFrame *frame)
 {
 
@@ -261,4 +262,6 @@ static void packet_handler(struct PacketRawFrame *frame)
             break;
     }
 }
+
+*/
 

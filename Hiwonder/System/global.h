@@ -32,10 +32,7 @@
 #include "chassis.h"
 
 // 全系统全局变量
-
-
 extern struct PacketController packet_controller;
-
 extern ButtonObjectTypeDef *buttons[2];
 extern BuzzerObjectTypeDef *buzzers[1];
 extern LEDObjectTypeDef *leds[1];
@@ -51,7 +48,6 @@ typedef struct{
 	HID_GAMEPAD_Info_TypeDef status;
 }GamepadStatusObjectTypeDef;
 
-void global_init(void);
 
 void set_chassis_type(uint8_t chassis_type);
 

@@ -26,7 +26,7 @@ void battery_check_timer_callback(void *argument)
 	if(battery_report_count > (int)(1 * 1000 / BATTERY_TASK_PERIOD)) { /* 定时发送蓝牙电压报告 */
 		battery_report_count = 0;
 		char msg[8];
-		sprintf(&msg[1], "V%dV", (int)(battery_volt + 0.5)); /* 组织蓝牙电量消息 */
+		sprintf(&msg[1], "V%dV", (int)(battery_volt + 0.5f)); /* 组织蓝牙电量消息 */
 		msg[0] = strlen(&msg[1]);
 		osMessageQueuePut(bluetooth_tx_queueHandle, msg, 0, 0); /* 压入发送队列 */
 	}

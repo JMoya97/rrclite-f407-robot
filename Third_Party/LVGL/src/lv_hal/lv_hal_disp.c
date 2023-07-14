@@ -466,7 +466,7 @@ lv_disp_rot_t lv_disp_get_rotation(lv_disp_t * disp)
 {
     if(disp == NULL) disp = lv_disp_get_default();
 
-    return disp->driver.rotated;
+    return (lv_disp_rot_t)disp->driver.rotated;
 }
 
 /**********************

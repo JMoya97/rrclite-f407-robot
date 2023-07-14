@@ -37,8 +37,6 @@ void imu_task_entry(void *argument)
 //    int imu_report_interval = 1;
 //    int count = 0;
 //    struct PacketReportIMU report;
-
-
     for(;;) {
         osSemaphoreAcquire(mpu6050_data_readyHandle, osWaitForever);
         imus[0]->update(imus[0]);

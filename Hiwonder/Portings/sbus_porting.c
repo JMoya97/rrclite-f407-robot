@@ -101,7 +101,7 @@ void sbus_rx_task_entry1(void *argument)
     HAL_UART_RegisterRxEventCallback(&huart5, sbus_dma_receive_event_callback); /* 注册接收事件回调 */
     /* 使用 ReceiveToIdle_DMA 进行接收， 该函数会在DMA缓存满时中断或在接收空闲时中断并触发接收事件回调 */
     HAL_UARTEx_ReceiveToIdle_DMA(&huart5, (uint8_t*)subs1_rx_dma_buffers[sbus1_rx_dma_buffer_index], SBUS_RX_DMA_BUFFER_SIZE);
-	static int last_ry = 1000;
+//	static int last_ry = 1000;
 	static uint32_t ticks = 0;
     /* 解析循环 */
     for(;;) {
@@ -131,7 +131,7 @@ void sbus_rx_task_entry1(void *argument)
 //							}
 //						}
 //					}
-					last_ry = sbus1_status->channels[1];
+//					last_ry = sbus1_status->channels[1];
 					if(HAL_GetTick() > ticks) {
 						ticks = HAL_GetTick() + 100;
 		                memcpy(&sbus_status_disp, sbus1_status, sizeof(SBusStatusObjectTypeDef));

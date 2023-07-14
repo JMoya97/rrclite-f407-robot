@@ -438,7 +438,7 @@ HID_TypeTypeDef HIWONDER_USBH_HID_GetDeviceType(USBH_HandleTypeDef *phost)
             type = HID_MOUSE;
         } else {
             if((phost->device.DevDesc.idProduct == 0x0526 || phost->device.DevDesc.idProduct == 0x0575) && phost->device.DevDesc.idVendor == 0x2563) {
-                type = HID_GAMEPAD;
+                type = (HID_TypeTypeDef)HID_GAMEPAD;
             }
         }
     }

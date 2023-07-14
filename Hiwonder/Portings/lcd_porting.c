@@ -71,3 +71,4 @@ static void lcd1_set_blacklight(ST7735ObjectTypeDef *self, uint32_t brightness)
 {
     HAL_GPIO_WritePin(LCD_BLK_GPIO_Port, LCD_BLK_Pin, brightness > 0 ? GPIO_PIN_SET : GPIO_PIN_RESET);
 }
+

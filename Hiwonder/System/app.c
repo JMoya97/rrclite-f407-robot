@@ -30,7 +30,6 @@ void u8g2_init(void);
 
 void global_init(void)
 {
-    lwmem_assignmem(lwmem_regions); /* 动态内存初始化 */
 }
 
 void button_event_callback(ButtonObjectTypeDef *button,  ButtonEventIDEnum event)

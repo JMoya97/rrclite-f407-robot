@@ -32,8 +32,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "global.h"
-#include "serial_servo.h"
+#include "lwmem_porting.h"
+#include "log.h"
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -100,7 +101,7 @@ int main(void)
 {
   /* USER CODE BEGIN 1 */
   LOG_INIT();
-
+  lwmem_assignmem(lwmem_regions); /* 动态内存初始化 */
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -148,10 +149,7 @@ int main(void)
   MX_NVIC_Init();
   /* USER CODE BEGIN 2 */
   LOG_DEBUG("Start...\r\n");
-
-    //i2c_scan();
-  global_init();
-
+  //i2c_scan();
   /* USER CODE END 2 */
 
   /* Init scheduler */
