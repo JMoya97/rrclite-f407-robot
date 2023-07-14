@@ -26,11 +26,7 @@ void motors_init(void);
 void pwm_servos_init(void);
 void sbus_init(void);
 void chassis_init(void);
-void u8g2_init(void);
 
-void global_init(void)
-{
-}
 
 void button_event_callback(ButtonObjectTypeDef *button,  ButtonEventIDEnum event)
 {
@@ -48,7 +44,6 @@ void jetauto_control(char msg);
 void jettank_control(char msg);
 void ti4wd_control(char msg);
 void tankblack_control(char msg);
-extern float battery_volt;
 
 void app_task_entry(void *argument)
 {

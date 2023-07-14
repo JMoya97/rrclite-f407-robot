@@ -45,6 +45,7 @@ void motors_init(void)
     for(int i = 0; i < 4; ++i) {
         motors[i] = LWMEM_CCM_MALLOC(sizeof( EncoderMotorObjectTypeDef));
         encoder_motor_object_init(motors[i]);
+		motors[i]->ticks_overflow = 60000;
         motors[i]->ticks_per_circle = MOTOR_DEFAULT_TICKS_PER_CIRCLE;
         motors[i]->rps_limit = MOTOR_DEFAULT_RPS_LIMIT;
         motors[i]->pid_controller.set_point = 0.0f;

@@ -13,31 +13,31 @@ MecanumChassisTypeDef      jetauto;
 
 static void jetank_set_motors(void* self, float rps_l, float rps_r)
 {
-    encoder_set_speed(motors[0], rps_r);
-    encoder_set_speed(motors[3], -rps_l);
+    encoder_motor_set_speed(motors[0], rps_r);
+    encoder_motor_set_speed(motors[3], -rps_l);
 }
 
 
 static void tankblack_set_motors(void* self, float rps_l, float rps_r)
 {
-    encoder_set_speed(motors[0], -rps_l);
-    encoder_set_speed(motors[1], rps_r);
+    encoder_motor_set_speed(motors[0], -rps_l);
+    encoder_motor_set_speed(motors[1], rps_r);
 }
 
 static void ti4wd_set_motors(void* self, float rps_l, float rps_r)
 {
-    encoder_set_speed(motors[3], rps_r);
-    encoder_set_speed(motors[2], -rps_l);
-    encoder_set_speed(motors[0], -rps_l);
-    encoder_set_speed(motors[1], rps_r);
+    encoder_motor_set_speed(motors[3], rps_r);
+    encoder_motor_set_speed(motors[2], -rps_l);
+    encoder_motor_set_speed(motors[0], -rps_l);
+    encoder_motor_set_speed(motors[1], rps_r);
 }
 
 static void jetauto_set_motors(void* self, float rps_lh, float rps_lt, float rps_rh, float rps_rt)
 {
-    encoder_set_speed(motors[1], rps_lh);
-    encoder_set_speed(motors[0], rps_lt);
-    encoder_set_speed(motors[2], -rps_rh);
-    encoder_set_speed(motors[3], -rps_rt);
+    encoder_motor_set_speed(motors[1], rps_lh);
+    encoder_motor_set_speed(motors[0], rps_lt);
+    encoder_motor_set_speed(motors[2], -rps_rh);
+    encoder_motor_set_speed(motors[3], -rps_rt);
 }
 
 

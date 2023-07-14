@@ -507,26 +507,13 @@ void TIM7_IRQHandler(void)
     extern EncoderMotorObjectTypeDef *motors[4];
     if(__HAL_TIM_GET_FLAG(&htim7, TIM_FLAG_UPDATE) != RESET) {
         __HAL_TIM_CLEAR_FLAG(&htim7, TIM_FLAG_UPDATE);
-        motors[0]->new_count = __HAL_TIM_GET_COUNTER(&htim5);
-        motors[1]->new_count = __HAL_TIM_GET_COUNTER(&htim2);
-        motors[2]->new_count = __HAL_TIM_GET_COUNTER(&htim4);
-        motors[3]->new_count = __HAL_TIM_GET_COUNTER(&htim3);
-
-        motors[0]->new_overflow_num = motors[0]->overflow_num;
-        motors[1]->new_overflow_num = motors[1]->overflow_num;
-        motors[2]->new_overflow_num = motors[2]->overflow_num;
-        motors[3]->new_overflow_num = motors[3]->overflow_num;
-
-        int64_t new_count = 0;
-        for(int i = 0; i < 4; ++i) {
-            new_count = (int64_t)motors[i]->new_count + motors[i]->new_overflow_num * 60000;
-            encoder_update(motors[i], 0.01, new_count);
-            //printf("motor%d: %f\t", i + 1, motors[i]->rps);
-        }
-        for(int i = 0; i < 4; ++i) {
-            encoder_speed_control(motors[i], 0.01);
-        }
-        //printf("\r\n");
+		encoder_update(motors[0], 0.01, __HAL_TIM_GET_COUNTER(&htim5));
+		encoder_update(motors[1], 0.01, __HAL_TIM_GET_COUNTER(&htim2));
+		encoder_update(motors[2], 0.01, __HAL_TIM_GET_COUNTER(&htim4));
+		encoder_update(motors[3], 0.01, __HAL_TIM_GET_COUNTER(&htim3));
+		for(int i = 0; i < 4; ++i) {
+			encoder_motor_control(motors[i], 0.01);
+		}
     }
   /* USER CODE END TIM7_IRQn 0 */
   /* USER CODE BEGIN TIM7_IRQn 1 */
