@@ -1,9 +1,13 @@
 #ifndef __GLOBAL_CONF_H
 #define __GLOBAL_CONF_H
 
-#define ENABLE_IMU  1    /* IMU 任务是否启动 */
-#define ENABLE_LVGL 0    /* LVGL 任务是否启动 */
-#define ENABLE_BATTERY_LOW_ALARM 0  /* 低电压报警是否开启 */
+#define ENABLE_IMU  1                     /* IMU 任务是否启动 */
+#define ENABLE_LVGL 0                     /* LVGL 任务是否启动 */
+#define ENABLE_BLUETOOTH                1 /* 蓝牙是否开启 */
+#define ENABLE_BLUETOOTH_BATTERY_REPORT 1 /* 蓝牙电压报告是否开启 */
+#define ENABLE_BATTERY_LOW_ALARM        0 /* 低电压报警是否开启 */
+
+
 //#define BATTERY_LOW_ALARM_THRESHOLD 6300  /* 低电压报警阈值, 单位毫伏 */
 #define BATTERY_LOW_ALARM_THRESHOLD 9500
 

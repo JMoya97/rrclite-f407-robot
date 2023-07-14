@@ -17,6 +17,8 @@
 #include <stdio.h>
 #include "lwmem_porting.h"
 
+#if ENABLE_BLUETOOTH
+
 #define BLUETOOTH_DMA_BUFFER_SIZE 16   /* 单个DMA缓存长度 */
 
 extern osMessageQueueId_t moving_ctrl_queueHandle;  /* 运动控制的控制队列 */
@@ -87,3 +89,4 @@ static void bluetooth_dma_tx_complete_callback(UART_HandleTypeDef *huart)
     osSemaphoreRelease(bluetooth_tx_idleHandle);
 }
 
+#endif

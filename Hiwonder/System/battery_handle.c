@@ -6,6 +6,10 @@
 float battery_volt = 0.0f; /* 电池电压全局变量, 单位 v */
 static uint16_t adc_value[2];
 
+#if ENABLE_BLUETOOTH&&ENABLE_BLUETOOTH_BATTERY_REPORT /* 开启蓝牙电压报告后引入 */
+extern osMessageQueueId_t bluetooth_tx_queueHandle; /* 蓝牙数据发送队列 */
+#endif
+
 
 void battery_check_timer_callback(void *argument)
 {
@@ -15,6 +19,19 @@ void battery_check_timer_callback(void *argument)
         battery_volt = battery_volt == 0 ? volt : battery_volt * 0.95f + volt * 0.05f;
     }
     HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc_value, 2);
+
+#if  ENABLE_BLUETOOTH&&ENABLE_BLUETOOTH_BATTERY_REPORT
+	static int battery_report_count = 0;
+	battery_report_count++;
+	if(battery_report_count > (int)(1 * 1000 / BATTERY_TASK_PERIOD)) { /* 定时发送蓝牙电压报告 */
+		battery_report_count = 0;
+		char msg[8];
+		sprintf(&msg[1], "V%dV", (int)(battery_volt + 0.5)); /* 组织蓝牙电量消息 */
+		msg[0] = strlen(&msg[1]);
+		osMessageQueuePut(bluetooth_tx_queueHandle, msg, 0, 0); /* 压入发送队列 */
+	}
+#endif
+
 	
 #if ENABLE_BATTERY_LOW_ALARM
 	static int count = 0;
