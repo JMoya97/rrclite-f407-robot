@@ -1,3 +1,14 @@
+/**
+ * @file log.h
+ * @author Lu Yongping (Lucas@hiwonder.com)
+ * @brief LOG 相关定义和声明
+ * @version 0.1
+ * @date 2023-05-12
+ *
+ * @copyright Copyright (c) 2023
+ *
+ */
+
 #ifndef __LOG_H__
 #define __LOG_H__
 
@@ -7,6 +18,7 @@
 #define LOG_LEVEL_DEFAULT LOG_LEVEL_DEBUG
 #define LOG_PRINT_FILE_NAME 1
 #define LOG_ENABLE 1
+#define LOG_USE_RTT 0
 
 enum log_level{
 	LOG_LEVEL_DEBUG,
@@ -24,8 +36,12 @@ enum log_level{
 #define log_ap(fmt, ...) fmt, __VA_ARGS__
 #endif
 
-
+#if LOG_USE_RTT
 #define LOG_INIT()	do{log_level = LOG_LEVEL_DEFAULT; SEGGER_RTT_Init(); }while(0)
+#else
+#define LOG_INIT()	do{log_level = LOG_LEVEL_DEFAULT; }while(0)
+#endif
+
 #define LOG_PRINTF(...) 	printf(__VA_ARGS__)
 
 #if LOG_ENABLE

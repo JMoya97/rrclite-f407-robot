@@ -34,9 +34,9 @@ void imu_task_entry(void *argument)
     imus_init();
     imus[0]->reset(imus[0]);
 
-    int imu_report_interval = 1;
-    int count = 0;
-    struct PacketReportIMU report;
+//    int imu_report_interval = 1;
+//    int count = 0;
+//    struct PacketReportIMU report;
 
 
     for(;;) {

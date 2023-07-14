@@ -60,7 +60,7 @@ void serial_servo_set_position(uint8_t servo_id, uint16_t position, uint16_t dur
         return;
     }
     uint8_t buffer[10];
-    position = position < 0 ? 0 : position > 1000 ? 1000 : position;
+    position = position > 1000 ? 1000 : position;
     buffer[0] = SERIAL_SERVO_FRAME_HEADER;
     buffer[1] = SERIAL_SERVO_FRAME_HEADER;
     buffer[2] = servo_id;

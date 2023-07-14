@@ -49,16 +49,7 @@ void jetauto_control(char msg);
 void jettank_control(char msg);
 void ti4wd_control(char msg);
 void tankblack_control(char msg);
-void draw(u8g2_t *u8g2)
-{
-  u8g2_SetFontMode(u8g2, 1); /*ז̥ģʽѡԱ*/
-  u8g2_SetFontDirection(u8g2, 0); /*ז̥·½ϲѡԱ*/
-  u8g2_SetFont(u8g2, u8g2_font_inb16_mf); /*ז¿②Ա*/
-  u8g2_DrawStr(u8g2, 70, 30, "CuZn");
-		
-	u8g2_SendBuffer(u8g2);
-	osDelay(1000);
-}
+extern float battery_volt;
 
 void app_task_entry(void *argument)
 {
@@ -79,13 +70,8 @@ void app_task_entry(void *argument)
     osTimerStart(led_timerHandle, LED_TASK_PERIOD);
     osTimerStart(buzzer_timerHandle, BUZZER_TASK_PERIOD);
     osTimerStart(button_timerHandle, BUTTON_TASK_PERIOD);
-    //osTimerStart(battery_check_timerHandle, BATTERY_TASK_PERIOD);
-    //HAL_ADC_Start(&hadc1);
-	u8g2_init();
-	for(;;) {
-		draw(u8g2);
-		osDelay(100);
-	}
+    osTimerStart(battery_check_timerHandle, BATTERY_TASK_PERIOD);
+
     char msg = '\0';
     uint8_t msg_prio;
     osMessageQueueReset(moving_ctrl_queueHandle);

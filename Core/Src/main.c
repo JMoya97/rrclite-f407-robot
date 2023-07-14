@@ -99,8 +99,8 @@ void i2c_scan(void)
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-    LOG_INIT();
-    LOG_INFO("Start...\r\n");
+  LOG_INIT();
+
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -147,6 +147,7 @@ int main(void)
   /* Initialize interrupts */
   MX_NVIC_Init();
   /* USER CODE BEGIN 2 */
+  LOG_DEBUG("Start...\r\n");
 
     //i2c_scan();
   global_init();
