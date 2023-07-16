@@ -50,18 +50,18 @@ void USBH_HID_EventCallback(USBH_HandleTypeDef *phost)
 			}
             last_button = button;
             if(GAMEPAD_GET_BUTTON(info, GAMEPAD_BUTTON_MASK_CIRCLE)) {
-                osMessageQueuePut(moving_ctrl_queueHandle, "P", 0, 0);
+                osMessageQueuePut(moving_ctrl_queueHandle, "p", 0, 0);
             }
             if(GAMEPAD_GET_BUTTON(info, GAMEPAD_BUTTON_MASK_SQUARE)) {
-                osMessageQueuePut(moving_ctrl_queueHandle, "L", 0, 0);
+                osMessageQueuePut(moving_ctrl_queueHandle, "l", 0, 0);
             }
             /** 按下时触发 */
             if(!GAMEPAD_GET_BUTTON(&last_info, GAMEPAD_BUTTON_MASK_TRIANGLE) && GAMEPAD_GET_BUTTON(info, GAMEPAD_BUTTON_MASK_TRIANGLE)) {
-                osMessageQueuePut(moving_ctrl_queueHandle, "J", 0, 0);
+                osMessageQueuePut(moving_ctrl_queueHandle, "j", 0, 0);
             }
 
             if(!GAMEPAD_GET_BUTTON(&last_info, GAMEPAD_BUTTON_MASK_CROSS) && GAMEPAD_GET_BUTTON(info, GAMEPAD_BUTTON_MASK_CROSS)) {
-                osMessageQueuePut(moving_ctrl_queueHandle, "N", 0, 0);
+                osMessageQueuePut(moving_ctrl_queueHandle, "n", 0, 0);
             }
             if(!GAMEPAD_GET_BUTTON(&last_info, GAMEPAD_BUTTON_MASK_SELECT) && GAMEPAD_GET_BUTTON(info, GAMEPAD_BUTTON_MASK_SELECT)) {
                 osMessageQueuePut(moving_ctrl_queueHandle, "T", 0, 0);

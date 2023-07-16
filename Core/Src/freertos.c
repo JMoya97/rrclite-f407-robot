@@ -123,7 +123,7 @@ const osThreadAttr_t gui_task_attributes = {
   .cb_size = sizeof(gui_taskControlBlock),
   .stack_mem = &gui_taskBuffer[0],
   .stack_size = sizeof(gui_taskBuffer),
-  .priority = (osPriority_t) osPriorityBelowNormal,
+  .priority = (osPriority_t) osPriorityLow,
 };
 /* Definitions for app_task */
 osThreadId_t app_taskHandle;
@@ -135,7 +135,7 @@ const osThreadAttr_t app_task_attributes = {
   .cb_size = sizeof(app_taskControlBlock),
   .stack_mem = &app_taskBuffer[0],
   .stack_size = sizeof(app_taskBuffer),
-  .priority = (osPriority_t) osPriorityNormal,
+  .priority = (osPriority_t) osPriorityNormal7,
 };
 /* Definitions for bluetooth_task */
 osThreadId_t bluetooth_taskHandle;
@@ -162,14 +162,8 @@ const osMessageQueueAttr_t packet_tx_queue_attributes = {
 };
 /* Definitions for lvgl_event_queue */
 osMessageQueueId_t lvgl_event_queueHandle;
-uint8_t lvgl_event_queueBuffer[ 16 * sizeof( void* ) ];
-osStaticMessageQDef_t lvgl_event_queueControlBlock;
 const osMessageQueueAttr_t lvgl_event_queue_attributes = {
-  .name = "lvgl_event_queue",
-  .cb_mem = &lvgl_event_queueControlBlock,
-  .cb_size = sizeof(lvgl_event_queueControlBlock),
-  .mq_mem = &lvgl_event_queueBuffer,
-  .mq_size = sizeof(lvgl_event_queueBuffer)
+  .name = "lvgl_event_queue"
 };
 /* Definitions for moving_ctrl_queue */
 osMessageQueueId_t moving_ctrl_queueHandle;
@@ -184,14 +178,8 @@ const osMessageQueueAttr_t moving_ctrl_queue_attributes = {
 };
 /* Definitions for bluetooth_tx_queue */
 osMessageQueueId_t bluetooth_tx_queueHandle;
-uint8_t bluetooth_tx_queueBuffer[ 8 * 8 ];
-osStaticMessageQDef_t bluetooth_tx_queueControlBlock;
 const osMessageQueueAttr_t bluetooth_tx_queue_attributes = {
-  .name = "bluetooth_tx_queue",
-  .cb_mem = &bluetooth_tx_queueControlBlock,
-  .cb_size = sizeof(bluetooth_tx_queueControlBlock),
-  .mq_mem = &bluetooth_tx_queueBuffer,
-  .mq_size = sizeof(bluetooth_tx_queueBuffer)
+  .name = "bluetooth_tx_queue"
 };
 /* Definitions for button_timer */
 osTimerId_t button_timerHandle;
@@ -405,7 +393,7 @@ void MX_FREERTOS_Init(void) {
   packet_tx_queueHandle = osMessageQueueNew (64, sizeof(void*), &packet_tx_queue_attributes);
 
   /* creation of lvgl_event_queue */
-  lvgl_event_queueHandle = osMessageQueueNew (16, sizeof(void*), &lvgl_event_queue_attributes);
+  lvgl_event_queueHandle = osMessageQueueNew (16, 32, &lvgl_event_queue_attributes);
 
   /* creation of moving_ctrl_queue */
   moving_ctrl_queueHandle = osMessageQueueNew (32, sizeof(char), &moving_ctrl_queue_attributes);

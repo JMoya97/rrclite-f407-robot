@@ -70,7 +70,7 @@
 typedef int16_t lv_coord_t;
 
 /* Maximum buffer size to allocate for rotation. Only used if software rotation is enabled. */
-#define LV_DISP_ROT_MAX_BUF  (16U * 1024U)
+#define LV_DISP_ROT_MAX_BUF  (4U * 1024U)
 
 /*=========================
    Memory manager settings
@@ -96,7 +96,7 @@ typedef int16_t lv_coord_t;
 #  define LV_MEM_AUTO_DEFRAG  1
 #else       /*LV_MEM_CUSTOM*/
 #  define LV_MEM_CUSTOM_INCLUDE "lwmem_porting.h"   /*Header for the dynamic memory function*/
-#  define LV_MEM_CUSTOM_ALLOC   LWMEM_RAM_MALLOC       /*Wrapper to malloc*/
+#  define LV_MEM_CUSTOM_ALLOC   LWMEM_CCM_MALLOC       /*Wrapper to malloc*/
 #  define LV_MEM_CUSTOM_FREE    LWMEM_FREE         /*Wrapper to free*/
 #endif     /*LV_MEM_CUSTOM*/
 
@@ -762,3 +762,4 @@ typedef void * lv_obj_user_data_t;
 #endif /*LV_CONF_H*/
 
 #endif /*End of "Content enable"*/
+
