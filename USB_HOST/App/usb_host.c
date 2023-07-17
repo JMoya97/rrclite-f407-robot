@@ -79,7 +79,6 @@ void MX_USB_HOST_Init(void)
     if (USBH_Start(&hUsbHostHS) != USBH_OK) {
         Error_Handler();
     }
-#pragma diag_suppress 111 /* 后面自动生成的代码不要执�?? ?, 手工消除代码不可达警�?? ? */
     return;
   /* USER CODE END USB_HOST_Init_PreTreatment */
 

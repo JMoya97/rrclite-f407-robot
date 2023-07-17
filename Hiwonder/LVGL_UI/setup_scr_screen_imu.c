@@ -84,7 +84,7 @@ void setup_scr_screen_imu(lv_ui *ui){
 	lv_style_set_pad_top(&style_screen_imu_title_main, LV_STATE_DEFAULT, 0);
 	lv_style_set_pad_bottom(&style_screen_imu_title_main, LV_STATE_DEFAULT, 0);
 	lv_obj_add_style(ui->screen_imu_title, LV_LABEL_PART_MAIN, &style_screen_imu_title_main);
-	lv_obj_set_pos(ui->screen_imu_title, 33.5, 5);
+	lv_obj_set_pos(ui->screen_imu_title, 33, 5);
 	lv_obj_set_width(ui->screen_imu_title, 93);
 
 	//Write codes screen_imu_label_1
