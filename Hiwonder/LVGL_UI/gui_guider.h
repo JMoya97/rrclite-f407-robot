@@ -22,9 +22,9 @@ typedef struct
 	lv_obj_t *screen_sys;
 	bool screen_sys_del;
 	lv_obj_t *screen_sys_cont_1;
-	lv_obj_t *screen_sys_label_volt;
-	lv_obj_t *screen_sys_label_ssid;
+	lv_obj_t *screen_sys_label_volt111;
 	lv_obj_t *screen_sys_title;
+	lv_obj_t *screen_sys_label_volt;
 	lv_obj_t *screen_imu;
 	bool screen_imu_del;
 	lv_obj_t *screen_imu_cont_1;

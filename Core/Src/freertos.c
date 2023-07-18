@@ -30,7 +30,6 @@
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
-typedef StaticTask_t osStaticThreadDef_t;
 typedef StaticQueue_t osStaticMessageQDef_t;
 typedef StaticTimer_t osStaticTimerDef_t;
 typedef StaticSemaphore_t osStaticSemaphoreDef_t;
@@ -55,98 +54,58 @@ typedef StaticEventGroup_t osStaticEventGroupDef_t;
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
-uint32_t defaultTaskBuffer[ 128 ];
-osStaticThreadDef_t defaultTaskControlBlock;
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
-  .cb_mem = &defaultTaskControlBlock,
-  .cb_size = sizeof(defaultTaskControlBlock),
-  .stack_mem = &defaultTaskBuffer[0],
-  .stack_size = sizeof(defaultTaskBuffer),
-  .priority = (osPriority_t) osPriorityLow,
+  .stack_size = 256 * 4,
+  .priority = (osPriority_t) osPriorityBelowNormal,
 };
 /* Definitions for imu_task */
 osThreadId_t imu_taskHandle;
-uint32_t imu_taskBuffer[ 128 ];
-osStaticThreadDef_t imu_taskControlBlock;
 const osThreadAttr_t imu_task_attributes = {
   .name = "imu_task",
-  .cb_mem = &imu_taskControlBlock,
-  .cb_size = sizeof(imu_taskControlBlock),
-  .stack_mem = &imu_taskBuffer[0],
-  .stack_size = sizeof(imu_taskBuffer),
+  .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityAboveNormal,
 };
 /* Definitions for packet_tx_task */
 osThreadId_t packet_tx_taskHandle;
-uint32_t packet_tx_taskBuffer[ 128 ];
-osStaticThreadDef_t packet_tx_taskControlBlock;
 const osThreadAttr_t packet_tx_task_attributes = {
   .name = "packet_tx_task",
-  .cb_mem = &packet_tx_taskControlBlock,
-  .cb_size = sizeof(packet_tx_taskControlBlock),
-  .stack_mem = &packet_tx_taskBuffer[0],
-  .stack_size = sizeof(packet_tx_taskBuffer),
+  .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for packet_rx_task */
 osThreadId_t packet_rx_taskHandle;
-uint32_t packet_rx_taskBuffer[ 256 ];
-osStaticThreadDef_t packet_rx_taskControlBlock;
 const osThreadAttr_t packet_rx_task_attributes = {
   .name = "packet_rx_task",
-  .cb_mem = &packet_rx_taskControlBlock,
-  .cb_size = sizeof(packet_rx_taskControlBlock),
-  .stack_mem = &packet_rx_taskBuffer[0],
-  .stack_size = sizeof(packet_rx_taskBuffer),
+  .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for sbus_rx_task */
 osThreadId_t sbus_rx_taskHandle;
-uint32_t sbus_rx_taskBuffer[ 128 ];
-osStaticThreadDef_t sbus_rx_taskControlBlock;
 const osThreadAttr_t sbus_rx_task_attributes = {
   .name = "sbus_rx_task",
-  .cb_mem = &sbus_rx_taskControlBlock,
-  .cb_size = sizeof(sbus_rx_taskControlBlock),
-  .stack_mem = &sbus_rx_taskBuffer[0],
-  .stack_size = sizeof(sbus_rx_taskBuffer),
+  .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for gui_task */
 osThreadId_t gui_taskHandle;
-uint32_t gui_taskBuffer[ 512 ];
-osStaticThreadDef_t gui_taskControlBlock;
 const osThreadAttr_t gui_task_attributes = {
   .name = "gui_task",
-  .cb_mem = &gui_taskControlBlock,
-  .cb_size = sizeof(gui_taskControlBlock),
-  .stack_mem = &gui_taskBuffer[0],
-  .stack_size = sizeof(gui_taskBuffer),
+  .stack_size = 1500 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
 /* Definitions for app_task */
 osThreadId_t app_taskHandle;
-uint32_t app_taskBuffer[ 512 ];
-osStaticThreadDef_t app_taskControlBlock;
 const osThreadAttr_t app_task_attributes = {
   .name = "app_task",
-  .cb_mem = &app_taskControlBlock,
-  .cb_size = sizeof(app_taskControlBlock),
-  .stack_mem = &app_taskBuffer[0],
-  .stack_size = sizeof(app_taskBuffer),
+  .stack_size = 512 * 4,
   .priority = (osPriority_t) osPriorityNormal7,
 };
 /* Definitions for bluetooth_task */
 osThreadId_t bluetooth_taskHandle;
-uint32_t bluetooth_taskBuffer[ 128 ];
-osStaticThreadDef_t bluetooth_taskControlBlock;
 const osThreadAttr_t bluetooth_task_attributes = {
   .name = "bluetooth_task",
-  .cb_mem = &bluetooth_taskControlBlock,
-  .cb_size = sizeof(bluetooth_taskControlBlock),
-  .stack_mem = &bluetooth_taskBuffer[0],
-  .stack_size = sizeof(bluetooth_taskBuffer),
+  .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for packet_tx_queue */

@@ -31,11 +31,12 @@ static void sbus_dma_receive_event_callback(UART_HandleTypeDef *huart, uint16_t 
 /* SBUS 对外暴露变量 */
 SBusStatusObjectTypeDef *sbus1_status;
 
-
 /* SBUS1 需要的外部变量 */
 extern osSemaphoreId_t sbus_data_readyHandle; /* subs数据就绪信号量Handle */
 extern osSemaphoreId_t sbus_data_ready_01_Handle;
 extern osEventFlagsId_t sbus_data_ready_event_Handle;
+
+
 /**
  * @brief  SBUS初始化
  *  初始化 SBUS 相关内存、变量并开始SBUS 接收
@@ -45,6 +46,7 @@ void sbus_init(void)
 {
     sbus1_status = LWMEM_CCM_MALLOC(sizeof(SBusStatusObjectTypeDef));
     sbus1_status->type_id = OBJECT_TYPE_ID_GAMEPAD_STATUS;
+	
     /* DMA 接收缓存初始化 */
     subs1_rx_dma_buffers[0] = LWMEM_RAM_MALLOC(SBUS_RX_DMA_BUFFER_SIZE); /* DMA 缓存不能放在 CCMRAM 上 */
     subs1_rx_dma_buffers[1] = LWMEM_RAM_MALLOC(SBUS_RX_DMA_BUFFER_SIZE);
@@ -84,59 +86,64 @@ static void sbus_dma_receive_event_callback(UART_HandleTypeDef *huart, uint16_t 
     }
 }
 
+
 /**
  * @brief  SBUS接收任务入口函数
  * @param argument 入口参数
  * @retval None.
  */
-void sbus_rx_task_entry1(void *argument)
+#if ENABLE_SBUS
+void sbus_rx_task_entry(void *argument)
 {
     extern osMessageQueueId_t lvgl_event_queueHandle;
-	extern SBusStatusObjectTypeDef sbus_status_disp;
+    extern SBusStatusObjectTypeDef sbus_status_disp;
 
     static uint8_t buf_temp[32];
-
-    osSemaphoreAcquire(sbus_data_ready_01_Handle, osWaitForever);
-    /* 开始接收 */
+	
+	sbus_init();
+    
+	/* 开始接收 */
+start_sbus_receive:
+    HAL_UART_AbortReceive(&huart5);
     HAL_UART_RegisterRxEventCallback(&huart5, sbus_dma_receive_event_callback); /* 注册接收事件回调 */
     /* 使用 ReceiveToIdle_DMA 进行接收， 该函数会在DMA缓存满时中断或在接收空闲时中断并触发接收事件回调 */
     HAL_UARTEx_ReceiveToIdle_DMA(&huart5, (uint8_t*)subs1_rx_dma_buffers[sbus1_rx_dma_buffer_index], SBUS_RX_DMA_BUFFER_SIZE);
-//	static int last_ry = 1000;
-	static uint32_t ticks = 0;
+//  static int last_ry = 1000;
+    static uint32_t ticks = 0;
     /* 解析循环 */
     for(;;) {
-        osSemaphoreAcquire(sbus_data_ready_01_Handle, osWaitForever); /* 等待数据就绪 */
-		//osEventFlagsWait(sbus_data_ready_event_Handle, 0x01, osFlagsWaitAny, osWaitForever);
-		//osEventFlagsClear(sbus_data_ready_event_Handle, 0x01);
+        if(osSemaphoreAcquire(sbus_data_ready_01_Handle, 1000) != osOK) { /* 等待数据就绪 */
+            goto start_sbus_receive;
+        }
         for(;;) {
             memset(buf_temp, 0, 25);
             if(lwrb_peek(sbus1_rx_fifo, 0, buf_temp, 25) == 25) {  /* 从缓存中取出25个字节 */
                 if(sbus_decode_frame(buf_temp, sbus1_status) == 0) { /* 尝试解析直到字节不够 */
                     lwrb_skip(sbus1_rx_fifo, 25);
-                    //printf("rx:%d, ry:%d\r\n", sbus1_status->channels[0], sbus1_status->channels[1]);
-//					if(sbus1_status->channels[1] > 1005) {
-//						float s = (float)(sbus1_status->channels[1] - 1000) / 800.0f * 2.0;
-//						 for(int i = 0; i < 4; ++i) {
+//                    printf("rx:%d, ry:%d\r\n", sbus1_status->channels[0], sbus1_status->channels[1]);
+//                  if(sbus1_status->channels[1] > 1005) {
+//                      float s = (float)(sbus1_status->channels[1] - 1000) / 800.0f * 2.0;
+//                       for(int i = 0; i < 4; ++i) {
 //                            encoder_set_speed(motors[i], s);
 //                        }
-//					}else if(sbus1_status->channels[1] < 995) {
-//						float s = (float)(1000 - sbus1_status->channels[1]) / 800.0f * -2.0;
-//						 for(int i = 0; i < 4; ++i) {
+//                  }else if(sbus1_status->channels[1] < 995) {
+//                      float s = (float)(1000 - sbus1_status->channels[1]) / 800.0f * -2.0;
+//                       for(int i = 0; i < 4; ++i) {
 //                            encoder_set_speed(motors[i], s);
 //                        }
-//					}else{
-//						if(!(last_ry > 995 && last_ry < 1005)) {
-//							for(int i = 0; i < 4; ++i) {
-//								encoder_set_speed(motors[i], 0);
-//							}
-//						}
-//					}
-//					last_ry = sbus1_status->channels[1];
-					if(HAL_GetTick() > ticks) {
-						ticks = HAL_GetTick() + 100;
-		                memcpy(&sbus_status_disp, sbus1_status, sizeof(SBusStatusObjectTypeDef));
-					    lv_event_send(guider_ui.screen_sbus, LV_EVENT_PRESSED, NULL);
-					}
+//                  }else{
+//                      if(!(last_ry > 995 && last_ry < 1005)) {
+//                          for(int i = 0; i < 4; ++i) {
+//                              encoder_set_speed(motors[i], 0);
+//                          }
+//                      }
+//                  }
+//                  last_ry = sbus1_status->channels[1];
+                    if(HAL_GetTick() > ticks) {
+                        ticks = HAL_GetTick() + 100;
+                        //memcpy(&sbus_status_disp, sbus1_status, sizeof(SBusStatusObjectTypeDef));
+                        //lv_event_send(guider_ui.screen_sbus, LV_EVENT_PRESSED, NULL);
+                    }
                 } else {
                     lwrb_skip(sbus1_rx_fifo, 1);
                 }
@@ -146,4 +153,5 @@ void sbus_rx_task_entry1(void *argument)
         }
     }
 }
+#endif
 

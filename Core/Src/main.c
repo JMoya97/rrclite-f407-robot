@@ -118,6 +118,7 @@ int main(void)
 
   /* USER CODE BEGIN SysInit */
     __HAL_RCC_I2C1_CLK_ENABLE();
+	__HAL_RCC_UART5_CLK_ENABLE();
     __HAL_RCC_DMA1_CLK_ENABLE();
   /* USER CODE END SysInit */
 
@@ -236,6 +237,24 @@ static void MX_NVIC_Init(void)
   /* DMA1_Stream3_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Stream3_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(DMA1_Stream3_IRQn);
+  /* DMA1_Stream4_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Stream4_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream4_IRQn);
+  /* DMA1_Stream5_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Stream5_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream5_IRQn);
+  /* DMA1_Stream6_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Stream6_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream6_IRQn);
+  /* TIM2_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(TIM2_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(TIM2_IRQn);
+  /* TIM3_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(TIM3_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(TIM3_IRQn);
+  /* TIM4_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(TIM4_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(TIM4_IRQn);
   /* USART2_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(USART2_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(USART2_IRQn);
@@ -245,6 +264,9 @@ static void MX_NVIC_Init(void)
   /* EXTI15_10_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(EXTI15_10_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+  /* TIM8_BRK_TIM12_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(TIM8_BRK_TIM12_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(TIM8_BRK_TIM12_IRQn);
   /* TIM8_UP_TIM13_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(TIM8_UP_TIM13_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(TIM8_UP_TIM13_IRQn);
@@ -263,6 +285,9 @@ static void MX_NVIC_Init(void)
   /* USART6_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(USART6_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(USART6_IRQn);
+  /* OTG_HS_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(OTG_HS_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(OTG_HS_IRQn);
 }
 
 /* USER CODE BEGIN 4 */

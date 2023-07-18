@@ -43,8 +43,9 @@ void update_sbus_view(void)
 void lvgl_timer_callback(void *argument)
 {
     extern osMessageQueueId_t lvgl_event_queueHandle;
-    void *msg = NULL;
-    osMessageQueuePut(lvgl_event_queueHandle, &msg, 0, 10);
+    ObjectTypeDef object;
+    object.structure.type_id = OBJECT_TYPE_ID_LVGL_UPDATE;
+    osMessageQueuePut(lvgl_event_queueHandle, &object, 0, 10);
 }
 
 #if ENABLE_LVGL
@@ -64,39 +65,30 @@ void gui_task_entry(void *arg)
     setup_scr_screen_sbus(&guider_ui);
 
     lv_event_send(guider_ui.screen_empty, LV_EVENT_CLICKED, NULL);
-		for(int i = 0; i < 180; ++i) {
-			lv_task_handler();
-			osDelay(10);
-		}
-		
-    osTimerStart(lvgl_timerHandle, 20);
+    for(int i = 0; i < 10; ++i) {
+        lv_task_handler();
+        osDelay(10);
+    }
+	
+	osTimerStart(lvgl_timerHandle, 40);
     lv_event_send(guider_ui.screen_startup, LV_EVENT_CLICKED, NULL);
 
-    void *event = NULL;
+    ObjectTypeDef event;
     uint8_t msg_prio = 0;
     for(;;) {
         osMessageQueueGet(lvgl_event_queueHandle, &event, &msg_prio, osWaitForever);
-        if(NULL == event) {
-            lv_task_handler();
-        } else {
-//        object = NULL;
-//        msg_prio = 0;
-//        osMessageQueueGet(lvgl_event_queueHandle, &object, &msg_prio, osWaitForever);
-//        switch(object->type->type_id) {
-//            case OBJECT_TYPE_ID_KEY_EVENT:
-////                if(((KeyEventObjectTypeDef *)object)->key_id == 1 && ((KeyEventObjectTypeDef*)object)->event == KEY_EVENT_CLICK) {
-////                    lv_event_send(lv_scr_act(), LV_EVENT_CLICKED, NULL);
-////                }
-//                break;
-//            case OBJECT_TYPE_ID_SBUS_STATUS:
-//                break;
-//            //memcpy(&new_sbus_status, object, sizeof(SBusStatusObjectTypeDef));
-//            //lv_event_send(guider_ui.screen_sbus, LV_EVENT_PRESSED, &event);
-//            default:
-//                break;
-//        }
-            LWMEM_FREE(event);
-			}
+        switch(event.structure.type_id) {
+            case OBJECT_TYPE_ID_BATTERY_VOLTAGE: {
+                lv_label_set_text_fmt(guider_ui.screen_sys_label_volt, "%dmv", *((uint16_t*)(event.structure.data)));
+                break;
+            }
+            case OBJECT_TYPE_ID_LVGL_UPDATE: {
+                lv_task_handler();
+                break;
+            }
+            default:
+                break;
+        }
     }
 }
 #endif

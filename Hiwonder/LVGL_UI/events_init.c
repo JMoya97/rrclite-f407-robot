@@ -23,7 +23,7 @@ static void screen_emptyevent_handler(lv_obj_t * obj, lv_event_t event)
 		{
 			if (guider_ui.screen_startup_del == true)
 				setup_scr_screen_startup(&guider_ui);
-			lv_scr_load_anim(guider_ui.screen_startup, LV_SCR_LOAD_ANIM_FADE_ON, 1000, 0, false);
+			lv_scr_load_anim(guider_ui.screen_startup, LV_SCR_LOAD_ANIM_FADE_ON, 500, 0, false);
 		}
 		guider_ui.screen_empty_del = false;
 	}
@@ -49,9 +49,9 @@ static void screen_startupevent_handler(lv_obj_t * obj, lv_event_t event)
 		{
 			if (guider_ui.screen_sys_del == true)
 				setup_scr_screen_sys(&guider_ui);
-			lv_scr_load_anim(guider_ui.screen_sys, LV_SCR_LOAD_ANIM_MOVE_TOP, 1000, 0, false);
+			lv_scr_load_anim(guider_ui.screen_sys, LV_SCR_LOAD_ANIM_MOVE_TOP, 500, 0, false);
 		}
-		//guider_ui.screen_startup_del = false;
+		guider_ui.screen_startup_del = false;
 	}
 		break;
 	default:
