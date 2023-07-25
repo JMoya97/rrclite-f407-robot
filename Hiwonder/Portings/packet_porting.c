@@ -101,9 +101,25 @@ static void packet_dma_receive_event_callback(UART_HandleTypeDef *huart, uint16_
     if(length < PACKET_RX_DMA_BUFFER_SIZE) {
         HAL_UART_AbortReceive(&huart3);
     }
+    HAL_UART_RegisterRxEventCallback(&huart3, packet_dma_receive_event_callback); /* 注册接收事件回调 */
     HAL_UARTEx_ReceiveToIdle_DMA(&huart3, packet_controller.rx_dma_buffers[packet_controller.rx_dma_buffer_index], PACKET_RX_DMA_BUFFER_SIZE);
     lwrb_write(packet_controller.rx_fifo, packet_controller.rx_dma_buffers[cur_index], length); /* 将接收到的数据写入fifo ring */
     osSemaphoreRelease(packet_rx_not_emptyHandle); /* 置位接收缓存非空信号 */
+}
+
+/**
+ * @brief 串口错误处理
+* 目前实测只在 JetsonNano 上 ModemManager 会占用新插入的串口（/dev/ttyACM*设备会被误认为是Modem)导致出现错误
+ * 出错后我们需要重新开始接收
+ * @param huart 串口实例
+ * @retval None.
+ *
+*/
+static void packet_uart_error_callblack(UART_HandleTypeDef *huart)
+{
+    HAL_UART_AbortReceive(&huart3);
+    HAL_UART_RegisterRxEventCallback(&huart3, packet_dma_receive_event_callback); /* 注册接收事件回调 */
+    HAL_UARTEx_ReceiveToIdle_DMA(&huart3, packet_controller.rx_dma_buffers[packet_controller.rx_dma_buffer_index], PACKET_RX_DMA_BUFFER_SIZE);
 }
 
 /**
@@ -116,8 +132,9 @@ static void packet_dma_receive_event_callback(UART_HandleTypeDef *huart, uint16_
 void packet_rx_task_entry(void *argument)
 {
     osSemaphoreAcquire(packet_rx_not_emptyHandle, 0); /* 默认信号不为零，先清除掉 */
+    HAL_UART_RegisterCallback(&huart3, HAL_UART_ERROR_CB_ID, packet_uart_error_callblack);
     packet_handle_init();
-	packet_start_recv();
+    packet_start_recv();
     for(;;) {
         osSemaphoreAcquire(packet_rx_not_emptyHandle, osWaitForever); /* 等待接收缓存非空 */
         packet_recv(&packet_controller);

@@ -80,7 +80,8 @@ void packet_recv(struct PacketController *self)
                     self->state = PACKET_CONTROLLER_STATE_STARTBYTE1;
                     break;
                 default:
-                    while(1);
+					self->state = PACKET_CONTROLLER_STATE_STARTBYTE1;
+                    break;
             }
         }
         avaliable = lwrb_get_full(self->rx_fifo);
