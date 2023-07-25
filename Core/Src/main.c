@@ -39,7 +39,6 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -62,6 +61,7 @@ void SystemClock_Config(void);
 void MX_FREERTOS_Init(void);
 static void MX_NVIC_Init(void);
 /* USER CODE BEGIN PFP */
+void packet_init(void);
 void i2c_scan(void)
 {
     uint8_t data;
@@ -101,7 +101,8 @@ int main(void)
 {
   /* USER CODE BEGIN 1 */
   LOG_INIT();
-  lwmem_assignmem(lwmem_regions); /* 动态内存初始化 */
+	SEGGER_RTT_Init();
+  lwmem_assignmem(lwmem_regions); /* 动�?�内存初始化 */
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -150,6 +151,7 @@ int main(void)
   MX_NVIC_Init();
   /* USER CODE BEGIN 2 */
   LOG_DEBUG("Start...\r\n");
+  packet_init();
   //i2c_scan();
   /* USER CODE END 2 */
 

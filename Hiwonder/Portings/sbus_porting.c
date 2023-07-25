@@ -122,7 +122,7 @@ start_sbus_receive:
                     lwrb_skip(sbus1_rx_fifo, 25);
 //                    printf("rx:%d, ry:%d\r\n", sbus1_status->channels[0], sbus1_status->channels[1]);
 //                  if(sbus1_status->channels[1] > 1005) {
-//                      float s = (float)(sbus1_status->channels[1] - 1000) / 800.0f * 2.0;
+//                      float s = (float)(sbus1_status->channels[1] - 1000) / 800.0f * 2.0; 172 1792 992 -800 +800
 //                       for(int i = 0; i < 4; ++i) {
 //                            encoder_set_speed(motors[i], s);
 //                        }

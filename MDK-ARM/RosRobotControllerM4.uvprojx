@@ -2671,6 +2671,16 @@
               <FileType>1</FileType>
               <FilePath>..\Hiwonder\System\app.c</FilePath>
             </File>
+            <File>
+              <FileName>packet_handle.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Hiwonder\System\packet_handle.c</FilePath>
+            </File>
+            <File>
+              <FileName>packet_handle.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Hiwonder\System\packet_handle.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

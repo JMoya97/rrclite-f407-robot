@@ -61,30 +61,6 @@ void button_timer_callback(void *argument)
 }
 
 
-//extern osMessageQueueId_t lvgl_event_queueHandle;
-//static void key_event_callback(KeyObjectTypeDef* self, KeyEventEnum event)
-//{
-//    KeyEventObjectTypeDef *event_obj = LWMEM_CCM_MALLOC(sizeof(KeyEventObjectTypeDef));
-//  event_obj->base.type = &type_key_event_instant;
-
-//    struct PacketReportKeyEvent report = {
-//        .event = (uint8_t)(int)event,
-//    };
-//    event_obj->event = event;
-//    if(keys[0] == self) {
-//        report.key_id = 1;
-//        event_obj->key_id = 1;
-
-//    }
-//    if(keys[1] == self) {
-//        report.key_id = 2;
-//        event_obj->key_id = 2;
-//    }
-//    if(osMessageQueuePut(lvgl_event_queueHandle, &event_obj, 0, 0) != osOK) {
-//        LWMEM_FREE(event_obj);
-//    };
-//    packet_transmit(&packet_controller, PACKET_FUNC_KEY, &report, sizeof(struct PacketReportKeyEvent));
-//}
 
 
 

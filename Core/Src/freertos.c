@@ -99,7 +99,7 @@ osThreadId_t app_taskHandle;
 const osThreadAttr_t app_task_attributes = {
   .name = "app_task",
   .stack_size = 512 * 4,
-  .priority = (osPriority_t) osPriorityNormal7,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for bluetooth_task */
 osThreadId_t bluetooth_taskHandle;

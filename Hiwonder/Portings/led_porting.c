@@ -82,22 +82,3 @@ static int get_ctrl_block(LEDObjectTypeDef *self, LEDCtrlTypeDef *p) {
 	return (int)osMessageQueueGet(led1_ctrl_ququeHandle, p, 0, 0);
 }
 
-
-
-//static void packet_handler(struct PacketRawFrame *frame);
-
-///**
-//* @brief 串口命令回调处理
-//* @param frame 数据帧
-//* @retval void
-//*/
-//static void packet_handler(struct PacketRawFrame *frame)
-//{
-//    uint8_t led_id = frame->data_and_checksum[0] - 1; /* ID 都是从 1 开始 */
-//    if(led_id < LED_NUM) {
-//        uint16_t on_time = *((uint16_t*)&frame->data_and_checksum[1]);
-//        uint16_t off_time = *((uint16_t*)&frame->data_and_checksum[3]);
-//        led_objs[led_id]->flash(led_objs[led_id], on_time, off_time, frame->data_and_checksum[5] > 0 ? true : false);
-//    }
-//}
-

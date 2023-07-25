@@ -320,19 +320,30 @@ static int export_mpu6050_update(IMU_ObjectTypeDef *self_base)
 }
 
 
-int export_mpu6050_get_euler(IMU_ObjectTypeDef *self, float *rpy)
+static int export_mpu6050_get_euler(IMU_ObjectTypeDef *self, float *rpy)
 {
 	memcpy(rpy, &((MPU6050ObjectTypeDef*)self)->euler, sizeof(FusionEuler));
 	return 0;
 }
 
 
-int export_mpu6050_get_quat(IMU_ObjectTypeDef *self, float *quat)
+static int export_mpu6050_get_quat(IMU_ObjectTypeDef *self, float *quat)
 {
 	memcpy(quat, &((MPU6050ObjectTypeDef*)self)->quat, sizeof(FusionQuaternion));
 	return 0;
 }
 
+static int export_mpu6050_get_accel(IMU_ObjectTypeDef *self, float *accel)
+{
+	memcpy(accel, &((MPU6050ObjectTypeDef*)self)->accel, sizeof(float) * 3);
+	return 0;
+}
+
+static int export_mpu6050_get_gyro(IMU_ObjectTypeDef *self, float *gyro)
+{
+	memcpy(gyro, &((MPU6050ObjectTypeDef*)self)->gyro, sizeof(float) * 3);
+	return 0;
+}
 /**
   * @brief 初始化mpu6050对象内存
   * @param obj 需要初始化内对象指针
@@ -350,6 +361,8 @@ void mpu6050_object_init(MPU6050ObjectTypeDef *obj, uint8_t dev_addr)
     obj->base.update = export_mpu6050_update;
 	obj->base.get_euler = export_mpu6050_get_euler;
 	obj->base.get_quat = export_mpu6050_get_quat;
+	obj->base.get_accel = export_mpu6050_get_accel;
+	obj->base.get_gyro = export_mpu6050_get_gyro;
 }
 
 /** @} */

@@ -4,11 +4,11 @@
  * @brief 串口协议接口实现
  * @version 0.1
  * @date 2023-05-23
- * 
+ *
  * @copyright Copyright (c) 2023
- * 
+ *
  */
- 
+
 #include "global.h"
 #include "lwrb.h"
 #include "usart.h"
@@ -16,6 +16,7 @@
 #include "cmsis_os2.h"
 #include <stdio.h>
 #include "lwmem_porting.h"
+#include "packet_handle.h"
 
 #define PACKET_RX_FIFO_BUFFER_SIZE 2048 /* FIFO缓存长度 */
 #define PACKET_RX_DMA_BUFFER_SIZE 256 /* 单个DMA缓存长度 */
@@ -44,8 +45,8 @@ void packet_init(void)
     packet_controller.data_index = 0;
 
     /* DMA 接收缓存初始化 */
-		static uint8_t rx_dma_buffer1[PACKET_RX_DMA_BUFFER_SIZE];
-		static uint8_t rx_dma_buffer2[PACKET_RX_DMA_BUFFER_SIZE];
+    static uint8_t rx_dma_buffer1[PACKET_RX_DMA_BUFFER_SIZE];
+    static uint8_t rx_dma_buffer2[PACKET_RX_DMA_BUFFER_SIZE];
 
     packet_controller.rx_dma_buffers[0] = rx_dma_buffer1;
     packet_controller.rx_dma_buffers[1] = rx_dma_buffer2;
@@ -54,7 +55,7 @@ void packet_init(void)
 
     /* 接收 FIFO 初始化 */
     packet_controller.rx_fifo_buffer  = LWMEM_CCM_MALLOC(PACKET_RX_FIFO_BUFFER_SIZE);
-    packet_controller.rx_fifo = LWMEM_CCM_MALLOC(sizeof(lwrb_t)); 
+    packet_controller.rx_fifo = LWMEM_CCM_MALLOC(sizeof(lwrb_t));
     lwrb_init(packet_controller.rx_fifo, packet_controller.rx_fifo_buffer, PACKET_RX_FIFO_BUFFER_SIZE);
 
     /* 发送接口 */
@@ -95,15 +96,14 @@ void packet_start_recv(void)
  */
 static void packet_dma_receive_event_callback(UART_HandleTypeDef *huart, uint16_t length)
 {
-	printf("recv_len:%d\r\n", length);
     int cur_index = packet_controller.rx_dma_buffer_index; /* 取得当前DMA缓存的索引号 */
     packet_controller.rx_dma_buffer_index ^= 1;
-	if(length < PACKET_RX_DMA_BUFFER_SIZE) {
-		HAL_UART_AbortReceive(&huart3);
-	}
+    if(length < PACKET_RX_DMA_BUFFER_SIZE) {
+        HAL_UART_AbortReceive(&huart3);
+    }
     HAL_UARTEx_ReceiveToIdle_DMA(&huart3, packet_controller.rx_dma_buffers[packet_controller.rx_dma_buffer_index], PACKET_RX_DMA_BUFFER_SIZE);
     lwrb_write(packet_controller.rx_fifo, packet_controller.rx_dma_buffers[cur_index], length); /* 将接收到的数据写入fifo ring */
-	osSemaphoreRelease(packet_rx_not_emptyHandle); /* 置位接收缓存非空信号 */
+    osSemaphoreRelease(packet_rx_not_emptyHandle); /* 置位接收缓存非空信号 */
 }
 
 /**
@@ -113,14 +113,15 @@ static void packet_dma_receive_event_callback(UART_HandleTypeDef *huart, uint16_
  * @param argument 保留
  * @retval void
  */
-void packet_rx_task_entry1(void *argument)
+void packet_rx_task_entry(void *argument)
 {
-	osSemaphoreAcquire(packet_rx_not_emptyHandle, osWaitForever); /* 默认信号不为零，先清除掉 */
-	for(;;) {
-		osSemaphoreAcquire(packet_rx_not_emptyHandle, osWaitForever); /* 等待接收缓存非空 */
-		packet_recv(&packet_controller);
-		printf("recv\r\n");
-	}
+    osSemaphoreAcquire(packet_rx_not_emptyHandle, 0); /* 默认信号不为零，先清除掉 */
+    packet_handle_init();
+	packet_start_recv();
+    for(;;) {
+        osSemaphoreAcquire(packet_rx_not_emptyHandle, osWaitForever); /* 等待接收缓存非空 */
+        packet_recv(&packet_controller);
+    }
 }
 
 
@@ -132,7 +133,7 @@ void packet_rx_task_entry1(void *argument)
  * @param argument 保留
  * @retval void
  */
-void packet_tx_task_entry1(void *argument)
+void packet_tx_task_entry(void *argument)
 {
     for(;;) {
         osSemaphoreAcquire(packet_tx_idleHandle, osWaitForever); /* 等待发送空闲信号 */

@@ -71,7 +71,9 @@ void packet_recv(struct PacketController *self)
                     crc = checksum_crc8((uint8_t*)&self->frame.function, self->frame.data_length + 2);
                     if(crc == self->frame.data_and_checksum[self->frame.data_length]) { /* 校验失败, 跳过执行 */
                         if(NULL != self->handles[self->frame.function]) {
-                            self->handles[self->frame.function](&self->frame);
+							if(self->handles[self->frame.function] != NULL) {
+								self->handles[self->frame.function](&self->frame);
+							}
                         }
                     }
                     memset(&self->frame, 0, sizeof(struct PacketRawFrame));

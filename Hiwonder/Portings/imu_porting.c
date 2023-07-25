@@ -6,6 +6,7 @@
 #include "imu_mpu6050.h"
 
 IMU_ObjectTypeDef *imus[1];
+int imu_report_interval = 1;
 
 static int i2c_write_byte_to_mem(MPU6050ObjectTypeDef *self, uint8_t reg_addr, uint8_t data);
 static int i2c_read_from_mem(MPU6050ObjectTypeDef *self, uint8_t reg_addr, uint32_t length, uint8_t *buf);
@@ -34,21 +35,13 @@ void imu_task_entry(void *argument)
     imus_init();
     imus[0]->reset(imus[0]);
 
-//    int imu_report_interval = 1;
-//    int count = 0;
-//    struct PacketReportIMU report;
+    PacketReportIMU_Raw_TypeDef report;
     for(;;) {
         osSemaphoreAcquire(mpu6050_data_readyHandle, osWaitForever);
         imus[0]->update(imus[0]);
-//        count += 1;
-//        if(count > imu_report_interval) {
-//            count = 0;
-//            report.quat.w = imu1.quat.element.w;
-//            report.quat.x = imu1.quat.element.x;
-//            report.quat.y = imu1.quat.element.y;
-//            report.quat.z = imu1.quat.element.z;
-//            packet_transmit(&packet_controller, PACKET_FUNC_IMU, &report, sizeof(struct PacketReportIMU));
-//        }
+		imus[0]->get_accel(imus[0], report.array.accel_array);
+		imus[0]->get_gyro(imus[0], report.array.gyro_array);
+        packet_transmit(&packet_controller, PACKET_FUNC_IMU, &report, sizeof(PacketReportIMU_Raw_TypeDef));
     }
 }
 
