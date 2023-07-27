@@ -28,6 +28,7 @@ struct PacketController packet_controller; /* 协议控制器实例 */
 static void packet_dma_receive_event_callback(UART_HandleTypeDef *huart, uint16_t length);
 static void packet_dma_transmit_finished(UART_HandleTypeDef *huart);
 static int send_packet(struct PacketController *self, struct PacketRawFrame *frame);
+static void packet_uart_error_callblack(UART_HandleTypeDef *huart);
 
 /* 串口控制依赖的外部变量 */
 extern osSemaphoreId_t packet_tx_idleHandle;
@@ -76,18 +77,6 @@ static int send_packet(struct PacketController *self, struct PacketRawFrame *fra
 }
 
 /**
- * @brief 开始串口协议接收
- * @retval void
- */
-void packet_start_recv(void)
-{
-    HAL_UART_RegisterRxEventCallback(&huart3, packet_dma_receive_event_callback); /* 注册接收事件回调 */
-    /* 使用 ReceiveToIdle_DMA 进行接收， 该函数会在DMA缓存满时中断或在接收空闲时中断并触发接收事件回调 */
-    HAL_UARTEx_ReceiveToIdle_DMA(&huart3, packet_controller.rx_dma_buffers[packet_controller.rx_dma_buffer_index], PACKET_RX_DMA_BUFFER_SIZE); /* 开始接收 */
-}
-
-
-/**
  * @brief  串口协议包接收事件回调
  * 在 DMA 接收缓存满后或者空闲时触发本函数将接收到的数据压入接收FIFO缓存，再由接收任务完成解析和处理
  * @param huart 串口实例
@@ -98,13 +87,25 @@ static void packet_dma_receive_event_callback(UART_HandleTypeDef *huart, uint16_
 {
     int cur_index = packet_controller.rx_dma_buffer_index; /* 取得当前DMA缓存的索引号 */
     packet_controller.rx_dma_buffer_index ^= 1;
-    if(length < PACKET_RX_DMA_BUFFER_SIZE) {
-        HAL_UART_AbortReceive(&huart3);
-    }
-    HAL_UART_RegisterRxEventCallback(&huart3, packet_dma_receive_event_callback); /* 注册接收事件回调 */
-    HAL_UARTEx_ReceiveToIdle_DMA(&huart3, packet_controller.rx_dma_buffers[packet_controller.rx_dma_buffer_index], PACKET_RX_DMA_BUFFER_SIZE);
+    HAL_UART_AbortReceive(&huart3);
+	HAL_UARTEx_ReceiveToIdle_DMA(&huart3, packet_controller.rx_dma_buffers[packet_controller.rx_dma_buffer_index], PACKET_RX_DMA_BUFFER_SIZE);
     lwrb_write(packet_controller.rx_fifo, packet_controller.rx_dma_buffers[cur_index], length); /* 将接收到的数据写入fifo ring */
     osSemaphoreRelease(packet_rx_not_emptyHandle); /* 置位接收缓存非空信号 */
+}
+
+
+/**
+ * @brief 开始串口协议接收
+ * @retval void
+ */
+void packet_start_recv(void)
+{
+    HAL_UART_AbortReceive(&huart3);
+    HAL_UART_RegisterCallback(&huart3, HAL_UART_ERROR_CB_ID, packet_uart_error_callblack);
+    HAL_UART_RegisterRxEventCallback(&huart3, packet_dma_receive_event_callback); /* 注册接收事件回调 */
+    /* 使用 ReceiveToIdle_DMA 进行接收， 该函数会在DMA缓存满时中断或在接收空闲时中断并触发接收事件回调 */
+	HAL_UARTEx_ReceiveToIdle_DMA(&huart3, packet_controller.rx_dma_buffers[packet_controller.rx_dma_buffer_index], PACKET_RX_DMA_BUFFER_SIZE);
+    /* 开始接收 */
 }
 
 /**
@@ -117,11 +118,8 @@ static void packet_dma_receive_event_callback(UART_HandleTypeDef *huart, uint16_
 */
 static void packet_uart_error_callblack(UART_HandleTypeDef *huart)
 {
-    HAL_UART_AbortReceive(&huart3);
-    HAL_UART_RegisterRxEventCallback(&huart3, packet_dma_receive_event_callback); /* 注册接收事件回调 */
-    HAL_UARTEx_ReceiveToIdle_DMA(&huart3, packet_controller.rx_dma_buffers[packet_controller.rx_dma_buffer_index], PACKET_RX_DMA_BUFFER_SIZE);
+    packet_start_recv();
 }
-
 /**
  * @brief  串口协议包的接收任务入口
  * 等待串口缓存非空信号量，然后从串口接收FIFO缓存中取出数据进行解析并处理
@@ -132,8 +130,8 @@ static void packet_uart_error_callblack(UART_HandleTypeDef *huart)
 void packet_rx_task_entry(void *argument)
 {
     osSemaphoreAcquire(packet_rx_not_emptyHandle, 0); /* 默认信号不为零，先清除掉 */
-    HAL_UART_RegisterCallback(&huart3, HAL_UART_ERROR_CB_ID, packet_uart_error_callblack);
     packet_handle_init();
+	__HAL_UNLOCK(&huart3);
     packet_start_recv();
     for(;;) {
         osSemaphoreAcquire(packet_rx_not_emptyHandle, osWaitForever); /* 等待接收缓存非空 */
@@ -168,7 +166,7 @@ void packet_tx_task_entry(void *argument)
  * @retval void
  */
 
-static void packet_dma_transmit_finished(UART_HandleTypeDef *huart)
+static void packet_dma_transmit_finished(UART_HandleTypeDef * huart)
 {
     lwmem_free(packet_controller.tx_dma_buffer);
     osStatus_t status = osMessageQueueGet(packet_tx_queueHandle, &packet_controller.tx_dma_buffer, NULL, 0); /* 从发送队列中取出数据 */
