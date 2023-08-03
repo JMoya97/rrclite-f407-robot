@@ -298,7 +298,7 @@ int mpu6050_enable_int(MPU6050ObjectTypeDef *self, bool enable)
 static int export_mpu6050_update(IMU_ObjectTypeDef *self_base)
 {
 	MPU6050ObjectTypeDef *self = (MPU6050ObjectTypeDef*)self_base;
-    //LL_GPIO_SetOutputPin(LED_SYS_GPIO_Port, LED_SYS_Pin); // 测量采集计算时间上升沿
+	//HAL_GPIO_WritePin(LED_SYS_GPIO_Port, LED_SYS_Pin, GPIO_PIN_SET); // 测量采集计算时间上升沿
     if(mpu6050_get_all(self, self->accel, &self->temperature, self->gyro) != 0) {
         return -1;
     }
@@ -314,7 +314,8 @@ static int export_mpu6050_update(IMU_ObjectTypeDef *self_base)
     const FusionEuler euler = FusionQuaternionToEuler(quat);
     memcpy(&self->quat, &quat, sizeof(FusionQuaternion));
     memcpy(&self->euler, &euler, sizeof(FusionEuler));
-    //LL_GPIO_ResetOutputPin(LED_SYS_GPIO_Port, LED_SYS_Pin); // 测量采集计算时间下降沿
+	//HAL_GPIO_WritePin(LED_SYS_GPIO_Port, LED_SYS_Pin, GPIO_PIN_RESET); // 测量采集计算时间下降沿
+
     //printf("Roll %0.1f, Pitch %0.1f, Yaw %0.1f\n", euler.angle.roll, euler.angle.pitch, euler.angle.yaw);
     return 0;
 }

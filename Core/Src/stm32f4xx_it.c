@@ -24,6 +24,7 @@
 /* USER CODE BEGIN Includes */
 #include "global.h"
 #include "tim.h"
+#include "serial_servo.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -366,7 +367,7 @@ void USART2_IRQHandler(void)
 void USART3_IRQHandler(void)
 {
   /* USER CODE BEGIN USART3_IRQn 0 */
-  __HAL_UNLOCK(&huart3); /* 解锁，避免死锁 */
+    __HAL_UNLOCK(&huart3); /* 解锁，避免死�? */
   /* USER CODE END USART3_IRQn 0 */
   HAL_UART_IRQHandler(&huart3);
   /* USER CODE BEGIN USART3_IRQn 1 */
@@ -508,13 +509,13 @@ void TIM7_IRQHandler(void)
     extern EncoderMotorObjectTypeDef *motors[4];
     if(__HAL_TIM_GET_FLAG(&htim7, TIM_FLAG_UPDATE) != RESET) {
         __HAL_TIM_CLEAR_FLAG(&htim7, TIM_FLAG_UPDATE);
-		encoder_update(motors[0], 0.01, __HAL_TIM_GET_COUNTER(&htim5));
-		encoder_update(motors[1], 0.01, __HAL_TIM_GET_COUNTER(&htim2));
-		encoder_update(motors[2], 0.01, __HAL_TIM_GET_COUNTER(&htim4));
-		encoder_update(motors[3], 0.01, __HAL_TIM_GET_COUNTER(&htim3));
-		for(int i = 0; i < 4; ++i) {
-			encoder_motor_control(motors[i], 0.01);
-		}
+        encoder_update(motors[0], 0.01, __HAL_TIM_GET_COUNTER(&htim5));
+        encoder_update(motors[1], 0.01, __HAL_TIM_GET_COUNTER(&htim2));
+        encoder_update(motors[2], 0.01, __HAL_TIM_GET_COUNTER(&htim4));
+        encoder_update(motors[3], 0.01, __HAL_TIM_GET_COUNTER(&htim3));
+        for(int i = 0; i < 4; ++i) {
+            encoder_motor_control(motors[i], 0.01);
+        }
     }
   /* USER CODE END TIM7_IRQn 0 */
   /* USER CODE BEGIN TIM7_IRQn 1 */
@@ -528,9 +529,35 @@ void TIM7_IRQHandler(void)
 void USART6_IRQHandler(void)
 {
   /* USER CODE BEGIN USART6_IRQn 0 */
+    extern SerialServoControllerTypeDef serial_servo_controller;
+    extern osSemaphoreId_t serial_servo_rx_completeHandle;
+	static uint32_t t1 = 0;
+	
+    if(__HAL_UART_GET_FLAG(&huart6, UART_FLAG_TXE) != RESET) {
+        __HAL_UART_CLEAR_FLAG(&huart6, UART_FLAG_TXE);
+        if(serial_servo_controller.tx_byte_index < serial_servo_controller.tx_frame.elements.length + 4) {  /* 判断数据是否发�?�完�? */
+            huart6.Instance->DR = ((uint8_t*)(&serial_servo_controller.tx_frame))[serial_servo_controller.tx_byte_index++]; /* 继续发�?�下�?个字�? */
+        } else {
+				t1 = HAL_GetTick();
+	        HAL_GPIO_WritePin(SERIAL_SERVO_RX_EN_GPIO_Port, SERIAL_SERVO_RX_EN_Pin, GPIO_PIN_RESET);  /* 转入接收模式 */
+            HAL_GPIO_WritePin(SERIAL_SERVO_TX_EN_GPIO_Port, SERIAL_SERVO_TX_EN_Pin, GPIO_PIN_SET);
+            if(serial_servo_controller.tx_only) {
+                osSemaphoreRelease(serial_servo_rx_completeHandle);
+		
+            }
+			__HAL_UART_DISABLE_IT(&huart6, UART_IT_TXE);
+        }
+    }
 
+    if(__HAL_UART_GET_FLAG(&huart6, UART_FLAG_RXNE) != RESET) {
+        __HAL_UART_CLEAR_FLAG(&huart6, UART_FLAG_RXNE);
+        if(0 == serial_servo_rx_handler(&serial_servo_controller, (uint8_t)(huart6.Instance->DR & (uint8_t)0x00FF))) {
+					printf("%u\r\n", HAL_GetTick() - t1);
+
+            osSemaphoreRelease(serial_servo_rx_completeHandle);
+        }
+    }
   /* USER CODE END USART6_IRQn 0 */
-  HAL_UART_IRQHandler(&huart6);
   /* USER CODE BEGIN USART6_IRQn 1 */
 
   /* USER CODE END USART6_IRQn 1 */

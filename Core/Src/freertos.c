@@ -228,6 +228,11 @@ const osSemaphoreAttr_t bluetooth_tx_idle_attributes = {
   .cb_mem = &bluetooth_tx_idleControlBlock,
   .cb_size = sizeof(bluetooth_tx_idleControlBlock),
 };
+/* Definitions for serial_servo_rx_complete */
+osSemaphoreId_t serial_servo_rx_completeHandle;
+const osSemaphoreAttr_t serial_servo_rx_complete_attributes = {
+  .name = "serial_servo_rx_complete"
+};
 /* Definitions for sbus_data_ready_event_ */
 osEventFlagsId_t sbus_data_ready_event_Handle;
 osStaticEventGroupDef_t sbus_data_ready_event_ControlBlock;
@@ -322,6 +327,9 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of bluetooth_tx_idle */
   bluetooth_tx_idleHandle = osSemaphoreNew(1, 1, &bluetooth_tx_idle_attributes);
+
+  /* creation of serial_servo_rx_complete */
+  serial_servo_rx_completeHandle = osSemaphoreNew(1, 1, &serial_servo_rx_complete_attributes);
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
     /* add semaphores, ... */

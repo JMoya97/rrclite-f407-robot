@@ -20,8 +20,9 @@ void button_task_handler(ButtonObjectTypeDef *self, uint32_t period)
         self->last_pin_raw = pin;
         return;
     }
-
-    if(self->last_pin_filtered == self->last_pin_raw) { /* 按钮状态没有改变, 即状态机状态不会发生转移, 直接返回 */
+	
+	/* 按钮状态没有改变, 即状态机状态不会发生转移, 直接返回 */
+    if(self->last_pin_filtered == self->last_pin_raw && self->stage != BUTTON_STAGE_PRESS && self->stage != BUTTON_STAGE_LONGPRESS) { 
         return;
     }
 

@@ -30,6 +30,7 @@
 #include "usbh_hid_gamepad.h"
 #include "object.h"
 #include "chassis.h"
+#include "serial_servo.h"
 
 // 全系统全局变量
 extern struct PacketController packet_controller;
@@ -41,6 +42,7 @@ extern IMU_ObjectTypeDef *imus[1];
 extern PWMServoObjectTypeDef *pwm_servos[4];
 extern EncoderMotorObjectTypeDef *motors[4];
 extern ChassisTypeDef *chassis;
+extern SerialServoControllerTypeDef serial_servo_controller;
 
 
 typedef struct{

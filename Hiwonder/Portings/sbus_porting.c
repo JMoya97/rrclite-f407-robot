@@ -16,7 +16,7 @@
 #include "usart.h"
 #include "global.h"
 #include "gui_guider.h"
-
+#include "packet_reports.h"
 
 #define SBUS_RX_DMA_BUFFER_SIZE 32 /* SBUS DMA 接收缓存长度 */
 #define SBUS_RX_FIFO_BUFFER_SIZE 512 /* SBUS FIFO 缓存长度 */
@@ -46,7 +46,7 @@ void sbus_init(void)
 {
     sbus1_status = LWMEM_CCM_MALLOC(sizeof(SBusStatusObjectTypeDef));
     sbus1_status->type_id = OBJECT_TYPE_ID_GAMEPAD_STATUS;
-	
+
     /* DMA 接收缓存初始化 */
     subs1_rx_dma_buffers[0] = LWMEM_RAM_MALLOC(SBUS_RX_DMA_BUFFER_SIZE); /* DMA 缓存不能放在 CCMRAM 上 */
     subs1_rx_dma_buffers[1] = LWMEM_RAM_MALLOC(SBUS_RX_DMA_BUFFER_SIZE);
@@ -99,20 +99,18 @@ void sbus_rx_task_entry(void *argument)
     extern SBusStatusObjectTypeDef sbus_status_disp;
 
     static uint8_t buf_temp[32];
-	
-	sbus_init();
-    
-	/* 开始接收 */
+
+    sbus_init();
+
+    /* 开始接收 */
 start_sbus_receive:
     HAL_UART_AbortReceive(&huart5);
     HAL_UART_RegisterRxEventCallback(&huart5, sbus_dma_receive_event_callback); /* 注册接收事件回调 */
     /* 使用 ReceiveToIdle_DMA 进行接收， 该函数会在DMA缓存满时中断或在接收空闲时中断并触发接收事件回调 */
     HAL_UARTEx_ReceiveToIdle_DMA(&huart5, (uint8_t*)subs1_rx_dma_buffers[sbus1_rx_dma_buffer_index], SBUS_RX_DMA_BUFFER_SIZE);
-//  static int last_ry = 1000;
-    static uint32_t ticks = 0;
     /* 解析循环 */
     for(;;) {
-        if(osSemaphoreAcquire(sbus_data_ready_01_Handle, 1000) != osOK) { /* 等待数据就绪 */
+        if(osSemaphoreAcquire(sbus_data_ready_01_Handle, 500) != osOK) { /* 等待数据就绪 */
             goto start_sbus_receive;
         }
         for(;;) {
@@ -120,30 +118,15 @@ start_sbus_receive:
             if(lwrb_peek(sbus1_rx_fifo, 0, buf_temp, 25) == 25) {  /* 从缓存中取出25个字节 */
                 if(sbus_decode_frame(buf_temp, sbus1_status) == 0) { /* 尝试解析直到字节不够 */
                     lwrb_skip(sbus1_rx_fifo, 25);
-//                    printf("rx:%d, ry:%d\r\n", sbus1_status->channels[0], sbus1_status->channels[1]);
-//                  if(sbus1_status->channels[1] > 1005) {
-//                      float s = (float)(sbus1_status->channels[1] - 1000) / 800.0f * 2.0; 172 1792 992 -800 +800
-//                       for(int i = 0; i < 4; ++i) {
-//                            encoder_set_speed(motors[i], s);
-//                        }
-//                  }else if(sbus1_status->channels[1] < 995) {
-//                      float s = (float)(1000 - sbus1_status->channels[1]) / 800.0f * -2.0;
-//                       for(int i = 0; i < 4; ++i) {
-//                            encoder_set_speed(motors[i], s);
-//                        }
-//                  }else{
-//                      if(!(last_ry > 995 && last_ry < 1005)) {
-//                          for(int i = 0; i < 4; ++i) {
-//                              encoder_set_speed(motors[i], 0);
-//                          }
-//                      }
-//                  }
-//                  last_ry = sbus1_status->channels[1];
-                    if(HAL_GetTick() > ticks) {
-                        ticks = HAL_GetTick() + 100;
-                        //memcpy(&sbus_status_disp, sbus1_status, sizeof(SBusStatusObjectTypeDef));
-                        //lv_event_send(guider_ui.screen_sbus, LV_EVENT_PRESSED, NULL);
+                    PacketReportSBusTypeDef report;
+                    for(int i = 0; i < 16; ++i) {
+                        report.channels[i] = sbus1_status->channels[i];
                     }
+                    report.ch17 = sbus1_status->ch17;
+                    report.ch18 = sbus1_status->ch18;
+                    report.signal_loss = sbus1_status->signal_loss;
+                    report.fail_safe = sbus1_status->fail_safe;
+                    packet_transmit(&packet_controller, PACKET_FUNC_SBUS, &report, sizeof(PacketReportSBusTypeDef));
                 } else {
                     lwrb_skip(sbus1_rx_fifo, 1);
                 }

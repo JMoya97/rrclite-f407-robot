@@ -101,8 +101,8 @@ int main(void)
 {
   /* USER CODE BEGIN 1 */
   LOG_INIT();
-	SEGGER_RTT_Init();
-  lwmem_assignmem(lwmem_regions); /* 动态内存初始化 */
+  SEGGER_RTT_Init();
+  lwmem_assignmem(lwmem_regions);  /* 动态内存初始化 */
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/

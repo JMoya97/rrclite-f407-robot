@@ -16,201 +16,232 @@
 #define BYTE_TO_HW(A, B) ((((uint16_t)(A)) << 8) | (uint8_t)(B))
 //宏函数 将高地八位合成为十六位
 
-uint8_t uart2_rx_buffer[256];
-uint8_t uart2_tx_buffer[256];
-uint32_t response_timeout = 0u;
 
-static inline void SerialWrite(const uint8_t *buffer, uint16_t length) {
-    HAL_GPIO_WritePin(SERIAL_SERVO_RX_EN_GPIO_Port, SERIAL_SERVO_RX_EN_Pin, GPIO_PIN_SET);
-    HAL_GPIO_WritePin(SERIAL_SERVO_TX_EN_GPIO_Port, SERIAL_SERVO_TX_EN_Pin, GPIO_PIN_RESET);
-    HAL_UART_Transmit(&huart6, (void *) buffer, length, 1000);
-    HAL_GPIO_WritePin(SERIAL_SERVO_RX_EN_GPIO_Port, SERIAL_SERVO_RX_EN_Pin, GPIO_PIN_RESET);
-    HAL_GPIO_WritePin(SERIAL_SERVO_TX_EN_GPIO_Port, SERIAL_SERVO_TX_EN_Pin, GPIO_PIN_SET);
+/* 自动填充数据帧的帧头、ID、命令字段 */
+static void cmd_frame_init(SerialServoCmdTypeDef *frame, int servo_id, int cmd)
+{
+    frame->header_1 = SERIAL_SERVO_FRAME_HEADER;
+    frame->header_2 = SERIAL_SERVO_FRAME_HEADER;
+    frame->elements.servo_id = servo_id;
+    frame->elements.command = cmd;
 }
 
-static inline void SerialRead(const uint8_t *buffer, uint16_t length) {
-    HAL_GPIO_WritePin(SERIAL_SERVO_RX_EN_GPIO_Port, SERIAL_SERVO_RX_EN_Pin, GPIO_PIN_RESET);
-    HAL_GPIO_WritePin(SERIAL_SERVO_TX_EN_GPIO_Port, SERIAL_SERVO_TX_EN_Pin, GPIO_PIN_SET);
-    HAL_UART_Receive_IT(&huart1, (void *) buffer, length);
-    HAL_UART_Transmit(&huart6, (void *) buffer, length, 1000);
+/* 自动填充数据帧的数据长度、校验值字段 */
+static void cmd_frame_complete(SerialServoCmdTypeDef *frame, int args_num)
+{
+    frame->elements.length = args_num + 3;
+    frame->elements.args[args_num] = serial_servo_checksum((uint8_t*)frame);
 }
 
-static inline uint8_t CheckSum(const uint8_t buf[]) {
-    uint16_t temp = 0;
-    for (int i = 2; i < buf[3] + 2; ++i) {
-        temp += buf[i];
+
+void serial_servo_set_id(SerialServoControllerTypeDef *self, uint32_t old_id, uint32_t new_id)
+{
+    SerialServoCmdTypeDef frame;
+    cmd_frame_init(&frame, old_id, SERIAL_SERVO_ID_WRITE);
+    frame.elements.args[0] = new_id;
+    cmd_frame_complete(&frame, 1);
+    self->serial_write_and_read(self, &frame, true);
+}
+
+int serial_servo_read_id(SerialServoControllerTypeDef *self, uint32_t servo_id, uint8_t *ret_servo_id)
+{
+    SerialServoCmdTypeDef frame;
+    cmd_frame_init(&frame, servo_id, SERIAL_SERVO_ID_READ);
+    cmd_frame_complete(&frame, 0);
+    if(0 == self->serial_write_and_read(self, &frame, false)) {
+        *ret_servo_id = (uint32_t)self->rx_frame.elements.args[0];
+        return 0;
     }
-    temp = ~temp;
-    return (uint8_t) temp;
+    return -1;
 }
 
-void serial_servo_set_id(uint8_t old_id, uint8_t new_id) {
-    uint8_t buf[7];
-    buf[0] = buf[1] = SERIAL_SERVO_FRAME_HEADER;
-    buf[2] = old_id;
-    buf[3] = 4;
-    buf[4] = SERIAL_SERVO_ID_WRITE;
-    buf[5] = new_id;
-    buf[6] = CheckSum(buf);
-    SerialWrite(buf, 7);
-}
-
-void serial_servo_set_position(uint8_t servo_id, uint16_t position, uint16_t duration) {
-    if (servo_id > 31) {  //舵机ID不能大于31,可根据对应控制板修改
-        return;
-    }
-    uint8_t buffer[10];
+void serial_servo_set_position(SerialServoControllerTypeDef *self, uint32_t servo_id, int position, uint32_t duration)
+{
+    SerialServoCmdTypeDef frame;
     position = position > 1000 ? 1000 : position;
-    buffer[0] = SERIAL_SERVO_FRAME_HEADER;
-    buffer[1] = SERIAL_SERVO_FRAME_HEADER;
-    buffer[2] = servo_id;
-    buffer[3] = 7;
-    buffer[4] = SERIAL_SERVO_MOVE_TIME_WRITE;
-    buffer[5] = GET_LOW_BYTE(position);
-    buffer[6] = GET_HIGH_BYTE(position);
-    buffer[7] = GET_LOW_BYTE(duration);
-    buffer[8] = GET_HIGH_BYTE(duration);
-    buffer[9] = CheckSum(buffer);
-    SerialWrite(buffer, 10);
+    cmd_frame_init(&frame, servo_id, SERIAL_SERVO_MOVE_TIME_WRITE);
+    frame.elements.args[0] = GET_LOW_BYTE(position);
+    frame.elements.args[1] = GET_HIGH_BYTE(position);
+    frame.elements.args[2] = GET_LOW_BYTE(duration);
+    frame.elements.args[3] = GET_HIGH_BYTE(duration);
+    cmd_frame_complete(&frame, 4);
+    self->serial_write_and_read(self, &frame, true);
 }
 
-void serial_servo_stop(uint8_t servo_id) {
-    uint8_t buffer[10];
-    buffer[0] = SERIAL_SERVO_FRAME_HEADER;
-    buffer[1] = SERIAL_SERVO_FRAME_HEADER;
-    buffer[2] = servo_id;
-    buffer[3] = 6;
-    buffer[4] = SERIAL_SERVO_MOVE_STOP;
-    buffer[5] = CheckSum(buffer);
-    SerialWrite(buffer, 6);
-}
-
-void serial_servo_set_deviation(uint8_t servo_id, int new_deviation) {
-    uint8_t buffer[10];
-    buffer[0] = SERIAL_SERVO_FRAME_HEADER;
-    buffer[1] = SERIAL_SERVO_FRAME_HEADER;
-    buffer[2] = servo_id;
-    buffer[3] = 7;
-    buffer[4] = SERIAL_SERVO_ANGLE_OFFSET_ADJUST;
-    buffer[5] = (uint8_t) ((int8_t) new_deviation);
-    buffer[6] = CheckSum(buffer);
-    SerialWrite(buffer, 7);
-}
-
-void serial_servo_read_deviation(uint8_t servo_id) {
-    uint8_t buffer[10];
-    buffer[0] = SERIAL_SERVO_FRAME_HEADER;
-    buffer[1] = SERIAL_SERVO_FRAME_HEADER;
-    buffer[2] = servo_id;
-    buffer[3] = 6;
-    buffer[4] = SERIAL_SERVO_ANGLE_OFFSET_READ;
-    buffer[5] = CheckSum(buffer);
-    SerialWrite(buffer, 6);
-}
-
-void serial_servo_save_deviation(uint8_t servo_id) {
-    uint8_t buffer[10];
-    buffer[0] = SERIAL_SERVO_FRAME_HEADER;
-    buffer[1] = SERIAL_SERVO_FRAME_HEADER;
-    buffer[2] = servo_id;
-    buffer[3] = 6;
-    buffer[4] = SERIAL_SERVO_ANGLE_OFFSET_WRITE;
-    buffer[5] = CheckSum(buffer);
-    SerialWrite(buffer, 6);
-}
-
-void serial_servo_unload(uint8_t servo_id) {
-    uint8_t buffer[7];
-    buffer[0] = SERIAL_SERVO_FRAME_HEADER;
-    buffer[1] = SERIAL_SERVO_FRAME_HEADER;
-    buffer[2] = servo_id;
-    buffer[3] = 7;
-    buffer[4] = SERIAL_SERVO_LOAD_OR_UNLOAD_WRITE;
-    buffer[5] = 0;
-    buffer[6] = CheckSum(buffer);
-    SerialWrite(buffer, 7);
-}
-
-int serial_servo_read_position(uint8_t servo_id) {
-    int ret = 0;
-    uint8_t buffer[6];
-    if (response_timeout!=0) { /* 当前有命令等待返回不能发送 */
-        return -1;
+int serial_servo_read_position(SerialServoControllerTypeDef *self, uint32_t servo_id, int16_t *position)
+{
+    SerialServoCmdTypeDef frame;
+    cmd_frame_init(&frame, servo_id, SERIAL_SERVO_POS_READ);
+    cmd_frame_complete(&frame, 0);
+    if(0 == self->serial_write_and_read(self, &frame, false)) {
+        *position = (int)(*((int16_t*)self->rx_frame.elements.args));
+        return 0;
     }
-
-    buffer[0] = SERIAL_SERVO_FRAME_HEADER;
-    buffer[1] = SERIAL_SERVO_FRAME_HEADER;
-    buffer[2] = servo_id;
-    buffer[3] = 6;
-    buffer[4] = SERIAL_SERVO_POS_READ;
-    buffer[5] = CheckSum(buffer);
-    SerialWrite(buffer, 6);
-    return ret;
+    return -1;
 }
 
-enum SERIAL_SERVO_RECV_STATE {
-    SERIAL_SERVO_WAIT_FOR_START_1,
-    SERIAL_SERVO_RECV_START_2,
-    SERIAL_SERVO_RECV_SERVO_ID,
-    SERIAL_SERVO_RECV_LENGTH,
-    SERIAL_SERVO_RECV_COMMAND,
-    SERIAL_SERVO_RECV_ARGUMENTS,
-    SERIAL_SERVO_RECV_CHECKSUM,
-};
+void serial_servo_stop(SerialServoControllerTypeDef *self, uint32_t servo_id)
+{
+    SerialServoCmdTypeDef frame;
+    cmd_frame_init(&frame, servo_id, SERIAL_SERVO_MOVE_STOP);
+    cmd_frame_complete(&frame, 0);
+    self->serial_write_and_read(self, &frame, true);
+}
 
-static uint8_t rx_buffer[128];
-struct __attribute__((packed)) servo_frame {
-    uint8_t servo_id;
-    uint8_t length;
-    uint8_t command;
-    uint8_t data[];
-};
-static uint8_t args = 0;
-static struct servo_frame *rx_frame = (void *) rx_buffer;
+void serial_servo_set_deviation(SerialServoControllerTypeDef *self, uint32_t servo_id, int new_deviation)
+{
+    SerialServoCmdTypeDef frame;
+    cmd_frame_init(&frame, servo_id, SERIAL_SERVO_ANGLE_OFFSET_ADJUST);
+    frame.elements.args[0] = (uint8_t) ((int8_t) new_deviation);
+    cmd_frame_complete(&frame, 1);
+    self->serial_write_and_read(self, &frame, true);
+}
 
-void serial_servo_received_handler(uint8_t rx_byte) {
-    static enum SERIAL_SERVO_RECV_STATE state = SERIAL_SERVO_WAIT_FOR_START_1;
-    switch (state) {
-        case SERIAL_SERVO_WAIT_FOR_START_1: {
-            state = 0x55==rx_byte ? SERIAL_SERVO_RECV_START_2 : SERIAL_SERVO_WAIT_FOR_START_1;
-            break;
-        }
-        case SERIAL_SERVO_RECV_START_2: {
-            state = 0x55==rx_byte ? SERIAL_SERVO_RECV_SERVO_ID : SERIAL_SERVO_WAIT_FOR_START_1;
-            break;
-        }
-        case SERIAL_SERVO_RECV_SERVO_ID: {
-            rx_frame->servo_id = rx_byte;
-            state = SERIAL_SERVO_RECV_LENGTH;
-            break;
-        }
-        case SERIAL_SERVO_RECV_LENGTH: {
-            rx_frame->length = rx_byte;
-            state = SERIAL_SERVO_RECV_COMMAND;
-            break;
-        }
-        case SERIAL_SERVO_RECV_COMMAND: {
-            rx_frame->command = rx_byte;
-            args = 0;
-            state = rx_frame->length==6 ? SERIAL_SERVO_RECV_CHECKSUM : SERIAL_SERVO_RECV_ARGUMENTS;
-            break;
-        }
-        case SERIAL_SERVO_RECV_ARGUMENTS: {
-            rx_frame->data[args++] = rx_byte;
-            if (args + 5==rx_frame->length) {
-                state = SERIAL_SERVO_RECV_CHECKSUM;
-            }
-            break;
-        }
-        case SERIAL_SERVO_RECV_CHECKSUM: {
-            state = SERIAL_SERVO_WAIT_FOR_START_1;
-            break;
-        }
-
-        default: {
-            state = SERIAL_SERVO_WAIT_FOR_START_1;
-            break;
-        }
+int serial_servo_read_deviation(SerialServoControllerTypeDef *self, uint32_t servo_id, int8_t *deviation)
+{
+    SerialServoCmdTypeDef frame;
+    cmd_frame_init(&frame, servo_id, SERIAL_SERVO_ANGLE_OFFSET_READ);
+    cmd_frame_complete(&frame, 0);
+    if(0 == self->serial_write_and_read(self, &frame, false)) {
+        *deviation = (int8_t)(self->rx_frame.elements.args[0]);
+        return 0;
     }
+    return -1;
+}
+
+void serial_servo_save_deviation(SerialServoControllerTypeDef *self, uint32_t servo_id)
+{
+    SerialServoCmdTypeDef frame;
+    cmd_frame_init(&frame, servo_id, SERIAL_SERVO_ANGLE_OFFSET_WRITE);
+    cmd_frame_complete(&frame, 0);
+    self->serial_write_and_read(self, &frame, true);
+}
+
+void serial_servo_load_unload(SerialServoControllerTypeDef *self, uint32_t servo_id, uint32_t load)
+{
+    SerialServoCmdTypeDef frame;
+    cmd_frame_init(&frame, servo_id, SERIAL_SERVO_LOAD_OR_UNLOAD_WRITE);
+    frame.elements.args[0] = load;
+    cmd_frame_complete(&frame, 1);
+    self->serial_write_and_read(self, &frame, true);
+}
+
+void serial_servo_set_angle_limit(SerialServoControllerTypeDef *self, uint32_t servo_id, uint32_t limit_l, uint32_t limit_h)
+{
+	SerialServoCmdTypeDef frame;
+    cmd_frame_init(&frame, servo_id, SERIAL_SERVO_ANGLE_LIMIT_WRITE);
+    limit_l = limit_l > 1000 ? 1000 : limit_l;
+	limit_h = limit_h > 1000 ? 1000 : limit_h;
+	uint32_t real_limit_l = limit_l > limit_h ? limit_h : limit_l;
+	uint32_t real_limit_h = limit_l > limit_h ? limit_l : limit_h;
+    frame.elements.args[0] = GET_LOW_BYTE(real_limit_l);
+    frame.elements.args[1] = GET_HIGH_BYTE(real_limit_l);
+    frame.elements.args[2] = GET_LOW_BYTE(real_limit_h);
+    frame.elements.args[3] = GET_HIGH_BYTE(real_limit_h);
+    cmd_frame_complete(&frame, 4);
+    self->serial_write_and_read(self, &frame, true);
+}
+
+int serial_servo_read_angle_limit(SerialServoControllerTypeDef *self, uint32_t servo_id, uint16_t limit[2])
+{
+    SerialServoCmdTypeDef frame;
+    cmd_frame_init(&frame, servo_id, SERIAL_SERVO_ANGLE_LIMIT_READ);
+    cmd_frame_complete(&frame, 0);
+    if(0 == self->serial_write_and_read(self, &frame, false)) {
+        limit[0] = *((uint16_t*)(&self->rx_frame.elements.args[0]));
+		limit[1] = *((uint16_t*)(&self->rx_frame.elements.args[2]));
+        return 0;
+    }
+    return -1;
+}
+
+
+void serial_servo_set_temp_limit(SerialServoControllerTypeDef *self, uint32_t servo_id, uint32_t limit)
+{
+    SerialServoCmdTypeDef frame;
+    cmd_frame_init(&frame, servo_id, SERIAL_SERVO_TEMP_MAX_LIMIT_WRITE);
+    frame.elements.args[0] = limit > 100 ? 100 : (uint8_t)limit;
+    cmd_frame_complete(&frame, 1);
+    self->serial_write_and_read(self, &frame, true);
+}
+
+int serial_servo_read_temp_limit(SerialServoControllerTypeDef *self, uint32_t servo_id, uint8_t *limit)
+{
+    SerialServoCmdTypeDef frame;
+    cmd_frame_init(&frame, servo_id, SERIAL_SERVO_TEMP_MAX_LIMIT_READ);
+    cmd_frame_complete(&frame, 0);
+    if(0 == self->serial_write_and_read(self, &frame, false)) {
+        *limit = (uint8_t)(self->rx_frame.elements.args[0]);
+        return 0;
+    }
+    return -1;
+}
+
+int serial_servo_read_temp(SerialServoControllerTypeDef *self, uint32_t servo_id, uint8_t *temp)
+{
+    SerialServoCmdTypeDef frame;
+    cmd_frame_init(&frame, servo_id, SERIAL_SERVO_TEMP_READ);
+    cmd_frame_complete(&frame, 0);
+    if(0 == self->serial_write_and_read(self, &frame, false)) {
+        *temp = (uint8_t)(self->rx_frame.elements.args[0]);
+        return 0;
+    }
+    return -1;
+}
+
+void serial_servo_set_vin_limit(SerialServoControllerTypeDef *self, uint32_t servo_id, uint32_t limit_l, uint32_t limit_h)
+{
+    SerialServoCmdTypeDef frame;
+    cmd_frame_init(&frame, servo_id, SERIAL_SERVO_VIN_LIMIT_WRITE);
+    limit_l = limit_l < 4500 ? 4500 : limit_l;
+    limit_h = limit_h > 14000 ? 14000 : limit_h;
+	uint32_t real_limit_l  = limit_l > limit_h ? limit_h : limit_l;
+	uint32_t real_limit_h = limit_l > limit_h ? limit_l : limit_h;
+    frame.elements.args[0] = GET_LOW_BYTE(real_limit_l);
+    frame.elements.args[1] = GET_HIGH_BYTE(real_limit_l);
+    frame.elements.args[2] = GET_LOW_BYTE(real_limit_h);
+    frame.elements.args[3] = GET_HIGH_BYTE(real_limit_h);
+    cmd_frame_complete(&frame, 4);
+    self->serial_write_and_read(self, &frame, true);
+}
+
+int serial_servo_read_vin_limit(SerialServoControllerTypeDef *self, uint32_t servo_id, uint16_t limit[2])
+{
+    SerialServoCmdTypeDef frame;
+    cmd_frame_init(&frame, servo_id, SERIAL_SERVO_VIN_LIMIT_READ);
+    cmd_frame_complete(&frame, 0);
+    if(0 == self->serial_write_and_read(self, &frame, false)) {
+        limit[0] = *((uint16_t*)(&self->rx_frame.elements.args[0]));
+		limit[1] = *((uint16_t*)(&self->rx_frame.elements.args[2]));
+        return 0;
+    }
+    return -1;
+}
+
+int serial_servo_read_vin(SerialServoControllerTypeDef *self, uint32_t servo_id, uint16_t *vin)
+{
+    SerialServoCmdTypeDef frame;
+    cmd_frame_init(&frame, servo_id, SERIAL_SERVO_VIN_READ);
+    cmd_frame_complete(&frame, 0);
+    if(0 == self->serial_write_and_read(self, &frame, false)) {
+        *vin = ((uint32_t) * ((uint16_t*)self->rx_frame.elements.args));
+        return 0;
+    }
+    return -1;
+}
+
+void serial_servo_controller_object_init(SerialServoControllerTypeDef *self)
+{
+    self->proc_timeout = 1;
+
+    self->rx_args_index = 0;
+    self->rx_state = SERIAL_SERVO_RECV_STARTBYTE_1;
+    memset(&self->rx_frame, 0, sizeof(SerialServoCmdTypeDef));
+
+    self->tx_only = true;
+    self->tx_byte_index = 0;
+    memset(&self->tx_frame, 0, sizeof(SerialServoCmdTypeDef));
+
+    self->serial_write_and_read = NULL;
 }
 
