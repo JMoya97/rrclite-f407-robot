@@ -42,6 +42,12 @@ typedef struct {
 /* 串口舵机 */
 typedef struct {
     uint8_t cmd;
+    uint8_t servo_num;
+	uint8_t args[];
+} SerialServoMultiCommandTypeDef;
+/* 串口舵机 */
+typedef struct {
+    uint8_t cmd;
     uint16_t duration;
     uint8_t servo_num;
     struct {
@@ -137,6 +143,10 @@ static void packet_serial_servo_handle(struct PacketRawFrame *frame)
             break;
         }
         case 0x03: { /* 停止舵机 */
+            SerialServoMultiCommandTypeDef *cmd = (SerialServoMultiCommandTypeDef *)frame->data_and_checksum;
+			for(int i = 0; i < cmd->servo_num; i++) {
+				serial_servo_stop(&serial_servo_controller, cmd->args[i]);
+			}
             break;
         }
         case 0x05: { /* 位置读取 */
@@ -173,6 +183,14 @@ static void packet_serial_servo_handle(struct PacketRawFrame *frame)
             serial_servo_load_unload(&serial_servo_controller, cmd->servo_id, 1);
             break;
         }
+		case 0x0D: { /* 动力状态读取 */
+            uint8_t load_unload;
+            SerialServoCommandTypeDef *cmd = (SerialServoCommandTypeDef *)frame->data_and_checksum;
+            packet_serial_servo_report_init(&report, cmd->servo_id, cmd->cmd, serial_servo_read_load_unload(&serial_servo_controller, cmd->servo_id, &load_unload));
+            report.args[0] = load_unload;
+            packet_transmit(&packet_controller, PACKET_FUNC_BUS_SERVO, &report, 4);
+            break;
+		}			
         case 0x10: { /* ID 写入 */
             SerialServoCommandTypeDef *cmd = (SerialServoCommandTypeDef *)frame->data_and_checksum;
             serial_servo_set_id(&serial_servo_controller, cmd->servo_id, cmd->args[0]);

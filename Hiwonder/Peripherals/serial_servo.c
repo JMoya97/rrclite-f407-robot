@@ -31,6 +31,7 @@ static void cmd_frame_complete(SerialServoCmdTypeDef *frame, int args_num)
 {
     frame->elements.length = args_num + 3;
     frame->elements.args[args_num] = serial_servo_checksum((uint8_t*)frame);
+    frame->elements.args[args_num + 1] = 0;
 }
 
 
@@ -189,6 +190,18 @@ int serial_servo_read_temp(SerialServoControllerTypeDef *self, uint32_t servo_id
     return -1;
 }
 
+int serial_servo_read_load_unload(SerialServoControllerTypeDef *self, uint32_t servo_id, uint8_t* load_unload)
+{
+    SerialServoCmdTypeDef frame;
+    cmd_frame_init(&frame, servo_id, SERIAL_SERVO_LOAD_OR_UNLOAD_READ);
+    cmd_frame_complete(&frame, 0);
+    if(0 == self->serial_write_and_read(self, &frame, false)) {
+        *load_unload = (uint8_t)(self->rx_frame.elements.args[0]);
+        return 0;
+    }
+    return -1;
+}
+
 void serial_servo_set_vin_limit(SerialServoControllerTypeDef *self, uint32_t servo_id, uint32_t limit_l, uint32_t limit_h)
 {
     SerialServoCmdTypeDef frame;
@@ -204,6 +217,7 @@ void serial_servo_set_vin_limit(SerialServoControllerTypeDef *self, uint32_t ser
     cmd_frame_complete(&frame, 4);
     self->serial_write_and_read(self, &frame, true);
 }
+
 
 int serial_servo_read_vin_limit(SerialServoControllerTypeDef *self, uint32_t servo_id, uint16_t limit[2])
 {

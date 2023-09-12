@@ -16,14 +16,27 @@ static int serial_write_and_read(SerialServoControllerTypeDef *self, SerialServo
     HAL_GPIO_WritePin(SERIAL_SERVO_RX_EN_GPIO_Port, SERIAL_SERVO_RX_EN_Pin, GPIO_PIN_SET);
     HAL_GPIO_WritePin(SERIAL_SERVO_TX_EN_GPIO_Port, SERIAL_SERVO_TX_EN_Pin, GPIO_PIN_RESET);
     memcpy(&self->tx_frame, frame, sizeof(SerialServoCmdTypeDef));
+	memset(&self->rx_frame, 0, sizeof(SerialServoCmdTypeDef));
     self->tx_byte_index = 0;
     self->tx_only = tx_only;
+	self->rx_args_index = 0;
     self->rx_state = SERIAL_SERVO_RECV_STARTBYTE_1;
     __HAL_UART_CLEAR_FLAG(&huart6, UART_FLAG_RXNE);
+	__HAL_UART_CLEAR_FLAG(&huart6, UART_FLAG_TXE);
+	 __HAL_UART_CLEAR_FLAG(&huart6, UART_FLAG_TC);
     __HAL_UART_ENABLE_IT(&huart6, UART_IT_TXE);
+    __HAL_UART_ENABLE_IT(&huart6, UART_IT_TC);
+    __HAL_UART_ENABLE_IT(&huart6, UART_IT_RXNE);
+
     if(osOK != osSemaphoreAcquire(serial_servo_rx_completeHandle, self->proc_timeout)) {
         ret = -1;
-    }
+	}
+    __HAL_UART_DISABLE_IT(&huart6, UART_IT_TXE);
+    __HAL_UART_DISABLE_IT(&huart6, UART_IT_TC);
+    __HAL_UART_DISABLE_IT(&huart6, UART_IT_RXNE);
+	__HAL_UART_CLEAR_FLAG(&huart6, UART_FLAG_RXNE);
+	__HAL_UART_CLEAR_FLAG(&huart6, UART_FLAG_TXE);
+	__HAL_UART_CLEAR_FLAG(&huart6, UART_FLAG_TC);
     HAL_GPIO_WritePin(SERIAL_SERVO_RX_EN_GPIO_Port, SERIAL_SERVO_RX_EN_Pin, GPIO_PIN_SET);
     HAL_GPIO_WritePin(SERIAL_SERVO_TX_EN_GPIO_Port, SERIAL_SERVO_TX_EN_Pin, GPIO_PIN_SET);
     return ret;

@@ -62,7 +62,7 @@ typedef struct {
 
 
 typedef enum {
-    SERIAL_SERVO_RECV_STARTBYTE_1,
+    SERIAL_SERVO_RECV_STARTBYTE_1 = 0,
     SERIAL_SERVO_RECV_STARTBYTE_2,
     SERIAL_SERVO_RECV_SERVO_ID,
     SERIAL_SERVO_RECV_LENGTH,
@@ -103,6 +103,7 @@ int serial_servo_read_temp(SerialServoControllerTypeDef *self, uint32_t servo_id
 void serial_servo_set_vin_limit(SerialServoControllerTypeDef *self, uint32_t servo_id, uint32_t limit_l, uint32_t limit_h);
 int serial_servo_read_vin_limit(SerialServoControllerTypeDef *self, uint32_t servo_id, uint16_t limit[2]);
 int serial_servo_read_vin(SerialServoControllerTypeDef *self, uint32_t servo_id, uint16_t *vin);
+int serial_servo_read_load_unload(SerialServoControllerTypeDef *self, uint32_t servo_id, uint8_t* load_unload);
 
 static inline uint8_t serial_servo_checksum(const uint8_t buf[])
 {

@@ -2,6 +2,8 @@
 #include "global.h"
 #include "global_conf.h"
 #include "buzzer.h"
+#include "packet_reports.h"
+#include "packet.h"
 
 float battery_volt = 0.0f; /* 电池电压全局变量, 单位 v */
 static uint16_t adc_value[2];
@@ -27,7 +29,11 @@ void battery_check_timer_callback(void *argument)
 
     if(battery_report_count > (int)(1 * 1000 / BATTERY_TASK_PERIOD)) { /* 定时发送蓝牙电压报告 */
         battery_report_count = 0;
-
+		PacketReportBatteryVoltageTypeDef report;
+		report.sub_cmd = 0x04;
+		report.voltage = (int)(battery_volt + 0.5f);
+        packet_transmit(&packet_controller, PACKET_FUNC_SYS, &report, sizeof(PacketReportBatteryVoltageTypeDef));
+		
 #if ENABLE_LVGL
         ObjectTypeDef object;
         object.structure.type_id = OBJECT_TYPE_ID_BATTERY_VOLTAGE;

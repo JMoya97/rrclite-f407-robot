@@ -531,32 +531,36 @@ void USART6_IRQHandler(void)
   /* USER CODE BEGIN USART6_IRQn 0 */
     extern SerialServoControllerTypeDef serial_servo_controller;
     extern osSemaphoreId_t serial_servo_rx_completeHandle;
-	static uint32_t t1 = 0;
-	
-    if(__HAL_UART_GET_FLAG(&huart6, UART_FLAG_TXE) != RESET) {
-        __HAL_UART_CLEAR_FLAG(&huart6, UART_FLAG_TXE);
-        if(serial_servo_controller.tx_byte_index < serial_servo_controller.tx_frame.elements.length + 4) {  /* 判断数据是否发�?�完�? */
-            huart6.Instance->DR = ((uint8_t*)(&serial_servo_controller.tx_frame))[serial_servo_controller.tx_byte_index++]; /* 继续发�?�下�?个字�? */
-        } else {
-				t1 = HAL_GetTick();
-	        HAL_GPIO_WritePin(SERIAL_SERVO_RX_EN_GPIO_Port, SERIAL_SERVO_RX_EN_Pin, GPIO_PIN_RESET);  /* 转入接收模式 */
-            HAL_GPIO_WritePin(SERIAL_SERVO_TX_EN_GPIO_Port, SERIAL_SERVO_TX_EN_Pin, GPIO_PIN_SET);
-            if(serial_servo_controller.tx_only) {
-                osSemaphoreRelease(serial_servo_rx_completeHandle);
-		
-            }
-			__HAL_UART_DISABLE_IT(&huart6, UART_IT_TXE);
-        }
-    }
 
     if(__HAL_UART_GET_FLAG(&huart6, UART_FLAG_RXNE) != RESET) {
         __HAL_UART_CLEAR_FLAG(&huart6, UART_FLAG_RXNE);
         if(0 == serial_servo_rx_handler(&serial_servo_controller, (uint8_t)(huart6.Instance->DR & (uint8_t)0x00FF))) {
-					printf("%u\r\n", HAL_GetTick() - t1);
-
             osSemaphoreRelease(serial_servo_rx_completeHandle);
         }
     }
+	
+    if(__HAL_UART_GET_FLAG(&huart6, UART_FLAG_TC) != RESET) {
+		__HAL_UART_CLEAR_FLAG(&huart6, UART_FLAG_TC);
+        if(serial_servo_controller.tx_only) {
+            osSemaphoreRelease(serial_servo_rx_completeHandle);
+        }else{
+			HAL_GPIO_WritePin(SERIAL_SERVO_RX_EN_GPIO_Port, SERIAL_SERVO_RX_EN_Pin, GPIO_PIN_RESET);  /* 转入接收模式 */
+			HAL_GPIO_WritePin(SERIAL_SERVO_TX_EN_GPIO_Port, SERIAL_SERVO_TX_EN_Pin, GPIO_PIN_SET);
+		}
+		__HAL_UART_DISABLE_IT(&huart6, UART_IT_TC);
+		return;
+    }
+
+    if(__HAL_UART_GET_FLAG(&huart6, UART_FLAG_TXE) != RESET) {
+        __HAL_UART_CLEAR_FLAG(&huart6, UART_FLAG_TXE);
+        if(serial_servo_controller.tx_byte_index < serial_servo_controller.tx_frame.elements.length + 3) {  /* 判断数据是否发�?�完�? */
+            huart6.Instance->DR = ((uint8_t*)(&serial_servo_controller.tx_frame))[serial_servo_controller.tx_byte_index++]; /* 继续发�?�下�?个字�? */
+        } else {
+            __HAL_UART_DISABLE_IT(&huart6, UART_IT_TXE);
+        }
+    }
+	
+
   /* USER CODE END USART6_IRQn 0 */
   /* USER CODE BEGIN USART6_IRQn 1 */
 

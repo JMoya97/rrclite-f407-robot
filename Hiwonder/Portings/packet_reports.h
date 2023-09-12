@@ -21,6 +21,11 @@ typedef union  {
     } element;
 } PacketReportIMU_Quat_TypeDef;
 
+typedef struct {
+	uint8_t sub_cmd;
+	uint16_t voltage;
+}PacketReportBatteryVoltageTypeDef;
+
 typedef union  {
     struct {
 		float accel_array[3];
