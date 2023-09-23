@@ -96,7 +96,41 @@ typedef struct {
     uint16_t repeat;
 } BuzzerCommandTypeDef;
 
+
+typedef struct {
+	uint8_t sub_cmd;
+	uint8_t length;
+	uint8_t data[];
+}OLEDCommandTypeDef;
+
 #pragma pack()
+
+#if ENABLE_OLED
+static void packet_oled_handle(struct PacketRawFrame *frame)
+{	
+	extern osMutexId_t oled_mutexHandle;
+	extern char oled_l1[];
+	extern char oled_l2[];
+	OLEDCommandTypeDef *cmd = (OLEDCommandTypeDef*)frame->data_and_checksum;
+	osMutexAcquire(oled_mutexHandle, osWaitForever);
+	switch(cmd->sub_cmd) {
+		case 0x01: { /* 设置 SSID */
+			memcpy(oled_l1, cmd->data, cmd->length);
+			oled_l1[cmd->length] = '\0';
+			break;
+		}
+		case 0x02:{ /* 设置 IP 地址 */
+			memcpy(oled_l2, cmd->data, cmd->length);
+			oled_l2[cmd->length] = '\0';
+			break;
+		}
+		default: {
+			break;
+		}
+	}
+	osMutexRelease(oled_mutexHandle);
+}
+#endif
 
 /**
 * @brief 串口命令回调处理
@@ -379,5 +413,8 @@ void packet_handle_init(void)
     packet_register_callback(&packet_controller, PACKET_FUNC_MOTOR, packet_motor_handle);
     packet_register_callback(&packet_controller, PACKET_FUNC_BUS_SERVO, packet_serial_servo_handle);
     packet_register_callback(&packet_controller, PACKET_FUNC_PWM_SERVO, packet_pwm_servo_handle);
+#if ENABLE_OLED
+	packet_register_callback(&packet_controller, PACKET_FUNC_OLED, packet_oled_handle);
+#endif
 }
 

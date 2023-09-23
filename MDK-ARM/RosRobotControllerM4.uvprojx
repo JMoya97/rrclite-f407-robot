@@ -2662,14 +2662,14 @@
               <FilePath>..\Hiwonder\System\battery_handle.c</FilePath>
             </File>
             <File>
-              <FileName>gampad_handle.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Hiwonder\System\gampad_handle.c</FilePath>
-            </File>
-            <File>
               <FileName>gui_handle.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Hiwonder\System\gui_handle.c</FilePath>
+            </File>
+            <File>
+              <FileName>gampad_handle.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Hiwonder\System\gampad_handle.c</FilePath>
             </File>
             <File>
               <FileName>app.c</FileName>
@@ -2685,6 +2685,11 @@
               <FileName>packet_handle.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\Hiwonder\System\packet_handle.h</FilePath>
+            </File>
+            <File>
+              <FileName>oled_handle.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Hiwonder\System\oled_handle.c</FilePath>
             </File>
           </Files>
         </Group>

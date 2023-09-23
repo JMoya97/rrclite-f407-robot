@@ -108,6 +108,13 @@ const osThreadAttr_t bluetooth_task_attributes = {
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
+/* Definitions for oled_task */
+osThreadId_t oled_taskHandle;
+const osThreadAttr_t oled_task_attributes = {
+  .name = "oled_task",
+  .stack_size = 256 * 4,
+  .priority = (osPriority_t) osPriorityBelowNormal,
+};
 /* Definitions for packet_tx_queue */
 osMessageQueueId_t packet_tx_queueHandle;
 uint8_t packet_tx_queueBuffer[ 64 * sizeof( void* ) ];
@@ -179,6 +186,11 @@ const osTimerAttr_t battery_check_timer_attributes = {
   .name = "battery_check_timer",
   .cb_mem = &battery_check_timerControlBlock,
   .cb_size = sizeof(battery_check_timerControlBlock),
+};
+/* Definitions for oled_mutex */
+osMutexId_t oled_mutexHandle;
+const osMutexAttr_t oled_mutex_attributes = {
+  .name = "oled_mutex"
 };
 /* Definitions for packet_tx_idle */
 osSemaphoreId_t packet_tx_idleHandle;
@@ -255,6 +267,7 @@ void sbus_rx_task_entry(void *argument);
 void gui_task_entry(void *argument);
 void app_task_entry(void *argument);
 void bluetooth_task_entry(void *argument);
+void oled_task_entry(void *argument);
 void button_timer_callback(void *argument);
 void led_timer_callback(void *argument);
 void lvgl_timer_callback(void *argument);
@@ -304,6 +317,9 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE BEGIN Init */
 
   /* USER CODE END Init */
+  /* Create the mutex(es) */
+  /* creation of oled_mutex */
+  oled_mutexHandle = osMutexNew(&oled_mutex_attributes);
 
   /* USER CODE BEGIN RTOS_MUTEX */
     /* add mutexes, ... */
@@ -397,11 +413,13 @@ void MX_FREERTOS_Init(void) {
   /* creation of bluetooth_task */
   bluetooth_taskHandle = osThreadNew(bluetooth_task_entry, NULL, &bluetooth_task_attributes);
 
+  /* creation of oled_task */
+  oled_taskHandle = osThreadNew(oled_task_entry, NULL, &oled_task_attributes);
+
   /* USER CODE BEGIN RTOS_THREADS */
     /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
 
-  /* Create the event(s) */
   /* creation of sbus_data_ready_event_ */
   sbus_data_ready_event_Handle = osEventFlagsNew(&sbus_data_ready_event__attributes);
 
@@ -550,6 +568,24 @@ __weak void bluetooth_task_entry(void *argument)
     osDelay(1);
   }
   /* USER CODE END bluetooth_task_entry */
+}
+
+/* USER CODE BEGIN Header_oled_task_entry */
+/**
+* @brief Function implementing the oled_task thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_oled_task_entry */
+__weak void oled_task_entry(void *argument)
+{
+  /* USER CODE BEGIN oled_task_entry */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END oled_task_entry */
 }
 
 /* button_timer_callback function */

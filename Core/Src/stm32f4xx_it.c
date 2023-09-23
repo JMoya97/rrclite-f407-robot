@@ -553,7 +553,7 @@ void USART6_IRQHandler(void)
 
     if(__HAL_UART_GET_FLAG(&huart6, UART_FLAG_TXE) != RESET) {
         __HAL_UART_CLEAR_FLAG(&huart6, UART_FLAG_TXE);
-        if(serial_servo_controller.tx_byte_index < serial_servo_controller.tx_frame.elements.length + 3) {  /* 判断数据是否发�?�完�? */
+        if(serial_servo_controller.tx_byte_index < serial_servo_controller.tx_frame.elements.length + 3) {  /* 判断数据是否发发送完�? */
             huart6.Instance->DR = ((uint8_t*)(&serial_servo_controller.tx_frame))[serial_servo_controller.tx_byte_index++]; /* 继续发�?�下�?个字�? */
         } else {
             __HAL_UART_DISABLE_IT(&huart6, UART_IT_TXE);

@@ -31,6 +31,7 @@ void imus_init(void)
 void imu_task_entry(void *argument)
 {
     extern osSemaphoreId_t mpu6050_data_readyHandle;
+	extern osMutexId_t oled_mutexHandle;
 
     imus_init();
     imus[0]->reset(imus[0]);
@@ -38,7 +39,9 @@ void imu_task_entry(void *argument)
     PacketReportIMU_Raw_TypeDef report;
     for(;;) {
         osSemaphoreAcquire(mpu6050_data_readyHandle, osWaitForever);
+		osMutexAcquire(oled_mutexHandle, osWaitForever);
         imus[0]->update(imus[0]);
+		osMutexRelease(oled_mutexHandle);
 		imus[0]->get_accel(imus[0], report.array.accel_array);
 		imus[0]->get_gyro(imus[0], report.array.gyro_array);
         packet_transmit(&packet_controller, PACKET_FUNC_IMU, &report, sizeof(PacketReportIMU_Raw_TypeDef));

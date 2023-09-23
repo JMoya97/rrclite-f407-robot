@@ -33,6 +33,11 @@ void battery_check_timer_callback(void *argument)
 		report.sub_cmd = 0x04;
 		report.voltage = (int)(battery_volt + 0.5f);
         packet_transmit(&packet_controller, PACKET_FUNC_SYS, &report, sizeof(PacketReportBatteryVoltageTypeDef));
+
+#if ENABLE_OLED
+		extern int oled_battery;
+		oled_battery = (int)(battery_volt + 0.5f);
+#endif
 		
 #if ENABLE_LVGL
         ObjectTypeDef object;
