@@ -1,15 +1,3 @@
-/**
- * @file syscall.c
- * @author Lu Yongping (Lucas@hiwonder.com)
- * @brief 标准库桩函数的重定向
- * @version 0.1
- * @date 2023-05-12
- *
- * @copyright Copyright (c) 2023
- *
- */
-
-
 #include <stdio.h>
 #include "usart.h"
 #include "SEGGER_RTT.h"
@@ -43,15 +31,15 @@ int stdin_getchar (void)
 
 int stderr_putchar (int ch)
 {
-  //  HAL_UART_Transmit(&huart1, (uint8_t*)&ch, 1, 0xFFFF);
-    SEGGER_RTT_Write(0, &ch, 1);
+    HAL_UART_Transmit(&huart1, (uint8_t*)&ch, 1, 0xFFFF);
+    //SEGGER_RTT_Write(0, &ch, 1);
     return ch;
 }
 
 int stdout_putchar (int ch)
 {
-  //  HAL_UART_Transmit(&huart1, (uint8_t*)&ch, 1, 0xFFFF);
-    SEGGER_RTT_Write(0, &ch, 1);
+    HAL_UART_Transmit(&huart1, (uint8_t*)&ch, 1, 0xFFFF);
+    //SEGGER_RTT_Write(0, &ch, 1);
     return (ch);
 }
 

@@ -26,14 +26,13 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "lvgl.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 typedef StaticQueue_t osStaticMessageQDef_t;
 typedef StaticTimer_t osStaticTimerDef_t;
 typedef StaticSemaphore_t osStaticSemaphoreDef_t;
-typedef StaticEventGroup_t osStaticEventGroupDef_t;
 /* USER CODE BEGIN PTD */
 
 /* USER CODE END PTD */
@@ -64,28 +63,28 @@ osThreadId_t imu_taskHandle;
 const osThreadAttr_t imu_task_attributes = {
   .name = "imu_task",
   .stack_size = 256 * 4,
-  .priority = (osPriority_t) osPriorityAboveNormal,
+  .priority = (osPriority_t) osPriorityNormal,
+};
+/* Definitions for encoder_task */
+osThreadId_t encoder_taskHandle;
+const osThreadAttr_t encTaskAttr = {
+  .name = "encoder_task",
+  .priority = (osPriority_t) osPriorityNormal,
+  .stack_size = 512
 };
 /* Definitions for packet_tx_task */
 osThreadId_t packet_tx_taskHandle;
 const osThreadAttr_t packet_tx_task_attributes = {
   .name = "packet_tx_task",
   .stack_size = 256 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
+  .priority = (osPriority_t) osPriorityAboveNormal,
 };
 /* Definitions for packet_rx_task */
 osThreadId_t packet_rx_taskHandle;
 const osThreadAttr_t packet_rx_task_attributes = {
   .name = "packet_rx_task",
   .stack_size = 256 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
-};
-/* Definitions for sbus_rx_task */
-osThreadId_t sbus_rx_taskHandle;
-const osThreadAttr_t sbus_rx_task_attributes = {
-  .name = "sbus_rx_task",
-  .stack_size = 256 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
+  .priority = (osPriority_t) osPriorityAboveNormal,
 };
 /* Definitions for gui_task */
 osThreadId_t gui_taskHandle;
@@ -99,13 +98,6 @@ osThreadId_t app_taskHandle;
 const osThreadAttr_t app_task_attributes = {
   .name = "app_task",
   .stack_size = 512 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
-};
-/* Definitions for bluetooth_task */
-osThreadId_t bluetooth_taskHandle;
-const osThreadAttr_t bluetooth_task_attributes = {
-  .name = "bluetooth_task",
-  .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for oled_task */
@@ -126,11 +118,6 @@ const osMessageQueueAttr_t packet_tx_queue_attributes = {
   .mq_mem = &packet_tx_queueBuffer,
   .mq_size = sizeof(packet_tx_queueBuffer)
 };
-/* Definitions for lvgl_event_queue */
-osMessageQueueId_t lvgl_event_queueHandle;
-const osMessageQueueAttr_t lvgl_event_queue_attributes = {
-  .name = "lvgl_event_queue"
-};
 /* Definitions for moving_ctrl_queue */
 osMessageQueueId_t moving_ctrl_queueHandle;
 uint8_t moving_ctrl_queueBuffer[ 32 * sizeof( char ) ];
@@ -141,11 +128,6 @@ const osMessageQueueAttr_t moving_ctrl_queue_attributes = {
   .cb_size = sizeof(moving_ctrl_queueControlBlock),
   .mq_mem = &moving_ctrl_queueBuffer,
   .mq_size = sizeof(moving_ctrl_queueBuffer)
-};
-/* Definitions for bluetooth_tx_queue */
-osMessageQueueId_t bluetooth_tx_queueHandle;
-const osMessageQueueAttr_t bluetooth_tx_queue_attributes = {
-  .name = "bluetooth_tx_queue"
 };
 /* Definitions for button_timer */
 osTimerId_t button_timerHandle;
@@ -162,14 +144,6 @@ const osTimerAttr_t led_timer_attributes = {
   .name = "led_timer",
   .cb_mem = &led_timerControlBlock,
   .cb_size = sizeof(led_timerControlBlock),
-};
-/* Definitions for lvgl_timer */
-osTimerId_t lvgl_timerHandle;
-osStaticTimerDef_t lvgl_timerControlBlock;
-const osTimerAttr_t lvgl_timer_attributes = {
-  .name = "lvgl_timer",
-  .cb_mem = &lvgl_timerControlBlock,
-  .cb_size = sizeof(lvgl_timerControlBlock),
 };
 /* Definitions for buzzer_timer */
 osTimerId_t buzzer_timerHandle;
@@ -208,21 +182,21 @@ const osSemaphoreAttr_t packet_rx_not_empty_attributes = {
   .cb_mem = &packet_rx_not_emptyControlBlock,
   .cb_size = sizeof(packet_rx_not_emptyControlBlock),
 };
-/* Definitions for mpu6050_data_ready */
-osSemaphoreId_t mpu6050_data_readyHandle;
-osStaticSemaphoreDef_t mpu6050_data_readyControlBlock;
-const osSemaphoreAttr_t mpu6050_data_ready_attributes = {
-  .name = "mpu6050_data_ready",
-  .cb_mem = &mpu6050_data_readyControlBlock,
-  .cb_size = sizeof(mpu6050_data_readyControlBlock),
+/* Definitions for IMU_data_ready */
+osSemaphoreId_t IMU_data_readyHandle;
+osStaticSemaphoreDef_t IMU_data_readyControlBlock;
+const osSemaphoreAttr_t IMU_data_ready_attributes = {
+  .name = "IMU_data_ready",
+  .cb_mem = &IMU_data_readyControlBlock,
+  .cb_size = sizeof(IMU_data_readyControlBlock),
 };
-/* Definitions for sbus_data_ready_01_ */
-osSemaphoreId_t sbus_data_ready_01_Handle;
-osStaticSemaphoreDef_t sbus_data_ready_01_ControlBlock;
-const osSemaphoreAttr_t sbus_data_ready_01__attributes = {
-  .name = "sbus_data_ready_01_",
-  .cb_mem = &sbus_data_ready_01_ControlBlock,
-  .cb_size = sizeof(sbus_data_ready_01_ControlBlock),
+/* Definitions for encoder_stream_ready */
+osSemaphoreId_t encoder_stream_readyHandle;
+osStaticSemaphoreDef_t encoder_stream_readyControlBlock;
+const osSemaphoreAttr_t encoder_stream_ready_attributes = {
+  .name   = "encoder_stream_ready",
+  .cb_mem = &encoder_stream_readyControlBlock,
+  .cb_size= sizeof(encoder_stream_readyControlBlock),
 };
 /* Definitions for spi_tx_finished */
 osSemaphoreId_t spi_tx_finishedHandle;
@@ -232,26 +206,10 @@ const osSemaphoreAttr_t spi_tx_finished_attributes = {
   .cb_mem = &spi_tx_finishedControlBlock,
   .cb_size = sizeof(spi_tx_finishedControlBlock),
 };
-/* Definitions for bluetooth_tx_idle */
-osSemaphoreId_t bluetooth_tx_idleHandle;
-osStaticSemaphoreDef_t bluetooth_tx_idleControlBlock;
-const osSemaphoreAttr_t bluetooth_tx_idle_attributes = {
-  .name = "bluetooth_tx_idle",
-  .cb_mem = &bluetooth_tx_idleControlBlock,
-  .cb_size = sizeof(bluetooth_tx_idleControlBlock),
-};
 /* Definitions for serial_servo_rx_complete */
 osSemaphoreId_t serial_servo_rx_completeHandle;
 const osSemaphoreAttr_t serial_servo_rx_complete_attributes = {
   .name = "serial_servo_rx_complete"
-};
-/* Definitions for sbus_data_ready_event_ */
-osEventFlagsId_t sbus_data_ready_event_Handle;
-osStaticEventGroupDef_t sbus_data_ready_event_ControlBlock;
-const osEventFlagsAttr_t sbus_data_ready_event__attributes = {
-  .name = "sbus_data_ready_event_",
-  .cb_mem = &sbus_data_ready_event_ControlBlock,
-  .cb_size = sizeof(sbus_data_ready_event_ControlBlock),
 };
 
 /* Private function prototypes -----------------------------------------------*/
@@ -261,20 +219,17 @@ const osEventFlagsAttr_t sbus_data_ready_event__attributes = {
 
 void StartDefaultTask(void *argument);
 void imu_task_entry(void *argument);
+void encoders_task_entry(void *argument);
 void packet_tx_task_entry(void *argument);
 void packet_rx_task_entry(void *argument);
-void sbus_rx_task_entry(void *argument);
 void gui_task_entry(void *argument);
 void app_task_entry(void *argument);
-void bluetooth_task_entry(void *argument);
 void oled_task_entry(void *argument);
 void button_timer_callback(void *argument);
 void led_timer_callback(void *argument);
-void lvgl_timer_callback(void *argument);
 void buzzer_timer_callback(void *argument);
 void battery_check_timer_callback(void *argument);
 
-extern void MX_USB_HOST_Init(void);
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
 /* Hook prototypes */
@@ -304,7 +259,6 @@ void vApplicationTickHook( void )
     added here, but the tick hook is called from an interrupt context, so
     code must not attempt to block, and only the interrupt safe FreeRTOS API
     functions can be used (those that end in FromISR()). */
-    lv_tick_inc(1);
 }
 /* USER CODE END 3 */
 
@@ -332,17 +286,14 @@ void MX_FREERTOS_Init(void) {
   /* creation of packet_rx_not_empty */
   packet_rx_not_emptyHandle = osSemaphoreNew(1, 1, &packet_rx_not_empty_attributes);
 
-  /* creation of mpu6050_data_ready */
-  mpu6050_data_readyHandle = osSemaphoreNew(1, 1, &mpu6050_data_ready_attributes);
+  /* creation of IMU_data_ready */
+  IMU_data_readyHandle = osSemaphoreNew(1, 0, &IMU_data_ready_attributes);
 
-  /* creation of sbus_data_ready_01_ */
-  sbus_data_ready_01_Handle = osSemaphoreNew(1, 1, &sbus_data_ready_01__attributes);
+  /* creation of encoder_data_ready */
+  encoder_stream_readyHandle = osSemaphoreNew(1, 0, &encoder_stream_ready_attributes);
 
   /* creation of spi_tx_finished */
   spi_tx_finishedHandle = osSemaphoreNew(1, 1, &spi_tx_finished_attributes);
-
-  /* creation of bluetooth_tx_idle */
-  bluetooth_tx_idleHandle = osSemaphoreNew(1, 1, &bluetooth_tx_idle_attributes);
 
   /* creation of serial_servo_rx_complete */
   serial_servo_rx_completeHandle = osSemaphoreNew(1, 1, &serial_servo_rx_complete_attributes);
@@ -358,9 +309,6 @@ void MX_FREERTOS_Init(void) {
   /* creation of led_timer */
   led_timerHandle = osTimerNew(led_timer_callback, osTimerPeriodic, NULL, &led_timer_attributes);
 
-  /* creation of lvgl_timer */
-  lvgl_timerHandle = osTimerNew(lvgl_timer_callback, osTimerPeriodic, NULL, &lvgl_timer_attributes);
-
   /* creation of buzzer_timer */
   buzzer_timerHandle = osTimerNew(buzzer_timer_callback, osTimerPeriodic, NULL, &buzzer_timer_attributes);
 
@@ -375,14 +323,8 @@ void MX_FREERTOS_Init(void) {
   /* creation of packet_tx_queue */
   packet_tx_queueHandle = osMessageQueueNew (64, sizeof(void*), &packet_tx_queue_attributes);
 
-  /* creation of lvgl_event_queue */
-  lvgl_event_queueHandle = osMessageQueueNew (16, 32, &lvgl_event_queue_attributes);
-
   /* creation of moving_ctrl_queue */
   moving_ctrl_queueHandle = osMessageQueueNew (32, sizeof(char), &moving_ctrl_queue_attributes);
-
-  /* creation of bluetooth_tx_queue */
-  bluetooth_tx_queueHandle = osMessageQueueNew (8, 8, &bluetooth_tx_queue_attributes);
 
   /* USER CODE BEGIN RTOS_QUEUES */
     /* add queues, ... */
@@ -395,14 +337,14 @@ void MX_FREERTOS_Init(void) {
   /* creation of imu_task */
   imu_taskHandle = osThreadNew(imu_task_entry, NULL, &imu_task_attributes);
 
+  /* creation of encoder_task */
+  encoder_taskHandle = osThreadNew(encoders_task_entry, NULL, &encTaskAttr);
+
   /* creation of packet_tx_task */
   packet_tx_taskHandle = osThreadNew(packet_tx_task_entry, NULL, &packet_tx_task_attributes);
 
   /* creation of packet_rx_task */
   packet_rx_taskHandle = osThreadNew(packet_rx_task_entry, NULL, &packet_rx_task_attributes);
-
-  /* creation of sbus_rx_task */
-  sbus_rx_taskHandle = osThreadNew(sbus_rx_task_entry, NULL, &sbus_rx_task_attributes);
 
   /* creation of gui_task */
   gui_taskHandle = osThreadNew(gui_task_entry, NULL, &gui_task_attributes);
@@ -410,18 +352,12 @@ void MX_FREERTOS_Init(void) {
   /* creation of app_task */
   app_taskHandle = osThreadNew(app_task_entry, NULL, &app_task_attributes);
 
-  /* creation of bluetooth_task */
-  bluetooth_taskHandle = osThreadNew(bluetooth_task_entry, NULL, &bluetooth_task_attributes);
-
   /* creation of oled_task */
   oled_taskHandle = osThreadNew(oled_task_entry, NULL, &oled_task_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
     /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
-
-  /* creation of sbus_data_ready_event_ */
-  sbus_data_ready_event_Handle = osEventFlagsNew(&sbus_data_ready_event__attributes);
 
   /* USER CODE BEGIN RTOS_EVENTS */
     /* add events, ... */
@@ -438,8 +374,6 @@ void MX_FREERTOS_Init(void) {
 /* USER CODE END Header_StartDefaultTask */
 void StartDefaultTask(void *argument)
 {
-  /* init code for USB_HOST */
-  MX_USB_HOST_Init();
   /* USER CODE BEGIN StartDefaultTask */
     /* Infinite loop */
     for(;;) {
@@ -463,6 +397,16 @@ __weak void imu_task_entry(void *argument)
         osDelay(1);
     }
   /* USER CODE END imu_task_entry */
+}
+
+__weak void encoders_task_entry(void *argument)
+{
+  /* USER CODE BEGIN encoders_task_entry */
+    /* Infinite loop */
+    for(;;) {
+        osDelay(1);
+    }
+  /* USER CODE END encoders_task_entry */
 }
 
 /* USER CODE BEGIN Header_packet_tx_task_entry */
@@ -497,23 +441,6 @@ __weak void packet_rx_task_entry(void *argument)
         osDelay(1);
     }
   /* USER CODE END packet_rx_task_entry */
-}
-
-/* USER CODE BEGIN Header_sbus_rx_task_entry */
-/**
-* @brief Function implementing the sbus_rx_task thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_sbus_rx_task_entry */
-__weak void sbus_rx_task_entry(void *argument)
-{
-  /* USER CODE BEGIN sbus_rx_task_entry */
-    /* Infinite loop */
-    for(;;) {
-        osDelay(1);
-    }
-  /* USER CODE END sbus_rx_task_entry */
 }
 
 /* USER CODE BEGIN Header_gui_task_entry */
@@ -552,24 +479,6 @@ __weak void app_task_entry(void *argument)
   /* USER CODE END app_task_entry */
 }
 
-/* USER CODE BEGIN Header_bluetooth_task_entry */
-/**
-* @brief Function implementing the bluetooth_task thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_bluetooth_task_entry */
-__weak void bluetooth_task_entry(void *argument)
-{
-  /* USER CODE BEGIN bluetooth_task_entry */
-  /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1);
-  }
-  /* USER CODE END bluetooth_task_entry */
-}
-
 /* USER CODE BEGIN Header_oled_task_entry */
 /**
 * @brief Function implementing the oled_task thread.
@@ -602,14 +511,6 @@ __weak void led_timer_callback(void *argument)
   /* USER CODE BEGIN led_timer_callback */
 
   /* USER CODE END led_timer_callback */
-}
-
-/* lvgl_timer_callback function */
-__weak void lvgl_timer_callback(void *argument)
-{
-  /* USER CODE BEGIN lvgl_timer_callback */
-
-  /* USER CODE END lvgl_timer_callback */
 }
 
 /* buzzer_timer_callback function */

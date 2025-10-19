@@ -1,15 +1,3 @@
-/**
- * @file sbus.h
- * @author Lu Yongping (Lucas@hiwonder.com)
- * @brief SBUS 协议的类型、函数声明
- * @version 0.1
- * @date 2023-05-18
- *
- * @copyright Copyright (c) 2023
- *
- */
-
-
 #ifndef __SBUS_H_
 #define __SBUS_H_
 
@@ -35,4 +23,3 @@ int sbus_decode_frame(uint8_t *buf, SBusStatusObjectTypeDef *status);
 void sbus_print_status(SBusStatusObjectTypeDef *status);
 
 #endif
-

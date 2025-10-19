@@ -19,7 +19,7 @@ void pid_controller_update(PID_ControllerTypeDef *self, float actual, float time
 	float integral = err * time_delta;
 	float derivative = (err - 2 * self->previous_1_err + self->previous_0_err) / time_delta;
 	
-	self->output = (self->kp * err) + (self->ki * integral) + (self->kd * derivative);
+	self->output = (self->kp * proportion) + (self->ki * integral) + (self->kd * derivative);
 	self->previous_1_err = self->previous_0_err;
 	self->previous_0_err = err;
 

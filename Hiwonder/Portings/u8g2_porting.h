@@ -15,4 +15,4 @@ extern u8g2_t *u8g2;
 void u8g2_init(void);
 
 
-#endif //__U8G2_PORTING_H
+#endif

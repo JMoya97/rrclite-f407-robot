@@ -230,16 +230,16 @@ Revision: $Rev: 3892 $
     #ifndef   SEGGER_RTT_MAX_INTERRUPT_PRIORITY
       #define SEGGER_RTT_MAX_INTERRUPT_PRIORITY   (0x20)
     #endif
-    #define SEGGER_RTT_LOCK()   {                                                                   \
-                                  unsigned int LockState;                                           \
-                                  register unsigned char BASEPRI __asm( "basepri");                 \
-                                  LockState = BASEPRI;                                              \
-                                  BASEPRI = SEGGER_RTT_MAX_INTERRUPT_PRIORITY;                      \
-                                  __schedule_barrier();
+//    #define SEGGER_RTT_LOCK()   {
+//                                  unsigned int LockState;
+//                                  register unsigned char BASEPRI __asm( "basepri");
+//                                  LockState = BASEPRI;
+//                                  BASEPRI = SEGGER_RTT_MAX_INTERRUPT_PRIORITY;
+//                                  __schedule_barrier();
 
-    #define SEGGER_RTT_UNLOCK()   BASEPRI = LockState;                                              \
-                                  __schedule_barrier();                                             \
-                                }
+//    #define SEGGER_RTT_UNLOCK()   BASEPRI = LockState;
+//                                  __schedule_barrier();
+//                                }
   #endif
 #endif
 

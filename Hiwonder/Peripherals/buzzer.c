@@ -1,13 +1,3 @@
-/**
- * @file buzzer.c
- * @author Lu Yongping (Lucas@hiwonder.com)
- * @brief 实现硬件&系统无关的蜂鸣器控制
- * @version 0.1
- * @date 2023-05-18
- *
- * @copyright Copyright (c) 2023
- *
- */
 #include "buzzer.h"
 
 void buzzer_task_handler(BuzzerObjectTypeDef *self, uint32_t period)
@@ -64,7 +54,6 @@ void buzzer_task_handler(BuzzerObjectTypeDef *self, uint32_t period)
     }
 }
 
-
 int buzzer_on( BuzzerObjectTypeDef *self, uint32_t freq)
 {
     BuzzerCtrlTypeDef ctrl_structure = {
@@ -97,7 +86,6 @@ int buzzer_didi(BuzzerObjectTypeDef *self, uint32_t freq, uint32_t ticks_on, uin
     };
     return self->put_ctrl_block(self, &ctrl_structure);
 }
-
 
 void buzzer_object_init(BuzzerObjectTypeDef *self)
 {

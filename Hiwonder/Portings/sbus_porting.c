@@ -1,21 +1,9 @@
-/**
- * @file lwmem_porting.c
- * @author Lu Yongping (Lucas@hiwonder.com)
- * @brief SBUS 协议接收的硬件相关处理
- * @version 0.1
- * @date 2023-05-18
- *
- * @copyright Copyright (c) 2023
- *
- */
-
 #include <stdio.h>
 #include "SBus.h"
 #include "lwmem_porting.h"
 #include "lwrb.h"
 #include "usart.h"
 #include "global.h"
-#include "gui_guider.h"
 #include "packet_reports.h"
 
 #define SBUS_RX_DMA_BUFFER_SIZE 32 /* SBUS DMA 接收缓存长度 */
@@ -36,12 +24,6 @@ extern osSemaphoreId_t sbus_data_readyHandle; /* subs数据就绪信号量Handle
 extern osSemaphoreId_t sbus_data_ready_01_Handle;
 extern osEventFlagsId_t sbus_data_ready_event_Handle;
 
-
-/**
- * @brief  SBUS初始化
- *  初始化 SBUS 相关内存、变量并开始SBUS 接收
- * @retval None.
- */
 void sbus_init(void)
 {
     sbus1_status = LWMEM_CCM_MALLOC(sizeof(SBusStatusObjectTypeDef));
@@ -59,19 +41,6 @@ void sbus_init(void)
 
 }
 
-
-/**
- * @brief  SBUS接收事件回调
- *  在 DMA 接收缓存满后或者空闲时触发本函数将接收到的数据压入接收FIFO缓存，再由接收任务完成解析和处理
- *  因为SBUS协议的发送最小间隔为4ms, 而DMA缓存大小设为了32, 所以总是触发空闲事件而不触发DMA满事件
- *  @attention 需要注意, 不是所有遥控接收器都会一次性完成一帧的发送，所以一帧数据可能会触发多次空闲事件, 不能直接使用空闲事件进行帧分割。
- *             因为接收开始位置不一定是帧头位置，所以也不能直接使用DMA接收长度进行分割。
- *             如果一定要使用DMA长度/空闲事件进行帧分割就必须先完成一次帧同步，即接收到一个完整、正确的帧再开始DMA接收确保DMA接收的首字节为帧头。
- *             在本实现中，将所有接收到的数据汇聚为字节流，再通过帧头、帧尾的固定值进行分割。
- * @param huart 串口实例
- * @param Pos 接收到的字节数
- * @retval None.
- */
 static void sbus_dma_receive_event_callback(UART_HandleTypeDef *huart, uint16_t length)
 {
     uint32_t cur_index = sbus1_rx_dma_buffer_index; /* 取得当前DMA缓存的索引号 */
@@ -86,12 +55,6 @@ static void sbus_dma_receive_event_callback(UART_HandleTypeDef *huart, uint16_t 
     }
 }
 
-
-/**
- * @brief  SBUS接收任务入口函数
- * @param argument 入口参数
- * @retval None.
- */
 #if ENABLE_SBUS
 void sbus_rx_task_entry(void *argument)
 {

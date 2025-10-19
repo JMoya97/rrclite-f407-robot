@@ -14,7 +14,7 @@ MecanumChassisTypeDef      jetauto;
 static void jetank_set_motors(void* self, float rps_l, float rps_r)
 {
     encoder_motor_set_speed(motors[0], rps_r);
-    encoder_motor_set_speed(motors[3], -rps_l);
+    encoder_motor_set_speed(motors[1], -rps_l);
 }
 
 
@@ -26,8 +26,6 @@ static void tankblack_set_motors(void* self, float rps_l, float rps_r)
 
 static void ti4wd_set_motors(void* self, float rps_l, float rps_r)
 {
-    encoder_motor_set_speed(motors[3], rps_r);
-    encoder_motor_set_speed(motors[2], -rps_l);
     encoder_motor_set_speed(motors[0], -rps_l);
     encoder_motor_set_speed(motors[1], rps_r);
 }
@@ -36,8 +34,6 @@ static void jetauto_set_motors(void* self, float rps_lh, float rps_lt, float rps
 {
     encoder_motor_set_speed(motors[1], rps_lh);
     encoder_motor_set_speed(motors[0], rps_lt);
-    encoder_motor_set_speed(motors[2], -rps_rh);
-    encoder_motor_set_speed(motors[3], -rps_rt);
 }
 
 
@@ -83,30 +79,22 @@ void set_chassis_type(uint8_t chassis_type)
             chassis = (ChassisTypeDef*)&jetauto;
             set_motor_type(motors[0], MOTOR_TYPE_JGB520);
             set_motor_type(motors[1], MOTOR_TYPE_JGB520);
-            set_motor_type(motors[2], MOTOR_TYPE_JGB520);
-            set_motor_type(motors[3], MOTOR_TYPE_JGB520);
             break;
 
         case CHASSIS_TYPE_JETTANK:
             chassis = (ChassisTypeDef*)&jetank;
             set_motor_type(motors[0], MOTOR_TYPE_JGB528);
             set_motor_type(motors[1], MOTOR_TYPE_JGB528);
-            set_motor_type(motors[2], MOTOR_TYPE_JGB528);
-            set_motor_type(motors[3], MOTOR_TYPE_JGB528);
             break;
         case CHASSIS_TYPE_TI4WD:
             chassis = (ChassisTypeDef*)&ti4wd;
             set_motor_type(motors[0], MOTOR_TYPE_JGA27);
             set_motor_type(motors[1], MOTOR_TYPE_JGA27);
-            set_motor_type(motors[2], MOTOR_TYPE_JGA27);
-            set_motor_type(motors[3], MOTOR_TYPE_JGA27);
 			break;
         case CHASSIS_TYPE_TANKBLACK:
             chassis = (ChassisTypeDef*)&tank_black;
             set_motor_type(motors[0], MOTOR_TYPE_JGB37);
             set_motor_type(motors[1], MOTOR_TYPE_JGB37);
-            set_motor_type(motors[2], MOTOR_TYPE_JGB37);
-            set_motor_type(motors[3], MOTOR_TYPE_JGB37);
 			break;
         default:
             break;

@@ -1,14 +1,3 @@
-/**
- * @file led.c
- * @author Lu Yongping (Lucas@hiwonder.com)
- * @brief 实现硬件无关的LED灯闪烁控制
- * @version 0.1
- * @date 2023-05-13
- *
- * @copyright Copyright (c) 2023
- *
- */
-
 #include "led.h"
 
 void led_task_handler(LEDObjectTypeDef *self, uint32_t period)

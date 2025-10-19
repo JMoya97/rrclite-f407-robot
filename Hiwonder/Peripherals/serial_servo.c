@@ -1,7 +1,3 @@
-//
-// Created by lucas on 2022-08-29.
-//
-
 #include <stdio.h>
 #include "serial_servo.h"
 #include "global.h"

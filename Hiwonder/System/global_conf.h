@@ -1,27 +1,64 @@
 #ifndef __GLOBAL_CONF_H
 #define __GLOBAL_CONF_H
 
-#define ENABLE_IMU  1                     /* IMU 任务是否启动 */
-#define ENABLE_LVGL 0                     /* LVGL 任务是否启动 */
-#define ENABLE_SBUS 1                     /* SBUS 任务是否启动 */
-#define ENABLE_BLUETOOTH                1 /* 蓝牙是否开启 */
-#define ENABLE_OLED 1                    /* 是否开启OLED显示 */
-#define ENABLE_BLUETOOTH_BATTERY_REPORT 1 /* 蓝牙电压报告是否开启 */
-#define ENABLE_BATTERY_LOW_ALARM        1 /* 低电压报警是否开启 */
+#include "motors_param.h"
 
+/* Feature toggles */
+#define ENABLE_IMU                   1   /* Enable IMU task */
+#define ENABLE_LVGL                  0   /* Enable LVGL task */
+#define ENABLE_OLED                  0   /* Enable OLED display */
+#define ENABLE_BATTERY_LOW_ALARM     1   /* Enable low-voltage alarm */
 
-//#define BATTERY_LOW_ALARM_THRESHOLD 6300  /* 低电压报警阈值, 单位毫伏 */
-#define BATTERY_LOW_ALARM_THRESHOLD 9600
+/* Motor ramp & hold (safe defaults) */
+#define ENABLE_MOTOR_PID_LOOP        0
 
+#define MOTOR_POLARITY_0 (+1)
+#define MOTOR_POLARITY_1 (+1)
+#define MOTOR_POLARITY_2 (+1)
+#define MOTOR_POLARITY_3 (-1)
 
-#define KEY1_PUSHED_LEVEL 0
-#define KEY2_PUSHED_LEVEL 0
-#define LED_SYS_LEVEL_ON  0
+/* Slew per 10 ms (TIM7 tick) */
+#define PWM_SLEW_UP_PER_TICK        30
+#define PWM_SLEW_DOWN_PER_TICK      60
 
-#define LED_TASK_PERIOD     30u /* LED状态刷新间隔 */
-#define BUZZER_TASK_PERIOD  30u /* 蜂鸣器状态刷新间隔 */
-#define BUTTON_TASK_PERIOD  30u /* 板载按键扫描间隔 */
-#define BATTERY_TASK_PERIOD 50u /* 电池电量检测间隔 */
-
+/* Gentle coast/hold when target = 0 */
+#ifndef PWM_COAST_HOLD_PWM
+#define PWM_COAST_HOLD_PWM          80
+#endif
+#ifndef HOLD_RPS_DEADBAND
+#define HOLD_RPS_DEADBAND           0.05f   /* |rps| below this is considered stopped */
 #endif
 
+/* Reverse gate settings */
+#ifndef REVERSE_GATE_RPS_THRESH
+#define REVERSE_GATE_RPS_THRESH     0.30f   /* must be slower than this to allow sign flip */
+#endif
+#ifndef REVERSE_GATE_MIN_PWM
+#define REVERSE_GATE_MIN_PWM        120     /* minimum magnitude when starting opposite dir */
+#endif
+#ifndef NORMAL_IDLE_DEADBAND
+#define NORMAL_IDLE_DEADBAND        100     /* near-zero applied PWM considered 'idle' */
+#endif
+
+/* Legacy hold constants (kept for compatibility) */
+#define HOLD_ENABLE                 1
+#define HOLD_KP_TICK                2
+#define HOLD_KD_TICK                0
+#define HOLD_STATIC_PWM             60
+#define HOLD_PWM_MAX                300
+#define HOLD_DEADBAND_TICKS         1
+
+/* Board I/O levels */
+#define KEY1_PUSHED_LEVEL           0
+#define KEY2_PUSHED_LEVEL           0
+#define LED_SYS_LEVEL_ON            0
+
+/* Task periods (ms) */
+#define LED_TASK_PERIOD             30u  /* LED status refresh interval */
+#define BUZZER_TASK_PERIOD          30u  /* Buzzer status refresh interval */
+#define BUTTON_TASK_PERIOD          30u  /* Onboard button scan interval */
+#define BATTERY_TASK_PERIOD         50u  /* Battery level check interval */
+
+#define MOTOR_BRINGUP_TEST          0
+
+#endif /* __GLOBAL_CONF_H */

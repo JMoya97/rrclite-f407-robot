@@ -27,7 +27,6 @@
 #include "spi.h"
 #include "tim.h"
 #include "usart.h"
-#include "usb_host.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -74,7 +73,7 @@ void i2c_scan(void)
         printf("%1X0 ", i);
         for(uint8_t j = 0; j < 0x0F; ++j) {
             uint8_t addr = (i << 4) | j;
-            uint8_t re = HAL_I2C_Mem_Read(&hi2c2, addr << 1, 0, I2C_MEMADD_SIZE_8BIT, &data, 1, 0xff);
+            uint8_t re = HAL_I2C_Mem_Read(&hi2c1, addr << 1, 0, I2C_MEMADD_SIZE_8BIT, &data, 1, 0xff);
             if(re == HAL_OK) {
                 printf("%02X ", addr);
             } else {
@@ -102,7 +101,7 @@ int main(void)
   /* USER CODE BEGIN 1 */
   LOG_INIT();
   SEGGER_RTT_Init();
-  lwmem_assignmem(lwmem_regions);  /* 动�?�内存初始化 */
+  lwmem_assignmem(lwmem_regions);  
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -127,32 +126,30 @@ int main(void)
   MX_GPIO_Init();
   MX_DMA_Init();
   MX_USART1_UART_Init();
-  MX_SPI2_Init();
   MX_TIM1_Init();
   MX_TIM2_Init();
+  //MX_TIM3_Init();
+  //MX_TIM4_Init();
   MX_TIM5_Init();
-  MX_TIM9_Init();
-  MX_TIM10_Init();
-  MX_TIM11_Init();
-  MX_I2C2_Init();
-  MX_UART5_Init();
-  MX_USART2_UART_Init();
-  MX_USART3_UART_Init();
-  MX_USART6_UART_Init();
+  MX_TIM6_Init();
   MX_TIM7_Init();
-  MX_TIM3_Init();
-  MX_TIM4_Init();
-  MX_TIM13_Init();
-  MX_CRC_Init();
+  //MX_TIM9_Init();
+  //MX_TIM10_Init();
+  //MX_TIM11_Init();
   MX_TIM12_Init();
+  MX_TIM13_Init();
+  MX_I2C1_Init();
+  MX_I2C2_Init();
+  MX_CRC_Init();
   MX_ADC1_Init();
+  MX_UART5_Init();
+  MX_SPI1_Init();
 
   /* Initialize interrupts */
   MX_NVIC_Init();
   /* USER CODE BEGIN 2 */
   LOG_DEBUG("Start...\r\n");
   packet_init();
-  //i2c_scan();
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -193,7 +190,7 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLM = 4;
+  RCC_OscInitStruct.PLL.PLLM = 8;
   RCC_OscInitStruct.PLL.PLLN = 168;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 7;
@@ -227,42 +224,15 @@ void SystemClock_Config(void)
   */
 static void MX_NVIC_Init(void)
 {
-  /* DMA1_Stream0_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Stream0_IRQn, 5, 0);
-  HAL_NVIC_EnableIRQ(DMA1_Stream0_IRQn);
-  /* DMA1_Stream1_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Stream1_IRQn, 5, 0);
-  HAL_NVIC_EnableIRQ(DMA1_Stream1_IRQn);
   /* DMA1_Stream2_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Stream2_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(DMA1_Stream2_IRQn);
-  /* DMA1_Stream3_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Stream3_IRQn, 5, 0);
-  HAL_NVIC_EnableIRQ(DMA1_Stream3_IRQn);
-  /* DMA1_Stream4_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Stream4_IRQn, 5, 0);
-  HAL_NVIC_EnableIRQ(DMA1_Stream4_IRQn);
-  /* DMA1_Stream5_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Stream5_IRQn, 5, 0);
-  HAL_NVIC_EnableIRQ(DMA1_Stream5_IRQn);
-  /* DMA1_Stream6_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Stream6_IRQn, 5, 0);
-  HAL_NVIC_EnableIRQ(DMA1_Stream6_IRQn);
   /* TIM2_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(TIM2_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(TIM2_IRQn);
   /* TIM3_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(TIM3_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(TIM3_IRQn);
-  /* TIM4_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(TIM4_IRQn, 5, 0);
-  HAL_NVIC_EnableIRQ(TIM4_IRQn);
-  /* USART2_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(USART2_IRQn, 5, 0);
-  HAL_NVIC_EnableIRQ(USART2_IRQn);
-  /* USART3_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(USART3_IRQn, 5, 0);
-  HAL_NVIC_EnableIRQ(USART3_IRQn);
   /* EXTI15_10_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(EXTI15_10_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
@@ -278,18 +248,13 @@ static void MX_NVIC_Init(void)
   /* TIM5_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(TIM5_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(TIM5_IRQn);
-  /* UART5_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(UART5_IRQn, 5, 0);
-  HAL_NVIC_EnableIRQ(UART5_IRQn);
   /* TIM7_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(TIM7_IRQn, 5, 0);
+  HAL_NVIC_SetPriority(TIM7_IRQn, 6, 0);
   HAL_NVIC_EnableIRQ(TIM7_IRQn);
-  /* USART6_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(USART6_IRQn, 5, 0);
-  HAL_NVIC_EnableIRQ(USART6_IRQn);
-  /* OTG_HS_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(OTG_HS_IRQn, 5, 0);
-  HAL_NVIC_EnableIRQ(OTG_HS_IRQn);
+  /* TIM6_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(TIM6_DAC_IRQn, 6, 0);
+  HAL_NVIC_EnableIRQ(TIM6_DAC_IRQn);
+
 }
 
 /* USER CODE BEGIN 4 */

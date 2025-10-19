@@ -27,10 +27,6 @@ struct PacketRawFrame {
 };
 #pragma pack()
 
-/**
- * @brief 解析器状态机状态枚举
- *
- */
 enum PacketControllerState {
     PACKET_CONTROLLER_STATE_STARTBYTE1, /**< 正在寻找帧头标记1 */
     PACKET_CONTROLLER_STATE_STARTBYTE2, /**< 正在寻找帧头标记2 */
@@ -40,10 +36,6 @@ enum PacketControllerState {
     PACKET_CONTROLLER_STATE_CHECKSUM, /** 正在处理数据校验 */
 };
 
-/**
- * @brief 帧功能号枚举
- *
- */
 enum PACKET_FUNCTION {
     PACKET_FUNC_SYS = 0,
     PACKET_FUNC_LED,
@@ -53,18 +45,16 @@ enum PACKET_FUNCTION {
     PACKET_FUNC_BUS_SERVO,
     PACKET_FUNC_KEY,
     PACKET_FUNC_IMU,
+    PACKET_FUNC_ENCODER,
     PACKET_FUNC_GAMEPAD,
     PACKET_FUNC_SBUS,
 	PACKET_FUNC_OLED,
+    PACKET_FUNC_RGB,
     PACKET_FUNC_NONE,
 };
 
 typedef void(*packet_handle)(struct PacketRawFrame *);
 
-/**
- * @brief 协议解析器
- * @details 协议解析器, 存储了解析器的工作状态、状态机状态等
- */
 struct PacketController {
     enum PacketControllerState state;        /**< 解析器状态机当前状态 */
     struct PacketRawFrame frame;             /**< 解析器正在处理的帧 */
@@ -82,36 +72,10 @@ struct PacketController {
     struct PacketRawFrame* tx_dma_buffer; /**< 正在发送的DMA缓存*/
 };
 
-
-/**
- * @brief 串口命令回调注册
- * @param self 协议实例
- * @param func 功能ID
- * @param handle 回调函数
- * @retval None
-*/
 void packet_register_callback(struct PacketController *self, enum PACKET_FUNCTION func, packet_handle p);
 
-
-/**
- * @brief 串口协议接收处理
- * @details 传入数据，根据状态机状态和数据切换状态机状态，完成协议的接收解析
- *          解析出的数据帧会压入接收帧队列
- * @param self 协议实例
- * @retval None
- */
 void packet_recv(struct PacketController *self);
 
-/**
- * @brief  串口协议发送处理
- *
- * @param self  协议实例
- * @param func  功能号
- * @param data  数据段
- * @param data_len  数据段长度
- * @retval  ==0 成功
- * @retval  !=0 失败
- */
 int packet_transmit(struct PacketController *self, uint8_t func, void* data, size_t data_len);
 
 #endif

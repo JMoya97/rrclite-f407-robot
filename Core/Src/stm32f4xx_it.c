@@ -58,26 +58,22 @@
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
-extern HCD_HandleTypeDef hhcd_USB_OTG_HS;
 extern DMA_HandleTypeDef hdma_i2c2_rx;
 extern DMA_HandleTypeDef hdma_i2c2_tx;
-extern DMA_HandleTypeDef hdma_spi2_tx;
+extern DMA_HandleTypeDef hdma_spi1_tx;
+extern SPI_HandleTypeDef hspi1;
 extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim3;
 extern TIM_HandleTypeDef htim4;
 extern TIM_HandleTypeDef htim5;
+extern TIM_HandleTypeDef htim6;
 extern TIM_HandleTypeDef htim7;
 extern TIM_HandleTypeDef htim12;
 extern TIM_HandleTypeDef htim13;
-extern DMA_HandleTypeDef hdma_uart5_rx;
-extern DMA_HandleTypeDef hdma_usart2_rx;
-extern DMA_HandleTypeDef hdma_usart2_tx;
-extern DMA_HandleTypeDef hdma_usart3_rx;
-extern DMA_HandleTypeDef hdma_usart3_tx;
+extern DMA_HandleTypeDef hdma_usart1_rx;
+extern DMA_HandleTypeDef hdma_usart1_tx;
 extern UART_HandleTypeDef huart5;
-extern UART_HandleTypeDef huart2;
-extern UART_HandleTypeDef huart3;
-extern UART_HandleTypeDef huart6;
+extern UART_HandleTypeDef huart1;
 extern TIM_HandleTypeDef htim14;
 
 /* USER CODE BEGIN EV */
@@ -183,34 +179,6 @@ void DebugMon_Handler(void)
 /******************************************************************************/
 
 /**
-  * @brief This function handles DMA1 stream0 global interrupt.
-  */
-void DMA1_Stream0_IRQHandler(void)
-{
-  /* USER CODE BEGIN DMA1_Stream0_IRQn 0 */
-
-  /* USER CODE END DMA1_Stream0_IRQn 0 */
-  HAL_DMA_IRQHandler(&hdma_uart5_rx);
-  /* USER CODE BEGIN DMA1_Stream0_IRQn 1 */
-
-  /* USER CODE END DMA1_Stream0_IRQn 1 */
-}
-
-/**
-  * @brief This function handles DMA1 stream1 global interrupt.
-  */
-void DMA1_Stream1_IRQHandler(void)
-{
-  /* USER CODE BEGIN DMA1_Stream1_IRQn 0 */
-
-  /* USER CODE END DMA1_Stream1_IRQn 0 */
-  HAL_DMA_IRQHandler(&hdma_usart3_rx);
-  /* USER CODE BEGIN DMA1_Stream1_IRQn 1 */
-
-  /* USER CODE END DMA1_Stream1_IRQn 1 */
-}
-
-/**
   * @brief This function handles DMA1 stream2 global interrupt.
   */
 void DMA1_Stream2_IRQHandler(void)
@@ -225,68 +193,12 @@ void DMA1_Stream2_IRQHandler(void)
 }
 
 /**
-  * @brief This function handles DMA1 stream3 global interrupt.
-  */
-void DMA1_Stream3_IRQHandler(void)
-{
-  /* USER CODE BEGIN DMA1_Stream3_IRQn 0 */
-
-  /* USER CODE END DMA1_Stream3_IRQn 0 */
-  HAL_DMA_IRQHandler(&hdma_usart3_tx);
-  /* USER CODE BEGIN DMA1_Stream3_IRQn 1 */
-
-  /* USER CODE END DMA1_Stream3_IRQn 1 */
-}
-
-/**
-  * @brief This function handles DMA1 stream4 global interrupt.
-  */
-void DMA1_Stream4_IRQHandler(void)
-{
-  /* USER CODE BEGIN DMA1_Stream4_IRQn 0 */
-
-  /* USER CODE END DMA1_Stream4_IRQn 0 */
-  HAL_DMA_IRQHandler(&hdma_spi2_tx);
-  /* USER CODE BEGIN DMA1_Stream4_IRQn 1 */
-
-  /* USER CODE END DMA1_Stream4_IRQn 1 */
-}
-
-/**
-  * @brief This function handles DMA1 stream5 global interrupt.
-  */
-void DMA1_Stream5_IRQHandler(void)
-{
-  /* USER CODE BEGIN DMA1_Stream5_IRQn 0 */
-
-  /* USER CODE END DMA1_Stream5_IRQn 0 */
-  HAL_DMA_IRQHandler(&hdma_usart2_rx);
-  /* USER CODE BEGIN DMA1_Stream5_IRQn 1 */
-
-  /* USER CODE END DMA1_Stream5_IRQn 1 */
-}
-
-/**
-  * @brief This function handles DMA1 stream6 global interrupt.
-  */
-void DMA1_Stream6_IRQHandler(void)
-{
-  /* USER CODE BEGIN DMA1_Stream6_IRQn 0 */
-
-  /* USER CODE END DMA1_Stream6_IRQn 0 */
-  HAL_DMA_IRQHandler(&hdma_usart2_tx);
-  /* USER CODE BEGIN DMA1_Stream6_IRQn 1 */
-
-  /* USER CODE END DMA1_Stream6_IRQn 1 */
-}
-
-/**
   * @brief This function handles TIM2 global interrupt.
   */
 void TIM2_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM2_IRQn 0 */
-    extern EncoderMotorObjectTypeDef *motors[4];
+    extern EncoderMotorObjectTypeDef *motors[2];
     if(__HAL_TIM_GET_FLAG(&htim2, TIM_FLAG_UPDATE) != RESET) {
         __HAL_TIM_CLEAR_FLAG(&htim2, TIM_FLAG_UPDATE);
         if(__HAL_TIM_IS_TIM_COUNTING_DOWN(&htim2)) {
@@ -303,75 +215,52 @@ void TIM2_IRQHandler(void)
 }
 
 /**
-  * @brief This function handles TIM3 global interrupt.
+  * @brief This function handles TIM5 global interrupt.
   */
-void TIM3_IRQHandler(void)
+void TIM5_IRQHandler(void)
 {
-  /* USER CODE BEGIN TIM3_IRQn 0 */
-    extern EncoderMotorObjectTypeDef *motors[4];
-
-    if(__HAL_TIM_GET_FLAG(&htim3, TIM_FLAG_UPDATE) != RESET) {
-        __HAL_TIM_CLEAR_FLAG(&htim3, TIM_FLAG_UPDATE);
-        if(__HAL_TIM_IS_TIM_COUNTING_DOWN(&htim3)) {
-            --motors[3]->overflow_num;
+  /* USER CODE BEGIN TIM5_IRQn 0 */
+    extern EncoderMotorObjectTypeDef *motors[2];
+    if(__HAL_TIM_GET_FLAG(&htim5, TIM_FLAG_UPDATE) != RESET) {
+        __HAL_TIM_CLEAR_FLAG(&htim5, TIM_FLAG_UPDATE);
+        if(__HAL_TIM_IS_TIM_COUNTING_DOWN(&htim5)) {
+            --motors[0]->overflow_num;
         } else {
-            ++motors[3]->overflow_num;
+            ++motors[0]->overflow_num;
         }
-        //printf("motor4, counts:%d", motors[3]->overflow_num * 60000 + __HAL_TIM_GetCounter(&htim3));
+        //printf("motor1, counts:%d", motors[0]->overflow_num * 60000 + __HAL_TIM_GetCounter(&htim5));
     }
-  /* USER CODE END TIM3_IRQn 0 */
-  /* USER CODE BEGIN TIM3_IRQn 1 */
-
-  /* USER CODE END TIM3_IRQn 1 */
+  /* USER CODE END TIM5_IRQn 0 */
+  /* USER CODE BEGIN TIM5_IRQn 1 */
+  /* USER CODE END TIM5_IRQn 1 */
 }
 
 /**
-  * @brief This function handles TIM4 global interrupt.
+  * @brief This function handles SPI1 global interrupt.
   */
-void TIM4_IRQHandler(void)
+void SPI1_IRQHandler(void)
 {
-  /* USER CODE BEGIN TIM4_IRQn 0 */
-    extern EncoderMotorObjectTypeDef *motors[4];
-    if(__HAL_TIM_GET_FLAG(&htim4, TIM_FLAG_UPDATE) != RESET) {
-        __HAL_TIM_CLEAR_FLAG(&htim4, TIM_FLAG_UPDATE);
-        if(__HAL_TIM_IS_TIM_COUNTING_DOWN(&htim4)) {
-            --motors[2]->overflow_num;
-        } else {
-            ++motors[2]->overflow_num;
-        }
-        //printf("motor3, counts:%d", motors[2]->overflow_num * 60000 + __HAL_TIM_GetCounter(&htim4));
-    }
-  /* USER CODE END TIM4_IRQn 0 */
-  /* USER CODE BEGIN TIM4_IRQn 1 */
+  /* USER CODE BEGIN SPI1_IRQn 0 */
 
-  /* USER CODE END TIM4_IRQn 1 */
+  /* USER CODE END SPI1_IRQn 0 */
+  HAL_SPI_IRQHandler(&hspi1);
+  /* USER CODE BEGIN SPI1_IRQn 1 */
+
+  /* USER CODE END SPI1_IRQn 1 */
 }
 
 /**
-  * @brief This function handles USART2 global interrupt.
+  * @brief This function handles USART1 global interrupt.
   */
-void USART2_IRQHandler(void)
+void USART1_IRQHandler(void)
 {
-  /* USER CODE BEGIN USART2_IRQn 0 */
+  /* USER CODE BEGIN USART1_IRQn 0 */
+    __HAL_UNLOCK(&huart1); /* 解�?，�?��?死�? */
+  /* USER CODE END USART1_IRQn 0 */
+  HAL_UART_IRQHandler(&huart1);
+  /* USER CODE BEGIN USART1_IRQn 1 */
 
-  /* USER CODE END USART2_IRQn 0 */
-  HAL_UART_IRQHandler(&huart2);
-  /* USER CODE BEGIN USART2_IRQn 1 */
-
-  /* USER CODE END USART2_IRQn 1 */
-}
-
-/**
-  * @brief This function handles USART3 global interrupt.
-  */
-void USART3_IRQHandler(void)
-{
-  /* USER CODE BEGIN USART3_IRQn 0 */
-    __HAL_UNLOCK(&huart3); /* 解锁，避免死�? */
-  /* USER CODE END USART3_IRQn 0 */
-  HAL_UART_IRQHandler(&huart3);
-  /* USER CODE BEGIN USART3_IRQn 1 */
-  /* USER CODE END USART3_IRQn 1 */
+  /* USER CODE END USART1_IRQn 1 */
 }
 
 /**
@@ -380,11 +269,17 @@ void USART3_IRQHandler(void)
 void EXTI15_10_IRQHandler(void)
 {
   /* USER CODE BEGIN EXTI15_10_IRQn 0 */
-    extern osSemaphoreId_t mpu6050_data_readyHandle;
-    if(__HAL_GPIO_EXTI_GET_IT(IMU_ITR_Pin) != RESET) {
-        __HAL_GPIO_EXTI_CLEAR_IT(IMU_ITR_Pin);
-        osSemaphoreRelease(mpu6050_data_readyHandle);
-    }
+	#if 0  // IMU pacing now done by TIM6 @ 100 Hz
+		extern osSemaphoreId_t IMU_data_readyHandle;
+		if(__HAL_GPIO_EXTI_GET_IT(IMU_ITR_Pin) != RESET) {
+			__HAL_GPIO_EXTI_CLEAR_IT(IMU_ITR_Pin);
+			osSemaphoreRelease(IMU_data_readyHandle);
+		}
+	#else
+		if(__HAL_GPIO_EXTI_GET_IT(IMU_ITR_Pin) != RESET) {
+			__HAL_GPIO_EXTI_CLEAR_IT(IMU_ITR_Pin);
+		}
+	#endif
   /* USER CODE END EXTI15_10_IRQn 0 */
   /* USER CODE BEGIN EXTI15_10_IRQn 1 */
 
@@ -466,119 +361,195 @@ void DMA1_Stream7_IRQHandler(void)
 }
 
 /**
-  * @brief This function handles TIM5 global interrupt.
-  */
-void TIM5_IRQHandler(void)
-{
-  /* USER CODE BEGIN TIM5_IRQn 0 */
-    extern EncoderMotorObjectTypeDef *motors[4];
-    if(__HAL_TIM_GET_FLAG(&htim5, TIM_FLAG_UPDATE) != RESET) {
-        __HAL_TIM_CLEAR_FLAG(&htim5, TIM_FLAG_UPDATE);
-        if(__HAL_TIM_IS_TIM_COUNTING_DOWN(&htim5)) {
-            --motors[0]->overflow_num;
-        } else {
-            ++motors[0]->overflow_num;
-        }
-        //printf("motor1, counts:%d", motors[0]->overflow_num * 60000 + __HAL_TIM_GetCounter(&htim5));
-    }
-  /* USER CODE END TIM5_IRQn 0 */
-  /* USER CODE BEGIN TIM5_IRQn 1 */
-  /* USER CODE END TIM5_IRQn 1 */
-}
-
-/**
   * @brief This function handles UART5 global interrupt.
   */
 void UART5_IRQHandler(void)
 {
   /* USER CODE BEGIN UART5_IRQn 0 */
+    extern SerialServoControllerTypeDef serial_servo_controller;
+    extern osSemaphoreId_t serial_servo_rx_completeHandle;
 
+    if(__HAL_UART_GET_FLAG(&huart5, UART_FLAG_RXNE) != RESET) {
+        __HAL_UART_CLEAR_FLAG(&huart5, UART_FLAG_RXNE);
+        if(0 == serial_servo_rx_handler(&serial_servo_controller, (uint8_t)(huart5.Instance->DR & (uint8_t)0x00FF))) {
+            osSemaphoreRelease(serial_servo_rx_completeHandle);
+        }
+    }
+	
+    if(__HAL_UART_GET_FLAG(&huart5, UART_FLAG_TC) != RESET) {
+		__HAL_UART_CLEAR_FLAG(&huart5, UART_FLAG_TC);
+        if(serial_servo_controller.tx_only) {
+            osSemaphoreRelease(serial_servo_rx_completeHandle);
+        }else{
+//			HAL_GPIO_WritePin(SERIAL_SERVO_RX_EN_GPIO_Port, SERIAL_SERVO_RX_EN_Pin, GPIO_PIN_RESET);  /* 转入接收模�? */
+//			HAL_GPIO_WritePin(SERIAL_SERVO_TX_EN_GPIO_Port, SERIAL_SERVO_TX_EN_Pin, GPIO_PIN_SET);
+            HAL_HalfDuplex_EnableReceiver(&huart5);
+		}
+		__HAL_UART_DISABLE_IT(&huart5, UART_IT_TC);
+		return;
+    }
+    
+    if(__HAL_UART_GET_FLAG(&huart5, UART_FLAG_TXE) != RESET) {
+        __HAL_UART_CLEAR_FLAG(&huart5, UART_FLAG_TXE);
+        if(serial_servo_controller.tx_byte_index < serial_servo_controller.tx_frame.elements.length + 3) {  /* 判断数�?�是�?��?��?��?完�? */
+            huart5.Instance->DR = ((uint8_t*)(&serial_servo_controller.tx_frame))[serial_servo_controller.tx_byte_index++]; /* 继续�?��?下丿个字�? */
+        } else {
+            __HAL_UART_DISABLE_IT(&huart5, UART_IT_TXE);
+        }
+    }
   /* USER CODE END UART5_IRQn 0 */
   HAL_UART_IRQHandler(&huart5);
   /* USER CODE BEGIN UART5_IRQn 1 */
-
+    
   /* USER CODE END UART5_IRQn 1 */
 }
+
+/**
+  * @brief This function handles TIM6 global interrupt (shared with DAC).
+  */
+void TIM6_DAC_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM6_DAC_IRQn 0 */
+  if (__HAL_TIM_GET_FLAG(&htim6, TIM_FLAG_UPDATE) != RESET &&
+      __HAL_TIM_GET_IT_SOURCE(&htim6, TIM_IT_UPDATE) != RESET)
+  {
+    __HAL_TIM_CLEAR_IT(&htim6, TIM_IT_UPDATE);
+    extern osSemaphoreId_t IMU_data_readyHandle;
+    if (IMU_data_readyHandle) {
+      osSemaphoreRelease(IMU_data_readyHandle);
+    }
+  }
+  /* USER CODE END TIM6_DAC_IRQn 0 */
+  /* USER CODE BEGIN TIM6_DAC_IRQn 1 */
+  /* USER CODE END TIM6_DAC_IRQn 1 */
+}
+
+
 
 /**
   * @brief This function handles TIM7 global interrupt.
   */
 void TIM7_IRQHandler(void)
 {
-  /* USER CODE BEGIN TIM7_IRQn 0 */
-    extern EncoderMotorObjectTypeDef *motors[4];
-    if(__HAL_TIM_GET_FLAG(&htim7, TIM_FLAG_UPDATE) != RESET) {
-        __HAL_TIM_CLEAR_FLAG(&htim7, TIM_FLAG_UPDATE);
-        encoder_update(motors[0], 0.01, __HAL_TIM_GET_COUNTER(&htim5));
-        encoder_update(motors[1], 0.01, __HAL_TIM_GET_COUNTER(&htim2));
-        encoder_update(motors[2], 0.01, __HAL_TIM_GET_COUNTER(&htim4));
-        encoder_update(motors[3], 0.01, __HAL_TIM_GET_COUNTER(&htim3));
-        for(int i = 0; i < 4; ++i) {
-            encoder_motor_control(motors[i], 0.01);
+    /* USER CODE BEGIN TIM7_IRQn 0 */
+    extern EncoderMotorObjectTypeDef *motors[2];
+    extern volatile int motors_pwm_target[2];
+    extern volatile int motors_pwm_current[2];
+
+    if (__HAL_TIM_GET_FLAG(&htim7, TIM_FLAG_UPDATE) != RESET &&
+        __HAL_TIM_GET_IT_SOURCE(&htim7, TIM_IT_UPDATE) != RESET) {
+
+        __HAL_TIM_CLEAR_IT(&htim7, TIM_IT_UPDATE);
+
+        // latch counters & schedule encoder stream (no TX in IRQ)
+        extern void encoders_timer7_cb(void);
+        encoders_timer7_cb();
+
+        // keep your existing 10 ms math exactly as-is
+        uint32_t c0 = __HAL_TIM_GET_COUNTER(&htim5);
+        uint32_t c1 = __HAL_TIM_GET_COUNTER(&htim2);
+
+        encoder_update(motors[0], 0.01f, c0);
+        encoder_update(motors[1], 0.01f, c1);
+
+    #if ENABLE_MOTOR_PID_LOOP
+        for (int i = 0; i < 2; ++i) {
+            encoder_motor_control(motors[i], 0.01f);
+        }
+    #endif
+
+        /* Slew target → current (visible ramp) */
+        for (int i = 0; i < 2; ++i) {
+            int cur  = motors_pwm_current[i];
+            int tgt  = motors_pwm_target[i];
+
+            /* Read measured speed (rps) from motor object updated by encoder_update() */
+            float rps = motors[i]->rps;  /* if you prefer TPS: use motors[i]->tps / 1040.0f */
+
+            /* ---- A) Reverse-gate: if direction flips while still spinning, aim for zero first ---- */
+            if (((cur > 0 && tgt < 0) || (cur < 0 && tgt > 0)) &&
+                ((rps > REVERSE_GATE_RPS_THRESH) || (rps < -REVERSE_GATE_RPS_THRESH))) {
+                tgt = 0;  /* temporarily force zero until the wheel is nearly stopped */
+            }
+
+            /* ---- B) Gentle hold at zero: when target==0 but wheel is coasting, oppose slightly ---- */
+            if (tgt == 0) {
+                float mag = (rps >= 0.0f) ? rps : -rps;
+                if (mag > HOLD_RPS_DEADBAND) {
+                    int hold = PWM_COAST_HOLD_PWM;
+                    /* if we're already near idle PWM, nudge with a small opposite value */
+                    if (cur > -NORMAL_IDLE_DEADBAND && cur < NORMAL_IDLE_DEADBAND) {
+                        tgt = (rps > 0.0f) ? -hold : hold;
+                    }
+                }
+            }
+
+            /* ---- C) Slew toward (possibly adjusted) target ---- */
+            int diff = tgt - cur;
+            if (diff > 0) {
+                int step = PWM_SLEW_UP_PER_TICK;
+                if (diff < step) step = diff;
+                cur += step;
+            } else if (diff < 0) {
+                int step = PWM_SLEW_DOWN_PER_TICK;
+                if (-diff < step) step = -diff;
+                cur -= step;
+            }
+
+            /* clamp just in case */
+            if (cur > 1000) cur = 1000;
+            if (cur < -1000) cur = -1000;
+
+            if (cur != motors_pwm_current[i]) {
+                motors_pwm_current[i] = cur;
+                motors[i]->set_pulse(motors[i], cur);
+            }
         }
     }
-  /* USER CODE END TIM7_IRQn 0 */
-  /* USER CODE BEGIN TIM7_IRQn 1 */
+    /* USER CODE END TIM7_IRQn 0 */
+    /* USER CODE BEGIN TIM7_IRQn 1 */
+    /* USER CODE END TIM7_IRQn 1 */
+}
+/**
+  * @brief This function handles DMA2 stream2 global interrupt.
+  */
+void DMA2_Stream2_IRQHandler(void)
+{
+  /* USER CODE BEGIN DMA2_Stream2_IRQn 0 */
 
-  /* USER CODE END TIM7_IRQn 1 */
+  /* USER CODE END DMA2_Stream2_IRQn 0 */
+  HAL_DMA_IRQHandler(&hdma_usart1_rx);
+  /* USER CODE BEGIN DMA2_Stream2_IRQn 1 */
+
+  /* USER CODE END DMA2_Stream2_IRQn 1 */
 }
 
 /**
-  * @brief This function handles USART6 global interrupt.
+  * @brief This function handles DMA2 stream3 global interrupt.
   */
-void USART6_IRQHandler(void)
+void DMA2_Stream3_IRQHandler(void)
 {
-  /* USER CODE BEGIN USART6_IRQn 0 */
-    extern SerialServoControllerTypeDef serial_servo_controller;
-    extern osSemaphoreId_t serial_servo_rx_completeHandle;
+  /* USER CODE BEGIN DMA2_Stream3_IRQn 0 */
 
-    if(__HAL_UART_GET_FLAG(&huart6, UART_FLAG_RXNE) != RESET) {
-        __HAL_UART_CLEAR_FLAG(&huart6, UART_FLAG_RXNE);
-        if(0 == serial_servo_rx_handler(&serial_servo_controller, (uint8_t)(huart6.Instance->DR & (uint8_t)0x00FF))) {
-            osSemaphoreRelease(serial_servo_rx_completeHandle);
-        }
-    }
-	
-    if(__HAL_UART_GET_FLAG(&huart6, UART_FLAG_TC) != RESET) {
-		__HAL_UART_CLEAR_FLAG(&huart6, UART_FLAG_TC);
-        if(serial_servo_controller.tx_only) {
-            osSemaphoreRelease(serial_servo_rx_completeHandle);
-        }else{
-			HAL_GPIO_WritePin(SERIAL_SERVO_RX_EN_GPIO_Port, SERIAL_SERVO_RX_EN_Pin, GPIO_PIN_RESET);  /* 转入接收模式 */
-			HAL_GPIO_WritePin(SERIAL_SERVO_TX_EN_GPIO_Port, SERIAL_SERVO_TX_EN_Pin, GPIO_PIN_SET);
-		}
-		__HAL_UART_DISABLE_IT(&huart6, UART_IT_TC);
-		return;
-    }
+  /* USER CODE END DMA2_Stream3_IRQn 0 */
+  HAL_DMA_IRQHandler(&hdma_spi1_tx);
+  /* USER CODE BEGIN DMA2_Stream3_IRQn 1 */
 
-    if(__HAL_UART_GET_FLAG(&huart6, UART_FLAG_TXE) != RESET) {
-        __HAL_UART_CLEAR_FLAG(&huart6, UART_FLAG_TXE);
-        if(serial_servo_controller.tx_byte_index < serial_servo_controller.tx_frame.elements.length + 3) {  /* 判断数据是否发发送完�? */
-            huart6.Instance->DR = ((uint8_t*)(&serial_servo_controller.tx_frame))[serial_servo_controller.tx_byte_index++]; /* 继续发�?�下�?个字�? */
-        } else {
-            __HAL_UART_DISABLE_IT(&huart6, UART_IT_TXE);
-        }
-    }
-	
-
-  /* USER CODE END USART6_IRQn 0 */
-  /* USER CODE BEGIN USART6_IRQn 1 */
-
-  /* USER CODE END USART6_IRQn 1 */
+  /* USER CODE END DMA2_Stream3_IRQn 1 */
 }
 
 /**
-  * @brief This function handles USB On The Go HS global interrupt.
+  * @brief This function handles DMA2 stream7 global interrupt.
   */
-void OTG_HS_IRQHandler(void)
+void DMA2_Stream7_IRQHandler(void)
 {
-  /* USER CODE BEGIN OTG_HS_IRQn 0 */
+  /* USER CODE BEGIN DMA2_Stream7_IRQn 0 */
 
-  /* USER CODE END OTG_HS_IRQn 0 */
-  HAL_HCD_IRQHandler(&hhcd_USB_OTG_HS);
-  /* USER CODE BEGIN OTG_HS_IRQn 1 */
+  /* USER CODE END DMA2_Stream7_IRQn 0 */
+  HAL_DMA_IRQHandler(&hdma_usart1_tx);
+  /* USER CODE BEGIN DMA2_Stream7_IRQn 1 */
 
-  /* USER CODE END OTG_HS_IRQn 1 */
+  /* USER CODE END DMA2_Stream7_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */

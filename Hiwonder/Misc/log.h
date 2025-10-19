@@ -1,14 +1,3 @@
-/**
- * @file log.h
- * @author Lu Yongping (Lucas@hiwonder.com)
- * @brief LOG 相关定义和声明
- * @version 0.1
- * @date 2023-05-12
- *
- * @copyright Copyright (c) 2023
- *
- */
-
 #ifndef __LOG_H__
 #define __LOG_H__
 

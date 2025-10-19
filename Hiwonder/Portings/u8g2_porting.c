@@ -4,17 +4,8 @@
 #include "cmsis_os2.h"
 #include "lwmem_porting.h"
 
-/* 全局变量 */
 u8g2_t *u8g2;
 
-/**
- * @brief OLED屏驱动接口
- * @details 实现将显示内容写入到OLED屏中
- * @param u8x8 屏幕实例对象
- * @param msg 要进行得操作
- * @param arg_int 操作参数
- * @param arg_ptr 操作参数指针
- */
 static uint8_t u8x8_byte_hw_i2c(u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void *arg_ptr)
 {
     /* u8g2/u8x8 will never send more than 32 bytes between START_TRANSFER and END_TRANSFER */
@@ -42,7 +33,7 @@ static uint8_t u8x8_byte_hw_i2c(u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void
             break;
         }
         case U8X8_MSG_BYTE_END_TRANSFER: {
-            if (HAL_I2C_Master_Transmit(&hi2c2, OLED_ADDRESS, buffer, buf_idx, 0xFFFF) != HAL_OK) {
+            if (HAL_I2C_Master_Transmit(&hi2c1, OLED_ADDRESS, buffer, buf_idx, 0xFFFF) != HAL_OK) {
                 return 0;
             }
             break;
@@ -55,15 +46,6 @@ static uint8_t u8x8_byte_hw_i2c(u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void
     return 1;
 }
 
-
-
-/**
-* @breif 为u8g2 库提供的延时及gpio操作接口
-* @param u8x8 屏幕对象实例指针
-* @param msg 要进行的操作
-* @param arg_int 操作参数
-* @param arg_ptr 操作参数指针
-*/
 static uint8_t u8x8_gpio_and_delay(u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void *arg_ptr)
 {
     switch (msg) {
@@ -106,12 +88,6 @@ static uint8_t u8x8_gpio_and_delay(u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, v
     return 1;
 }
 
-
-/**
-  * @brief u8g2 初始化
-  * @detials 完成u8g2对象初始化，相关驱动接口注册， 屏幕初始化
-  * @retval None.
-*/
 void u8g2_init()
 {
     u8g2 = LWMEM_CCM_MALLOC(sizeof(u8g2_t));

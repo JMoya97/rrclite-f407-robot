@@ -1,14 +1,3 @@
-/**
- * @file pwm_servo.c
- * @author Lu Yongping (Lucas@hiwonder.com)
- * @brief PWM舵机驱动与硬件无关的代码
- * @version 0.1
- * @date 2023-05-07
- *
- * @copyright Copyright (c) 2023
- *
- */
-
 #include "pwm_servo.h"
 #include <string.h>
 

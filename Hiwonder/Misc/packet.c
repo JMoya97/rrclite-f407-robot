@@ -5,29 +5,13 @@
 #include "cmsis_os2.h"
 #include "global.h"
 #include "lwmem_porting.h"
-/**
-    * @brief 串口命令回调注册
-    * @param self 协议实例
-    * @param func 功能ID
-    * @param handle 回调函数
-    * @retval None
-*/
+
 void packet_register_callback(struct PacketController *self, enum PACKET_FUNCTION func, packet_handle p)
 {
     if(func < PACKET_FUNC_NONE) {
         self->handles[func] = p;
     }
 }
-
-/**
- * @brief 串口协议解析
- * @details 传入数据，根据状态机状态和数据切换状态机状态，完成协议的接收解析
- *          解析出的数据帧会压入接收帧队列
- * @param self 协议实例
- * @param data 要解析的数据
- * @param length 数据长度
- * @retval None
- */
 
 void packet_recv(struct PacketController *self)
 {
@@ -40,7 +24,7 @@ void packet_recv(struct PacketController *self)
         readed_len = lwrb_read(self->rx_fifo, data, avaliable);
 
         for(int i = 0; i < readed_len; ++i) {
-            //printf("%0.2X ", data[i]);
+            //printf("%X ", data[i]);
             switch(self->state) {
                 case PACKET_CONTROLLER_STATE_STARTBYTE1: /* 处理帧头标记1 */
                     self->state = PROTO_CONST_STARTBYTE1 == data[i] ? PACKET_CONTROLLER_STATE_STARTBYTE2 : PACKET_CONTROLLER_STATE_STARTBYTE1;
@@ -69,8 +53,10 @@ void packet_recv(struct PacketController *self)
                 case PACKET_CONTROLLER_STATE_CHECKSUM: /* 处理校验值 */
                     self->frame.data_and_checksum[self->frame.data_length] = data[i];
                     crc = checksum_crc8((uint8_t*)&self->frame.function, self->frame.data_length + 2);
+                    //printf("crc:%d\r\n",crc);
                     if(crc == self->frame.data_and_checksum[self->frame.data_length]) { /* 校验失败, 跳过执行 */
                         if(NULL != self->handles[self->frame.function]) {
+                            led_flash(leds[2] , 10 , 10 , 1);
 							self->handles[self->frame.function](&self->frame);
                         }
                     }
@@ -100,7 +86,6 @@ struct PacketRawFrame* packet_serialize(uint8_t func, void* data_raw, size_t dat
     }
     return p;
 }
-
 
 int packet_transmit(struct PacketController *self, uint8_t func, void* data, size_t data_len)
 {

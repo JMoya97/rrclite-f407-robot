@@ -1,14 +1,3 @@
-/**
- * @file button_portting.c
- * @author Lu Yongping (Lucas@hiwonder.com)
- * @brief 板载按键接口实例及接口
- * @version 0.1
- * @date 2023-05-18
- *
- * @copyright Copyright (c) 2023
- *
- */
-
 #include "button.h"
 #include "global_conf.h"
 #include "packet_reports.h"
@@ -17,10 +6,8 @@
 #include "gpio.h"
 #include "lwmem_porting.h"
 
-// 全系统全局变量
 ButtonObjectTypeDef* buttons[2];
 static uint32_t button_read_pin(ButtonObjectTypeDef *self); /* 读取按键IO状态 */
-
 
 void buttons_init(void)
 {
@@ -47,20 +34,8 @@ static uint32_t button_read_pin(ButtonObjectTypeDef *self)
     }
 }
 
-
-
-/**
- * @brief 定时器回调进行按键扫描
- *
- * @param argument
- */
 void button_timer_callback(void *argument)
 {
 	button_task_handler(buttons[0], BUTTON_TASK_PERIOD);
 	button_task_handler(buttons[1], BUTTON_TASK_PERIOD);
 }
-
-
-
-
-

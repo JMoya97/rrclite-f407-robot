@@ -1,15 +1,4 @@
-/**
- * @file button.c
- * @author Lu Yongping (Lucas@hiwonder.com)
- * @brief 实现硬件无关的按键检测
- * @version 0.1
- * @date 2023-05-08
- *
- * @copyright Copyright (c) 2023
- *
- */
 #include "button.h"
-
 
 void button_task_handler(ButtonObjectTypeDef *self, uint32_t period)
 {
@@ -82,7 +71,6 @@ void button_task_handler(ButtonObjectTypeDef *self, uint32_t period)
     }
 }
 
-
 void button_register_callback(ButtonObjectTypeDef *self, ButtonEventCallbackFuncTypeDef callback)
 {
     if(NULL == callback) {
@@ -91,7 +79,7 @@ void button_register_callback(ButtonObjectTypeDef *self, ButtonEventCallbackFunc
     self->event_callback = callback;
 }
 
-void button_defalut_event_callback(ButtonObjectTypeDef *self,  ButtonEventIDEnum event)
+void button_default_event_callback(ButtonObjectTypeDef *self,  ButtonEventIDEnum event)
 {
 }
 
@@ -107,6 +95,6 @@ void button_object_init(ButtonObjectTypeDef *self)
     self->combin_th = 400; 
     self->lp_th = 2000;  
     self->repeat_th = 500;
-    self->event_callback = button_defalut_event_callback;
+    self->event_callback = button_default_event_callback;
 }
 
