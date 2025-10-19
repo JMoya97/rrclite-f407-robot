@@ -5,7 +5,8 @@ Release/
 .settings/
 *.launch
 *.ioc-backup
-Core/Inc/*~ 
+
+# Compiled artifacts
 *.o
 *.d
 *.map
@@ -13,13 +14,15 @@ Core/Inc/*~
 *.hex
 *.bin
 *.list
-# Keil / misc (if present)
+
+# Keil / misc
 Objects/
 Listings/
 *.uvguix.*
 *.uvoptx
 *.uvprojx
-# OS/editor
+
+# OS / editors
 .DS_Store
 Thumbs.db
 .vscode/
