@@ -1,0 +1,26 @@
+# STM32CubeIDE / build
+Debug/
+Release/
+.build/
+.settings/
+*.launch
+*.ioc-backup
+Core/Inc/*~ 
+*.o
+*.d
+*.map
+*.elf
+*.hex
+*.bin
+*.list
+# Keil / misc (if present)
+Objects/
+Listings/
+*.uvguix.*
+*.uvoptx
+*.uvprojx
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
