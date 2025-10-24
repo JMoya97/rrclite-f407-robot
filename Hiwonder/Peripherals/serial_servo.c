@@ -6,14 +6,14 @@
 #include <string.h>
 
 #define GET_LOW_BYTE(A) ((uint8_t)(A))
-//宏函数 获得A的低八位
+// Helper macro: low byte of A
 #define GET_HIGH_BYTE(A) ((uint8_t)((A) >> 8))
-//宏函数 获得A的高八位
+// Helper macro: high byte of A
 #define BYTE_TO_HW(A, B) ((((uint16_t)(A)) << 8) | (uint8_t)(B))
-//宏函数 将高地八位合成为十六位
+// Helper macro: combine high and low bytes
 
 
-/* 自动填充数据帧的帧头、ID、命令字段 */
+/* Populate frame header, ID, and command */
 static void cmd_frame_init(SerialServoCmdTypeDef *frame, int servo_id, int cmd)
 {
     frame->header_1 = SERIAL_SERVO_FRAME_HEADER;
@@ -22,7 +22,7 @@ static void cmd_frame_init(SerialServoCmdTypeDef *frame, int servo_id, int cmd)
     frame->elements.command = cmd;
 }
 
-/* 自动填充数据帧的数据长度、校验值字段 */
+/* Populate frame length and checksum */
 static void cmd_frame_complete(SerialServoCmdTypeDef *frame, int args_num)
 {
     frame->elements.length = args_num + 3;

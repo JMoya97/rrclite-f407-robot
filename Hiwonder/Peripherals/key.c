@@ -1,4 +1,4 @@
-/// 实现硬件无关的按键检测
+/// Hardware-agnostic button detection implementation
 #include "global.h"
 #include "key.h"
 
@@ -21,11 +21,11 @@ void key_refresh(KeyObjectTypeDef *self)
 {
     uint8_t level = self->read_pin();
     uint32_t current_tick = self->get_ticks();
-    if(level == self->last_level) { // 两次原始引脚状态一致认为是按键状态稳定非误触发
+    if(level == self->last_level) { // Two identical raw readings imply a stable button state
         switch(self->state) {
         case KEY_STATE_NORMAL:
             if(level == self->level_press) {
-                /* 触发按键按下事件 */
+                /* Trigger button press event */
                 if(NULL != self->event_callback) {
                     self->event_callback(self, KEY_EVENT_PRESSED);
                 }
@@ -40,7 +40,7 @@ void key_refresh(KeyObjectTypeDef *self)
                         }
                     }
                 }
-                self->stamp = current_tick; /* 记下这一次按下的时间 */
+                self->stamp = current_tick; /* Record the time of this press */
                 self->state = KEY_STATE_PRESS;
             } else {
                 if((current_tick - self->stamp) > self->combin_th && self->combin_counter != 0) {
@@ -49,26 +49,26 @@ void key_refresh(KeyObjectTypeDef *self)
             }
             break;
         case KEY_STATE_PRESS:
-            if(level != self->level_press) { // 如果按键没有按下，就是松开了
-                /* 触发短按松开事件 */
+            if(level != self->level_press) { // Button released
+                /* Trigger short-press release event */
                 if(NULL != self->event_callback) {
                     self->event_callback(self, KEY_EVENT_RELEASE_FROM_SP);
                     self->event_callback(self, KEY_EVENT_CLICK);
                 }
                 self->state = KEY_STATE_NORMAL;
             } else {
-                /* 超过长按触发时间，触发长按事件，状态转为长按*/
+                /* Long-press threshold reached: emit event and enter long-press state */
                 if((current_tick - self->stamp) > self->lp_th) {
                     self->event_callback(self, KEY_EVENT_LONGPRESS);
                     self->state = KEY_STATE_LONGPRESS;
                     self->combin_counter = 0;
-                    self->stamp = current_tick; /* 记下第一次长按触发时间 */
+                    self->stamp = current_tick; /* Record the first long-press trigger time */
                 }
             }
             break;
         case KEY_STATE_LONGPRESS:
-            if(level != self->level_press) { // 如果按键没有按下，就是松开了
-                /* 触发长按松开事件 */
+            if(level != self->level_press) { // Button released
+                /* Trigger long-press release event */
                 if(NULL != self->event_callback) {
                     self->event_callback(self, KEY_EVENT_RELEASE_FROM_LP);
                     self->stamp = 0;
@@ -77,7 +77,7 @@ void key_refresh(KeyObjectTypeDef *self)
             } else {
                 if((current_tick - self->stamp) > self->repeat_th)  {
                     self->event_callback(self, KEY_EVENT_LONGPRESS_REPEAT);
-                    self->stamp = current_tick; /* 记下这次重触发时间 */
+                    self->stamp = current_tick; /* Record the retrigger time */
                 }
             }
             break;

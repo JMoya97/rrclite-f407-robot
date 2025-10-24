@@ -3,7 +3,7 @@
 #include "global.h"
 #include "lwmem_porting.h"
 
-static uint8_t pixelBuffer[Pixel_S1_NUM+1][24]; //灯珠
+static uint8_t pixelBuffer[Pixel_S1_NUM+1][24]; // LED pixel data
 //uint8_t *pixelBuffer;
 
 static uint32_t  rgb_pixel[Pixel_S1_NUM];
@@ -20,7 +20,7 @@ void WS2812b_Configuration(void)
 
 void set_id_rgb_color(uint8_t id , uint8_t* rgb)
 {
-    if(id >= Pixel_S1_NUM) //RGB灯编号为 0 、 1
+    if(id >= Pixel_S1_NUM) // RGB LEDs are indexed as 0 and 1
     {
         return;
     }

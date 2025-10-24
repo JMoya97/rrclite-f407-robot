@@ -1,10 +1,3 @@
-/**
-* @file protocol.h
-* @brief 与上位机的通信协议处理
-* @author LuYongPing
-* @date 20 MAY 2023
-*/
-
 #ifndef __PROTOCOL_H_
 #define __PROTOCOL_H_
 
@@ -28,12 +21,12 @@ struct PacketRawFrame {
 #pragma pack()
 
 enum PacketControllerState {
-    PACKET_CONTROLLER_STATE_STARTBYTE1, /**< 正在寻找帧头标记1 */
-    PACKET_CONTROLLER_STATE_STARTBYTE2, /**< 正在寻找帧头标记2 */
-    PACKET_CONTROLLER_STATE_FUNCTION, /**< 正在处理帧功能号 */
-    PACKET_CONTROLLER_STATE_LENGTH, /**< 正在处理帧长度 */
-    PACKET_CONTROLLER_STATE_DATA, /**< 正在处理帧数据 */
-    PACKET_CONTROLLER_STATE_CHECKSUM, /** 正在处理数据校验 */
+    PACKET_CONTROLLER_STATE_STARTBYTE1, /**< Searching for frame header flag 1 */
+    PACKET_CONTROLLER_STATE_STARTBYTE2, /**< Searching for frame header flag 2 */
+    PACKET_CONTROLLER_STATE_FUNCTION, /**< Processing the frame function code */
+    PACKET_CONTROLLER_STATE_LENGTH, /**< Processing the frame length */
+    PACKET_CONTROLLER_STATE_DATA, /**< Processing the frame data */
+    PACKET_CONTROLLER_STATE_CHECKSUM, /**< Processing the checksum */
 };
 
 enum PACKET_FUNCTION {
@@ -48,7 +41,7 @@ enum PACKET_FUNCTION {
     PACKET_FUNC_ENCODER,
     PACKET_FUNC_GAMEPAD,
     PACKET_FUNC_SBUS,
-	PACKET_FUNC_OLED,
+    PACKET_FUNC_OLED,
     PACKET_FUNC_RGB,
     PACKET_FUNC_NONE,
 };
@@ -56,20 +49,19 @@ enum PACKET_FUNCTION {
 typedef void(*packet_handle)(struct PacketRawFrame *);
 
 struct PacketController {
-    enum PacketControllerState state;        /**< 解析器状态机当前状态 */
-    struct PacketRawFrame frame;             /**< 解析器正在处理的帧 */
-    packet_handle handles[PACKET_FUNC_NONE]; /**< 解析操作列表 */
+    enum PacketControllerState state;        /**< Current parser state */
+    struct PacketRawFrame frame;             /**< Frame currently being processed */
+    packet_handle handles[PACKET_FUNC_NONE]; /**< Registered handlers */
     int data_index;
+    uint8_t *rx_dma_buffers[2]; /**< DMA buffer list */
+    size_t rx_dma_buffer_size; /**< Size of each DMA buffer */
+    volatile int rx_dma_buffer_index;    /**< Index of the DMA buffer currently receiving */
 
-    uint8_t *rx_dma_buffers[2]; /**< DMA缓存列表 */
-    size_t rx_dma_buffer_size; /**< 单个DMA缓存的大小 */
-    volatile int rx_dma_buffer_index;    /**< 当前正在接收的DMA缓存索引号 */
-
-    uint8_t *rx_fifo_buffer;    /**< 接收FIFO缓存 */
-    lwrb_t *rx_fifo;            /**< 接收缓存FIFO对象 */
+    uint8_t *rx_fifo_buffer;    /**< Receive FIFO buffer */
+    lwrb_t *rx_fifo;            /**< Receive FIFO object */
 
     int (*send_packet)(struct PacketController *self, struct PacketRawFrame *frame);
-    struct PacketRawFrame* tx_dma_buffer; /**< 正在发送的DMA缓存*/
+    struct PacketRawFrame* tx_dma_buffer; /**< DMA buffer currently being transmitted */
 };
 
 void packet_register_callback(struct PacketController *self, enum PACKET_FUNCTION func, packet_handle p);

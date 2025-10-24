@@ -1,13 +1,3 @@
-/**
- * @file lvgl_handle.c
- * @author Lu Yongping (Lucas@hiwonder.com)
- * @brief lvgl界面的数据、信息、显示内容更新
- * @version 0.1
- * @date 2023-06-12
- *
- * @copyright Copyright (c) 2023
- *
- */
 #include <stdio.h>
 #include "cmsis_os2.h"
 #include "object.h"

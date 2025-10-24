@@ -1,23 +1,6 @@
-/**
- * @file checksum.c
- * @author Lu Yongping (Lucas@hiwonder.com)
- * @brief 几种校验算法的实现
- * @version 0.1
- * @date 2023-05-20
- *
- * @copyright Copyright (c) 2023
- *
- */
- 
 #include "checksum.h"
 
-/**
- * @ingroup Checksum Checksum
- * @{
- */
-
-
-/* CRC16 高位字节表 */
+/* CRC16 high-byte table */
 static const uint8_t crc16_h_table[] = {
     0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41, 0x01, 0xC0,
     0x80, 0x41, 0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41,
@@ -48,7 +31,7 @@ static const uint8_t crc16_h_table[] = {
 };
 
 
-/* CRC16低位字节表 */
+/* CRC16 low-byte table */
 static const uint8_t crc16_l_table[] = {
     0x00, 0xC0, 0xC1, 0x01, 0xC3, 0x03, 0x02, 0xC2, 0xC6, 0x06,
     0x07, 0xC7, 0x05, 0xC5, 0xC4, 0x04, 0xCC, 0x0C, 0x0D, 0xCD,
@@ -79,7 +62,7 @@ static const uint8_t crc16_l_table[] = {
 };
 
 
-/* CRC8 字节表 */
+/* CRC8 lookup table */
 static const uint8_t crc8_table[] = {
     0, 94, 188, 226, 97, 63, 221, 131, 194, 156, 126, 32, 163, 253, 31, 65,
     157, 195, 33, 127, 252, 162, 64, 30, 95, 1, 227, 189, 62, 96, 130, 220,

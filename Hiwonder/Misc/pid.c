@@ -1,15 +1,3 @@
-/**
- * @file pid.c
- * @author Lu Yongping (Lucas@hiwonder.com)
- * @brief PID实现
- * @version 0.1
- * @date 2023-07-12
- *
- * @copyright Copyright (c) 2023
- *
- */
-
-
 #include "pid.h"
 
 void pid_controller_update(PID_ControllerTypeDef *self, float actual, float time_delta) {

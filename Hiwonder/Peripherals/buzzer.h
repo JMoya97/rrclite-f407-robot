@@ -13,19 +13,19 @@ typedef enum {
 } BuzzerStageEnum;
 
 typedef struct {
-    uint16_t freq;      /**< @brief 蜂鸣器频率 */
-    uint32_t ticks_on;  /**< @brief 周期内蜂鸣器响起时长，毫秒 */
-    uint32_t ticks_off; /**< @brief 周期内蜂鸣器静音时长，毫秒 */
-    uint16_t repeat;    /**< @brief 蜂鸣器"嘀"响重复次数 */
+    uint16_t freq;      /**< @brief Buzzer frequency */
+    uint32_t ticks_on;  /**< @brief Duration the buzzer is active within one period (ms) */
+    uint32_t ticks_off; /**< @brief Duration the buzzer is silent within one period (ms) */
+    uint16_t repeat;    /**< @brief Number of times the buzzer repeats the beep */
 } BuzzerCtrlTypeDef;
 
 typedef struct BuzzerObject BuzzerObjectTypeDef;
 struct BuzzerObject {
 	uint32_t id;
 
-    BuzzerStageEnum stage;   /**< @brief 蜂鸣器控制状态机的当前状态 */
-    uint32_t ticks_count;    /**< @brief 毫秒计数，用于累计毫秒数切换状态机状态 */
-    BuzzerCtrlTypeDef ctrl_structure; /**< @brief 蜂鸣器控制参数 */
+    BuzzerStageEnum stage;   /**< @brief Current state of the buzzer control state machine */
+    uint32_t ticks_count;    /**< @brief Millisecond counter used to advance the state machine */
+    BuzzerCtrlTypeDef ctrl_structure; /**< @brief Buzzer control parameters */
 
     int (*get_ctrl_block)(BuzzerObjectTypeDef *self, BuzzerCtrlTypeDef *p);
 

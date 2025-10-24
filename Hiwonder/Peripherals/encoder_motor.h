@@ -7,17 +7,17 @@
 typedef struct EncoderMotorObject EncoderMotorObjectTypeDef;
 
 struct EncoderMotorObject{
-    int64_t counter;        /**< @brief 总计数值, 64bit 认为不会溢出 */
-    int64_t overflow_num;   /**< @brief 溢出计数 */
-    int32_t ticks_overflow; /**< @brief 计数溢出值 */
-    float tps;              /**< @brief ticks per second 计数器频率 */
-    float rps;              /**< @brief revolutions per second 输出轴转速 转每秒 */
-    int current_pulse;      /**< @brief 当前输出的PWM值, 有符号对应正反转 */
-    PID_ControllerTypeDef pid_controller; /**< @brief PID 控制器 */
+    int64_t counter;        /**< @brief Total count (64-bit to avoid overflow) */
+    int64_t overflow_num;   /**< @brief Number of timer overflows */
+    int32_t ticks_overflow; /**< @brief Counts per overflow interval */
+    float tps;              /**< @brief Counter frequency (ticks per second) */
+    float rps;              /**< @brief Output shaft speed in revolutions per second */
+    int current_pulse;      /**< @brief Current PWM output; sign indicates direction */
+    PID_ControllerTypeDef pid_controller; /**< @brief PID controller state */
 
-    /** porting 可移植硬件接口 **/
-    int32_t ticks_per_circle; /**< @brief 电机输出轴旋转一圈产生的计数个数, 根据电机实际情况填写 */
-	float rps_limit;  /**< @brief 电机地转速极限，一般会取比100% PWM占空比时地转速稍小的值以确保PID控制器对速度的控制 */
+    /** Porting hooks for hardware-specific behavior **/
+    int32_t ticks_per_circle; /**< @brief Counts produced per output-shaft revolution */
+        float rps_limit;  /**< @brief Maximum permitted speed, typically slightly below the 100% PWM value */
 
     void (*set_pulse)(EncoderMotorObjectTypeDef *self, int pulse);
 };
