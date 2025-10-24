@@ -20,5 +20,5 @@ build/
 *.lst
 *.log
 
-# Segger / tools (keep if you move J-Flash files)
+# Segger / tools
 JLinkLog.txt
