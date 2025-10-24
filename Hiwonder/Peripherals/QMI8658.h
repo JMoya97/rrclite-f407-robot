@@ -19,9 +19,9 @@ struct QMI8658
   int16_t ax, ay, az, gx, gy, gz;
   float pith, roll, yaw;
   unsigned long now, lastTime;
-  float dt;      //微分时间
-  float agz; //角度变量
-  long gzo;  //陀螺仪偏移量
+  float dt;      // Sample interval
+  float agz; // Angle accumulator
+  long gzo;  // Gyro offset
     
     uint8_t (*read_reg)(uint8_t reg);
     void (*write_reg)(uint8_t reg,uint8_t value);

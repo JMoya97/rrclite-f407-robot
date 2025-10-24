@@ -134,7 +134,7 @@ static inline int serial_servo_rx_handler(SerialServoControllerTypeDef *self, ui
         }
         case SERIAL_SERVO_RECV_LENGTH: {
             if(rx_byte > 7) {
-                self->rx_state = SERIAL_SERVO_RECV_STARTBYTE_1; /* 包长度超过允许长度 */
+                self->rx_state = SERIAL_SERVO_RECV_STARTBYTE_1; /* Packet length exceeds the allowed range */
                 return -3;
             }
             self->rx_frame.elements.length = rx_byte;
@@ -144,7 +144,7 @@ static inline int serial_servo_rx_handler(SerialServoControllerTypeDef *self, ui
         case SERIAL_SERVO_RECV_COMMAND: {
             self->rx_frame.elements.command = rx_byte;
             self->rx_args_index = 0;
-            self->rx_state = self->rx_frame.elements.length == 6 ? SERIAL_SERVO_RECV_CHECKSUM : SERIAL_SERVO_RECV_ARGUMENTS; /* 没有参数的话直接进入校验字段 */
+            self->rx_state = self->rx_frame.elements.length == 6 ? SERIAL_SERVO_RECV_CHECKSUM : SERIAL_SERVO_RECV_ARGUMENTS; /* Go straight to the checksum field if there are no arguments */
             return 3;
         }
         case SERIAL_SERVO_RECV_ARGUMENTS: {

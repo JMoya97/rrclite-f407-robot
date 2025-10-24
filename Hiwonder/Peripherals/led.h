@@ -16,18 +16,18 @@ typedef enum {
 } LEDStageEnum;
 
 typedef struct {
-    uint32_t ticks_on;  /**< @brief 周期内LED亮起时长，毫秒 */
-    uint32_t ticks_off; /**< @brief 周期内LED熄灭时长，毫秒 */
-    uint16_t repeat;    /**< @brief LED闪烁重复次数 */
+    uint32_t ticks_on;  /**< @brief LED on-time per cycle (ms) */
+    uint32_t ticks_off; /**< @brief LED off-time per cycle (ms) */
+    uint16_t repeat;    /**< @brief Number of blink repetitions */
 } LEDCtrlTypeDef;
 
 typedef struct LEDObjectObject LEDObjectTypeDef;
 struct LEDObjectObject {
 	uint32_t id;
 	
-    LEDStageEnum stage;   /**< @brief LED控制状态机的当前状态 */
-    uint32_t ticks_count;    /**< @brief 毫秒计数，用于累计毫秒数切换状态机状态 */
-    LEDCtrlTypeDef ctrl_structure; /**< @brief LED控制参数 */
+    LEDStageEnum stage;   /**< @brief Current state of the LED control state machine */
+    uint32_t ticks_count;    /**< @brief Millisecond accumulator for state transitions */
+    LEDCtrlTypeDef ctrl_structure; /**< @brief LED control parameters */
 
     int (*get_ctrl_block)(LEDObjectTypeDef *self, LEDCtrlTypeDef *p);
 

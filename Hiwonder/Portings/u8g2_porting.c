@@ -16,7 +16,7 @@ static uint8_t u8x8_byte_hw_i2c(u8x8_t *u8x8, uint8_t msg, uint8_t arg_int, void
     switch (msg) {
         case U8X8_MSG_BYTE_INIT: {
             /* add your custom code to init i2c subsystem */
-            // MX_I2C2_Init(); //I2C初始化。 I2C已经被初始化过， 不需要再初始化
+            // MX_I2C2_Init(); // I2C initialization already performed elsewhere; no need to run again
             break;
         }
         case U8X8_MSG_BYTE_START_TRANSFER: {
@@ -92,8 +92,8 @@ void u8g2_init()
 {
     u8g2 = LWMEM_CCM_MALLOC(sizeof(u8g2_t));
 
-    //U8G2_R0：默认使用U8G2_R0即可（用于配置屏幕是否要旋转）
-    u8g2_Setup_ssd1306_i2c_128x32_univision_f(u8g2, U8G2_R0, u8x8_byte_hw_i2c, u8x8_gpio_and_delay); // 初始化u8g2 结构体 ，使用硬件IIC
+    // U8G2_R0: default rotation (adjust if the display orientation needs to change)
+    u8g2_Setup_ssd1306_i2c_128x32_univision_f(u8g2, U8G2_R0, u8x8_byte_hw_i2c, u8x8_gpio_and_delay); // Initialize the u8g2 struct using the hardware I2C interface
     u8g2_InitDisplay(u8g2);
     u8g2_SetPowerSave(u8g2, 0);
     u8g2_ClearBuffer(u8g2);

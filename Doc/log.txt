@@ -1,60 +1,48 @@
-2024/06/25
-1、已经砍掉USB和蓝牙
-2、砍掉了LVGL和LCD
-3、砍掉了SBUS
-4、编码电机移植完成，但是编码器3的引脚PD12和PD13画反了
-5、2个按键接口一样，未检测
-6、PWM舵机接口一样，未检测
-7、另一个IIC1需要写接口
-8、3个LED引脚需要等UART3的接口移植到UART1上后才可以使用
-9、RGB灯的库得移植
-10、RRC的IIC是RRCLite的IIC2，连接着IMU，且芯片为QMI8658，需要重新编写
-11、总线舵机接口需要更换
-12、上位机的电机类型切换接口需要编写
-
-
+2. Removed LVGL and the LCD panel.
+3. Removed the SBUS module.
+4. Ported the encoder motors, but encoder 3 has pins PD12 and PD13 swapped on the schematic.
+5. The two button interfaces share the same design and remain untested.
+6. The PWM servo interface matches the original design and remains untested.
+7. A new driver is needed for the second I2C1 interface.
+8. The three LED pins cannot be used until the UART3 interface is migrated to UART1.
+9. The RGB LED library needs to be ported.
+10. The RRC I2C bus maps to RRCLite I2C2, which connects to the IMU (QMI8658) and must be reimplemented.
+11. The bus-servo interface must be replaced.
+12. The host-side motor type switch interface still needs to be implemented.
 
 2024/06/26
-1、QMI8658已经移植完成
-2、IIC1上的OLED屏已经移植完成，电池电量也检测正常
-3、2个按键接口检测正常
-
-4、总线舵机接口需要更换
-5、RGB灯使用SPI1驱动，但是成功了一次之后就不行了，原因未知（暂时跳过）
-6、3个LED引脚需要等UART3的接口移植到UART1上后才可以使用
-7、上位机的电机类型切换接口需要编写、上位机的电池电压报警接口需要编写
-
+1. Ported the QMI8658 successfully.
+2. Ported the OLED screen on I2C1 and verified battery monitoring.
+3. Verified both button interfaces.
+4. The bus-servo interface still needs to be replaced.
+5. The RGB LEDs run from SPI1; they worked once but then failed for unknown reasons (temporarily deferred).
+6. The three LED pins still depend on migrating the UART3 interface to UART1.
+7. The host-side motor type switch and battery voltage alarm interfaces still need to be implemented.
 
 2024/06/27
-1、总线舵机移植成功
-2、UART1与上位机通讯功能移植成功
-3、3个LED已经移植完毕
-
-4、上位机电机类型切换接口
-	在电机功能号3 下的 子功能号5，内容为uint16_t的类型值，类型如下：
-		MOTOR_TYPE_JGB520 = 0
-		MOTOR_TYPE_JGB37 = 1
-		MOTOR_TYPE_JGA27 = 2
-		MOTOR_TYPE_JGB528 = 3
-
-
-5、电池电压报警设置接口
-	在系统设置功能号0 下的 子功能号为1，内容为uint16_t的低压值。
-
-6、RGB灯功能和上位机接口
+1. Ported the bus-servo interface successfully.
+2. Ported the UART1 host communication interface successfully.
+3. Finished porting the three LEDs.
+4. Host motor type switch interface:
+        Under motor function code 3, sub-function 5 carries a uint16_t that encodes the type:
+                MOTOR_TYPE_JGB520 = 0
+                MOTOR_TYPE_JGB37 = 1
+                MOTOR_TYPE_JGA27 = 2
+                MOTOR_TYPE_JGB528 = 3
+5. Battery voltage alarm configuration interface:
+        Under system settings function code 0, sub-function 1 provides a uint16_t low-voltage threshold.
+6. RGB LED functionality and host interface.
 
 2024/06/28
-1、正在编写RGB灯的驱动......（被MechDog事情耽搁了）
+1. In progress: implementing the RGB LED driver (work delayed by MechDog tasks).
 
 2024/06/29
-1、RGB驱动已经成功
-	功能号为11，信息结构体如下：
-	//RGB灯结构体
-	typedef struct {
-		uint8_t id;
-		uint8_t data[];
-	} RGBCtlTypeDef;
-	当id为0时，data数组为6个元素，分别为 g1,r1,b1, g2,r2,b2
-	当id为1、2时，data数组为3个元素，分别为g,r,b
-
-
+1. RGB LED driver is now working.
+        Function code 11 uses the following payload structure:
+        // RGB LED structure
+        typedef struct {
+                uint8_t id;
+                uint8_t data[];
+        } RGBCtlTypeDef;
+        When id == 0, the data array has six elements: g1, r1, b1, g2, r2, b2.
+        When id is 1 or 2, the data array has three elements: g, r, b.

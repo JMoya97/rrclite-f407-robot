@@ -29,7 +29,7 @@ void pwm_servos_init(void)
 {
     for(int i = 0; i < 4; ++i) {
 	    pwm_servos[i] = LWMEM_CCM_MALLOC(sizeof(PWMServoObjectTypeDef));
-        pwm_servo_object_init(pwm_servos[i]);  // 初始化PWM舵机对象内存
+        pwm_servo_object_init(pwm_servos[i]);  // Initialize PWM servo object memory
     }
     pwm_servos[0]->write_pin = pwm_servo1_write_pin;
     pwm_servos[1]->write_pin = pwm_servo2_write_pin;

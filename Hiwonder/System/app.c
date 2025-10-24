@@ -1,14 +1,3 @@
-/**
- * @file app.c
- * @author Lu Yongping (Lucas@hiwonder.com)
- * @brief 主应用逻辑(main appilication logic)
- * @version 0.1
- * @date 2023-05-08
- *
- * @copyright Copyright (c) 2023
- *
- */
-
 #include "cmsis_os2.h"
 #include "led.h"
 #include "lwmem_porting.h"

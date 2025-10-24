@@ -255,7 +255,7 @@ void SPI1_IRQHandler(void)
 void USART1_IRQHandler(void)
 {
   /* USER CODE BEGIN USART1_IRQn 0 */
-    __HAL_UNLOCK(&huart1); /* 解�?，�?��?死�? */
+    __HAL_UNLOCK(&huart1); /* Unlock to avoid deadlock */
   /* USER CODE END USART1_IRQn 0 */
   HAL_UART_IRQHandler(&huart1);
   /* USER CODE BEGIN USART1_IRQn 1 */
@@ -381,7 +381,7 @@ void UART5_IRQHandler(void)
         if(serial_servo_controller.tx_only) {
             osSemaphoreRelease(serial_servo_rx_completeHandle);
         }else{
-//			HAL_GPIO_WritePin(SERIAL_SERVO_RX_EN_GPIO_Port, SERIAL_SERVO_RX_EN_Pin, GPIO_PIN_RESET);  /* 转入接收模�? */
+//			HAL_GPIO_WritePin(SERIAL_SERVO_RX_EN_GPIO_Port, SERIAL_SERVO_RX_EN_Pin, GPIO_PIN_RESET);  /* Switch to receive mode */
 //			HAL_GPIO_WritePin(SERIAL_SERVO_TX_EN_GPIO_Port, SERIAL_SERVO_TX_EN_Pin, GPIO_PIN_SET);
             HAL_HalfDuplex_EnableReceiver(&huart5);
 		}
@@ -391,8 +391,8 @@ void UART5_IRQHandler(void)
     
     if(__HAL_UART_GET_FLAG(&huart5, UART_FLAG_TXE) != RESET) {
         __HAL_UART_CLEAR_FLAG(&huart5, UART_FLAG_TXE);
-        if(serial_servo_controller.tx_byte_index < serial_servo_controller.tx_frame.elements.length + 3) {  /* 判断数�?�是�?��?��?��?完�? */
-            huart5.Instance->DR = ((uint8_t*)(&serial_servo_controller.tx_frame))[serial_servo_controller.tx_byte_index++]; /* 继续�?��?下丿个字�? */
+        if(serial_servo_controller.tx_byte_index < serial_servo_controller.tx_frame.elements.length + 3) {  /* Check whether all data has been transmitted */
+            huart5.Instance->DR = ((uint8_t*)(&serial_servo_controller.tx_frame))[serial_servo_controller.tx_byte_index++]; /* Continue sending the next byte */
         } else {
             __HAL_UART_DISABLE_IT(&huart5, UART_IT_TXE);
         }

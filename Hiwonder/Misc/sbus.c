@@ -5,10 +5,10 @@
 
 int sbus_decode_frame(uint8_t *buf, SBusStatusObjectTypeDef *status)
 {
-    if(SBUS_FRAME_STARTBYTE != buf[0]) { /* 帧头不符合协议要求 */
+    if(SBUS_FRAME_STARTBYTE != buf[0]) { /* Frame header does not match the protocol */
         return -1;
     }
-    if(SBUS_FRAME_ENDBYTE != buf[24]) { /* 帧尾不符合协议要求 */
+    if(SBUS_FRAME_ENDBYTE != buf[24]) { /* Frame tail does not match the protocol */
         return -2;
     }
 	status->type_id = OBJECT_TYPE_ID_GAMEPAD_STATUS;
@@ -30,17 +30,20 @@ int sbus_decode_frame(uint8_t *buf, SBusStatusObjectTypeDef *status)
     status->channels[14] = ((uint16_t)buf[20] >> 2 | ((uint16_t)buf[21] << 6 )) & 0x07FF;
     status->channels[15] = ((uint16_t)buf[21] >> 5 | ((uint16_t)buf[22] << 3 )) & 0x07FF;
 
-    status->ch17 = (bool)(buf[23] & 0x80u); // bit7 --- 数字通道17的数据
-    status->ch18 = (bool)(buf[23] & 0x40u); // bit6 --- 数字通道18的数据
-    status->signal_loss = (bool)(buf[23] & 0x20u); // bit5 --- 丢帧信息
-    status->fail_safe = (bool)(buf[23] & 0x10u); // bit4 --- 失效保护使能
-	
-	/* 这部分代码是针对性的，针对HotRC遥控接收器, 该遥控器在序号丢失时不会置位 signal_loss, 前四个channel的值变为固定特定值，这里加入判读 */
-	/* 此处加入对上一帧数据的判断，看数据是否从其他数据突变为固定值，但是这样还要加上对开机默认状态的处理且刚好摇杆的四个值都对上的概率已经很小就不多加判断了 */
-	if(status->channels[0] == 992 && status->channels[1] == 992 && status->channels[2] == 32 && status->channels[3] == 992) {
-		status->signal_loss = true;
-	}
-	/* 特定代码结束 */
+    status->ch17 = (bool)(buf[23] & 0x80u); // bit7 --- digital channel 17 data
+    status->ch18 = (bool)(buf[23] & 0x40u); // bit6 --- digital channel 18 data
+    status->signal_loss = (bool)(buf[23] & 0x20u); // bit5 --- lost-frame flag
+    status->fail_safe = (bool)(buf[23] & 0x10u); // bit4 --- failsafe enabled
+
+        /* This logic targets the HotRC receiver. When its frame index is lost it does not set signal_loss,
+         * and the first four channel values fall back to specific constants, so we add detection here. */
+        /* Ideally we would compare against the previous frame to detect the sudden jump to those constants, but
+         * that requires handling the power-on default state as well. Because the probability of all four joystick
+         * values matching exactly is already very low, the additional check was omitted. */
+        if(status->channels[0] == 992 && status->channels[1] == 992 && status->channels[2] == 32 && status->channels[3] == 992) {
+                status->signal_loss = true;
+        }
+        /* End of special-case logic */
     return 0;
 }
 

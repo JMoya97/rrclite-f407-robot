@@ -30,7 +30,7 @@
 #include "serial_servo.h"
 #include "rgb_spi.h"
 
-// 全系统全局变量
+// Global objects shared across the system
 extern struct PacketController packet_controller;
 extern ButtonObjectTypeDef *buttons[2];
 extern BuzzerObjectTypeDef *buzzers[1];

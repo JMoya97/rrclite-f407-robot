@@ -7,7 +7,7 @@
 #include "lwmem_porting.h"
 
 ButtonObjectTypeDef* buttons[2];
-static uint32_t button_read_pin(ButtonObjectTypeDef *self); /* 读取按键IO状态 */
+static uint32_t button_read_pin(ButtonObjectTypeDef *self); /* Read button GPIO */
 
 void buttons_init(void)
 {

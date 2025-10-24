@@ -1,31 +1,20 @@
-/**
- * @file led_portting.c
- * @author Lu Yongping (Lucas@hiwonder.com)
- * @brief 板载LED灯控制实例及接口实现
- * @version 0.1
- * @date 2023-05-23
- * 
- * @copyright Copyright (c) 2023
- * 
- */
-
 #include "led.h"
 #include "gpio.h"
 #include "global_conf.h"
 #include "packet.h"
 #include "lwmem_porting.h"
 
-/* 全系统全局变量 */
+/* Global LED objects */
 LEDObjectTypeDef *leds[LED_NUM];
-static osMessageQueueId_t led_ctrl_ququeHandle[LED_NUM]; /* LED1 控制队列Handle */
+static osMessageQueueId_t led_ctrl_ququeHandle[LED_NUM]; /* LED control queue handles */
 
-static void led_set_pin(LEDObjectTypeDef *self, uint32_t level);   /* LED_SYS 灯写 IO 口接口 */
-static int put_ctrl_block(LEDObjectTypeDef *self, LEDCtrlTypeDef *p);   /* 控制入队接口 */
-static int get_ctrl_block(LEDObjectTypeDef *self, LEDCtrlTypeDef *p);   /* 控制出队接口 */
+static void led_set_pin(LEDObjectTypeDef *self, uint32_t level);   /* Write LED GPIO */
+static int put_ctrl_block(LEDObjectTypeDef *self, LEDCtrlTypeDef *p);   /* Enqueue control block */
+static int get_ctrl_block(LEDObjectTypeDef *self, LEDCtrlTypeDef *p);   /* Dequeue control block */
 
 void leds_init(void)
 {
-	/* 建立 LED1 控制队列 */
+        /* Create control queues */
 	const osMessageQueueAttr_t led_ctrl_quque_attributes[LED_NUM] = {{ .name = "led1_ctrl_quque" },
                                                                       { .name = "led2_ctrl_quque" },
                                                                       { .name = "led3_ctrl_quque" }};

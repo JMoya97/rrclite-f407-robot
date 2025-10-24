@@ -1,15 +1,3 @@
-/**
- * @file lwmem_porting.h
- * @author Lu Yongping (Lucas@hiwonder.com)
- * @brief lwmem 接口移植及内存空间定义
- * @version 0.1
- * @date 2023-06-02
- *
- * @copyright Copyright (c) 2023
- *
- */
-
-
 #include "lwmem.h"
 
 extern lwmem_region_t lwmem_regions[];
