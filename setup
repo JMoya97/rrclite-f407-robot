@@ -1,15 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Use your repo URL here:
 REMOTE_URL="https://github.com/JMoya97/rrclite-f407-robot.git"
 
 # Make sure we're in a git repo
-git rev-parse --is-inside-work-tree >/dev/null 2>&1 || {
-  echo "Not a git repo"; exit 1;
-}
+git rev-parse --is-inside-work-tree >/dev/null 2>&1 || { echo "Not a git repo"; exit 1; }
 
-# Add 'origin' if it's missing (safe, edits only .git/config)
+# Add origin if missing (safe: writes only .git/config)
 if ! git config --get remote.origin.url >/dev/null 2>&1; then
   echo "Adding remote 'origin' -> $REMOTE_URL"
   git remote add origin "$REMOTE_URL" || git remote set-url origin "$REMOTE_URL"
@@ -17,4 +14,23 @@ else
   echo "Remote already set: $(git config remote.origin.url)"
 fi
 
-echo "setup: done (non-mutating)."
+# Try to set upstream for current branch if it exists
+branch="$(git rev-parse --abbrev-ref HEAD || echo main)"
+git fetch origin || true
+if git show-ref --verify --quiet "refs/remotes/origin/$branch"; then
+  git branch --set-upstream-to="origin/$branch" "$branch" || true
+fi
+
+# Only clean in CI, never nuke your local work
+if [ "${CI:-}" = "true" ]; then
+  git reset --hard HEAD
+  git clean -fdx
+fi
+
+echo "setup: done; non-mutating."
+# Guard: fail if tracked files got changed
+if ! git diff --quiet --ignore-submodules -- .; then
+  echo "Error: setup modified tracked files."
+  git status --porcelain
+  exit 1
+fi

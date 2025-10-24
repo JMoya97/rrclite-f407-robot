@@ -8,17 +8,16 @@ Debug/
 Release/
 build/
 
-# Generated / misc
-*.map
-*.axf
-*.out
+# Binaries / objects
 *.o
 *.d
 *.elf
 *.bin
 *.hex
+*.map
+*.out
 *.lst
 *.log
 
-# Segger / tools
+# Misc tools
 JLinkLog.txt
