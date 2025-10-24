@@ -1,29 +1,24 @@
-# STM32CubeIDE / build
-Debug/
-Release/
-.build/
+# STM32CubeIDE / Eclipse
 .settings/
 *.launch
-*.ioc-backup
+.metadata/
 
-# Compiled artifacts
+# Build dirs
+Debug/
+Release/
+build/
+
+# Generated / misc
+*.map
+*.axf
+*.out
 *.o
 *.d
-*.map
 *.elf
-*.hex
 *.bin
-*.list
+*.hex
+*.lst
+*.log
 
-# Keil / misc
-Objects/
-Listings/
-*.uvguix.*
-*.uvoptx
-*.uvprojx
-
-# OS / editors
-.DS_Store
-Thumbs.db
-.vscode/
-.idea/
+# Segger / tools (keep if you move J-Flash files)
+JLinkLog.txt
