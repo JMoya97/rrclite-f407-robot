@@ -12,6 +12,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <string.h>
 
 extern uint16_t encoders_set_stream(uint8_t enable, uint16_t period_ms);
 extern void encoders_read_once_and_report(uint8_t sub);
@@ -32,6 +33,23 @@ volatile uint16_t rrc_heartbeat_period_ms = RRC_HEARTBEAT_MS;
 
 static bool motor_pwm_fault_active;
 static rrc_error_code_t motor_pwm_last_error;
+
+typedef struct {
+    float bax;
+    float bay;
+    float baz;
+    float bgx;
+    float bgy;
+    float bgz;
+    float bmx;
+    float bmy;
+    float bmz;
+} rrc_imu_bias_store_t;
+
+/* IMU configuration shadow (RAM only, reset on boot). */
+static uint8_t g_imu_primary;
+static rrc_imu_bias_store_t g_imu_bias[2];
+static uint8_t g_imu_preset[2];
 
 static void rrc_uart_apply_with_delay(uint32_t baud, uint16_t delay_ms,
                                       uint8_t txid)
@@ -712,6 +730,113 @@ static void packet_imu_handle(struct PacketRawFrame *frame)
         };
 
         (void)rrc_send_ack(RRC_FUNC_IMU, RRC_IMU_STREAM_CTRL,
+                            &ack, sizeof(ack), txid);
+        break;
+    }
+    case RRC_IMU_SET_PRIMARY: {
+        if (payload_len < 2U) {
+            break;
+        }
+
+        uint8_t txid = RRC_TXID_NONE;
+        if (payload_len == 3U) {
+            txid = payload[2];
+        } else if (payload_len != 2U) {
+            break;
+        }
+
+        const uint8_t source_id = payload[1];
+        if (source_id > 1U) {
+            const uint32_t now = HAL_GetTick();
+            const uint8_t err_txid = (txid == RRC_TXID_NONE) ? 0U : txid;
+            (void)rrc_send_err(RRC_FUNC_IMU, RRC_IMU_SET_PRIMARY,
+                               RRC_SYS_ERR_INVALID_ARG, 0U, now, err_txid);
+            break;
+        }
+
+        g_imu_primary = source_id;
+
+        const rrc_imu_primary_ack_t ack = {
+            .txid = txid,
+            .source_id = source_id,
+        };
+
+        (void)rrc_send_ack(RRC_FUNC_IMU, RRC_IMU_SET_PRIMARY,
+                            &ack, sizeof(ack), txid);
+        break;
+    }
+    case RRC_IMU_SET_PRESET: {
+        if (payload_len < 3U) {
+            break;
+        }
+
+        uint8_t txid = RRC_TXID_NONE;
+        if (payload_len == 4U) {
+            txid = payload[3];
+        } else if (payload_len != 3U) {
+            break;
+        }
+
+        const uint8_t source_id = payload[1];
+        if (source_id > 1U) {
+            const uint32_t now = HAL_GetTick();
+            const uint8_t err_txid = (txid == RRC_TXID_NONE) ? 0U : txid;
+            (void)rrc_send_err(RRC_FUNC_IMU, RRC_IMU_SET_PRESET,
+                               RRC_SYS_ERR_INVALID_ARG, 0U, now, err_txid);
+            break;
+        }
+
+        uint8_t applied_preset = payload[2];
+        if (applied_preset > 2U) {
+            applied_preset = 2U;
+        }
+
+        g_imu_preset[source_id] = applied_preset;
+
+        const rrc_imu_preset_ack_t ack = {
+            .txid = txid,
+            .source_id = source_id,
+            .preset = applied_preset,
+        };
+
+        (void)rrc_send_ack(RRC_FUNC_IMU, RRC_IMU_SET_PRESET,
+                            &ack, sizeof(ack), txid);
+        break;
+    }
+    case RRC_IMU_SET_BIASES: {
+        const size_t min_len =
+            1U + 1U + sizeof(rrc_imu_bias_store_t); /* sub + source + bias */
+        if (payload_len < min_len) {
+            break;
+        }
+
+        uint8_t txid = RRC_TXID_NONE;
+        if (payload_len == (min_len + 1U)) {
+            txid = payload[min_len];
+        } else if (payload_len != min_len) {
+            break;
+        }
+
+        const uint8_t source_id = payload[1];
+        if (source_id > 1U) {
+            const uint32_t now = HAL_GetTick();
+            const uint8_t err_txid = (txid == RRC_TXID_NONE) ? 0U : txid;
+            (void)rrc_send_err(RRC_FUNC_IMU, RRC_IMU_SET_BIASES,
+                               RRC_SYS_ERR_INVALID_ARG, 0U, now, err_txid);
+            break;
+        }
+
+        const size_t bias_offset = 2U; /* sub + source */
+        rrc_imu_bias_store_t biases;
+        memcpy(&biases, &payload[bias_offset], sizeof(biases));
+        g_imu_bias[source_id] = biases;
+
+        const rrc_imu_bias_ack_t ack = {
+            .txid = txid,
+            .source_id = source_id,
+        };
+
+        (void)rrc_send_ack(RRC_FUNC_IMU, RRC_IMU_SET_BIASES,
                             &ack, sizeof(ack), txid);
         break;
     }
