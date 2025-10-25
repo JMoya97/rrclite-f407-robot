@@ -43,6 +43,27 @@ static bool motor_pwm_apply(uint8_t id, int pwm)
     return true;
 }
 
+static bool motor_pwm_fault_active;
+static rrc_error_code_t motor_pwm_last_error;
+
+static bool motor_pwm_try_reinit(void)
+{
+    /* Stub hook for quick reinitialisation after an apply failure. */
+    return true;
+}
+
+static bool motor_pwm_apply(uint8_t id, int pwm)
+{
+    extern void motor_set_target_pwm(uint8_t id, int cmd);
+
+    if (id >= 2U) {
+        return false;
+    }
+
+    motor_set_target_pwm(id, pwm);
+    return true;
+}
+
 #pragma pack(1)
 typedef struct {
     uint8_t cmd;
