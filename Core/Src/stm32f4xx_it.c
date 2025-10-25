@@ -25,6 +25,7 @@
 #include "global.h"
 #include "tim.h"
 #include "serial_servo.h"
+#include "packet_handle.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -435,6 +436,8 @@ void TIM7_IRQHandler(void)
     extern EncoderMotorObjectTypeDef *motors[2];
     extern volatile int motors_pwm_target[2];
     extern volatile int motors_pwm_current[2];
+    extern volatile uint16_t rrc_motor_failsafe_timeout_ms;
+    extern volatile uint32_t rrc_motor_last_cmd_ms;
 
     if (__HAL_TIM_GET_FLAG(&htim7, TIM_FLAG_UPDATE) != RESET &&
         __HAL_TIM_GET_IT_SOURCE(&htim7, TIM_IT_UPDATE) != RESET) {
@@ -444,6 +447,21 @@ void TIM7_IRQHandler(void)
         // latch counters & schedule encoder stream (no TX in IRQ)
         extern void encoders_timer7_cb(void);
         encoders_timer7_cb();
+
+        const uint32_t now_ms = HAL_GetTick();
+        const uint16_t failsafe_timeout = rrc_motor_failsafe_timeout_ms;
+        if (failsafe_timeout > 0U) {
+            if ((uint32_t)(now_ms - rrc_motor_last_cmd_ms) >=
+                (uint32_t)failsafe_timeout) {
+                for (int i = 0; i < 2; ++i) {
+                    motors_pwm_target[i] = 0;
+                }
+            }
+        }
+
+        rrc_motor_recovery_tick(now_ms);
+        rrc_imu_recovery_tick(now_ms);
+        rrc_io_recovery_tick(now_ms);
 
         // keep your existing 10 ms math exactly as-is
         uint32_t c0 = __HAL_TIM_GET_COUNTER(&htim5);
