@@ -283,7 +283,8 @@ bool rrc_send_recovered(uint8_t origin_func, uint8_t origin_sub,
 
 bool rrc_uart_baud_is_supported(uint32_t baud)
 {
-    return (baud == 115200U) || (baud == 1000000U);
+    return (baud == RRC_UART_BAUD_115200) ||
+           (baud == RRC_UART_BAUD_1000000);
 }
 
 uint16_t rrc_uart_baud_apply_delay_ms(uint32_t baud)

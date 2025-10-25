@@ -100,6 +100,15 @@ typedef struct __attribute__((packed)) {
     uint16_t period_ms_le;
 } rrc_sys_period_ack_t;
 
+#define RRC_UART_BAUD_115200          115200U
+#define RRC_UART_BAUD_1000000         1000000U
+
+typedef struct __attribute__((packed)) {
+    uint32_t baud_le;
+    uint16_t apply_after_ms_le;
+    uint8_t txid;
+} rrc_sys_uart_baud_set_req_t;
+
 typedef struct __attribute__((packed)) {
     uint8_t txid;
     uint32_t baud_le;
@@ -309,6 +318,8 @@ bool rrc_dispatch_command(uint8_t func, uint8_t sub,
 
 bool rrc_uart_baud_is_supported(uint32_t baud);
 uint16_t rrc_uart_baud_apply_delay_ms(uint32_t baud);
+uint32_t rrc_uart_current_baud(void);
+bool rrc_uart_runtime_reconfigure(uint32_t baud);
 
 #ifdef __cplusplus
 }

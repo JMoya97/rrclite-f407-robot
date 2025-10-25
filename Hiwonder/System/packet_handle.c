@@ -33,6 +33,25 @@ volatile uint16_t rrc_heartbeat_period_ms = RRC_HEARTBEAT_MS;
 static bool motor_pwm_fault_active;
 static rrc_error_code_t motor_pwm_last_error;
 
+static void rrc_uart_apply_with_delay(uint32_t baud, uint16_t delay_ms,
+                                      uint8_t txid)
+{
+    if (delay_ms == 0U) {
+        delay_ms = rrc_uart_baud_apply_delay_ms(baud);
+    }
+
+    if (delay_ms != 0U) {
+        osDelay(delay_ms);
+    }
+
+    if (!rrc_uart_runtime_reconfigure(baud)) {
+        const uint32_t now = HAL_GetTick();
+        const uint8_t err_txid = (txid == RRC_TXID_NONE) ? 0U : txid;
+        (void)rrc_send_err(RRC_FUNC_SYS, RRC_SYS_UART_BAUD_SET,
+                           RRC_SYS_ERR_IO_FAIL, 0U, now, err_txid);
+    }
+}
+
 static bool motor_pwm_try_reinit(void)
 {
     /* Stub hook for quick reinitialisation after an apply failure. */
@@ -805,6 +824,57 @@ static void packet_battery_limit_handle(struct PacketRawFrame *frame)
 
             (void)rrc_send_ack(RRC_FUNC_SYS, RRC_SYS_HEALTH_PERIOD_SET,
                                 &ack, sizeof(ack), txid);
+            break;
+        }
+        case RRC_SYS_UART_BAUD_SET: {
+            if (payload_len < 7U) {
+                break;
+            }
+
+            uint8_t txid = RRC_TXID_NONE;
+            if (payload_len == 8U) {
+                txid = payload[7];
+            } else if (payload_len != 7U) {
+                break;
+            }
+
+            const uint32_t baud = (uint32_t)payload[1] |
+                                   ((uint32_t)payload[2] << 8) |
+                                   ((uint32_t)payload[3] << 16) |
+                                   ((uint32_t)payload[4] << 24);
+            uint16_t apply_after_ms =
+                (uint16_t)((uint16_t)payload[5] | ((uint16_t)payload[6] << 8));
+
+            if (!rrc_uart_baud_is_supported(baud)) {
+                const uint8_t err_txid = (txid == RRC_TXID_NONE) ? 0U : txid;
+                (void)rrc_send_err(RRC_FUNC_SYS, RRC_SYS_UART_BAUD_SET,
+                                   RRC_SYS_ERR_UNSUPPORTED, 0U, HAL_GetTick(),
+                                   err_txid);
+                break;
+            }
+
+            if (apply_after_ms == 0U) {
+                apply_after_ms = rrc_uart_baud_apply_delay_ms(baud);
+            }
+
+            const rrc_sys_uart_baud_ack_t ack = {
+                .txid = txid,
+                .baud_le = baud,
+                .apply_after_ms_le = apply_after_ms,
+            };
+
+            if (!rrc_send_ack(RRC_FUNC_SYS, RRC_SYS_UART_BAUD_SET,
+                              &ack, sizeof(ack), txid)) {
+                break;
+            }
+
+            rrc_uart_apply_with_delay(baud, apply_after_ms, txid);
+            break;
+        }
+        case RRC_SYS_UART_BAUD_GET: {
+            const uint32_t baud_le = rrc_uart_current_baud();
+            (void)rrc_transport_send(RRC_FUNC_SYS, RRC_SYS_UART_BAUD_GET,
+                                     &baud_le, sizeof(baud_le));
             break;
         }
         case 1: {
