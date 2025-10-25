@@ -14,34 +14,16 @@
 
 extern uint16_t encoders_set_stream(uint8_t enable, uint16_t period_ms);
 extern void encoders_read_once_and_report(uint8_t sub);
-extern void imu_set_stream(uint8_t enable, uint16_t period_ms);
-extern void imu_read_once_and_report(uint8_t sub);
+extern uint16_t imu_set_stream(uint8_t sources_mask, uint16_t period_ms,
+                               uint8_t ack_each_frame, uint8_t *applied_mask,
+                               uint8_t *applied_ack_each_frame);
+extern void imu_emit_oneshot(uint8_t sources_mask);
+extern void imu_emit_whoami(uint8_t source_id);
 extern volatile int motors_pwm_current[2];
 extern uint16_t battery_set_stream(uint8_t enable, uint16_t period_ms);
 extern uint16_t battery_latest_millivolts_le(void);
 extern uint16_t buttons_set_stream(uint8_t enable, uint16_t period_ms);
 extern uint8_t buttons_read_mask(void);
-
-static bool motor_pwm_fault_active;
-static rrc_error_code_t motor_pwm_last_error;
-
-static bool motor_pwm_try_reinit(void)
-{
-    /* Stub hook for quick reinitialisation after an apply failure. */
-    return true;
-}
-
-static bool motor_pwm_apply(uint8_t id, int pwm)
-{
-    extern void motor_set_target_pwm(uint8_t id, int cmd);
-
-    if (id >= 2U) {
-        return false;
-    }
-
-    motor_set_target_pwm(id, pwm);
-    return true;
-}
 
 static bool motor_pwm_fault_active;
 static rrc_error_code_t motor_pwm_last_error;
@@ -656,18 +638,68 @@ static void packet_motor_handle(struct PacketRawFrame *frame)
 
 static void packet_imu_handle(struct PacketRawFrame *frame)
 {
-    switch (frame->data_and_checksum[0]) {
-        case 0xA0: { /* one-shot now */
-            imu_read_once_and_report(0xA0);
+    const uint8_t *payload = frame->data_and_checksum;
+    const size_t payload_len = frame->data_length;
+
+    if (payload_len == 0U) {
+        return;
+    }
+
+    const uint8_t sub = payload[0];
+
+    switch (sub) {
+    case RRC_IMU_ONESHOT: {
+        if (payload_len >= 2U) {
+            const uint8_t sources_mask = payload[1];
+            imu_emit_oneshot(sources_mask);
+        }
+        break;
+    }
+    case RRC_IMU_STREAM_CTRL: {
+        if (payload_len < 5U) {
             break;
         }
-        case 0xA1: { /* stream control */
-            const IMUStreamCtrlCmd* c = (const IMUStreamCtrlCmd*)frame->data_and_checksum;
-            uint16_t p = c->period_ms; if (p < 5) p = 5;
-            imu_set_stream(c->enable, p);
+
+        uint8_t txid = RRC_TXID_NONE;
+        if (payload_len == 6U) {
+            txid = payload[5];
+        } else if (payload_len != 5U) {
             break;
         }
-        default: break;
+
+        const uint8_t requested_mask = payload[1];
+        const uint16_t requested_period =
+            (uint16_t)((uint16_t)payload[2] | ((uint16_t)payload[3] << 8));
+        const uint8_t requested_ack = payload[4];
+
+        uint8_t applied_mask = 0U;
+        uint8_t applied_ack = 0U;
+        const uint16_t applied_period =
+            imu_set_stream(requested_mask, requested_period, requested_ack,
+                           &applied_mask, &applied_ack);
+
+        rrc_imu_stream_ack_t ack = {
+            .txid = txid,
+            .sources_mask = applied_mask,
+            .period_ms_le = applied_period,
+            .ack_each_frame = applied_ack,
+        };
+
+        (void)rrc_send_ack(RRC_FUNC_IMU, RRC_IMU_STREAM_CTRL,
+                            &ack, sizeof(ack), txid);
+        break;
+    }
+    case RRC_IMU_WHOAMI_STATUS: {
+        uint8_t source_id = 0U;
+        if (payload_len >= 2U) {
+            source_id = payload[1];
+        }
+
+        imu_emit_whoami(source_id);
+        break;
+    }
+    default:
+        break;
     }
 }
 

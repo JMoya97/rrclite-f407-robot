@@ -59,13 +59,13 @@ static const rrc_sub_entry_t g_io_subs[] = {
 };
 
 static const rrc_sub_entry_t g_imu_subs[] = {
-    {RRC_IMU_ONESHOT, STREAM_PAYLOAD_MAX},
-    {RRC_IMU_STREAM_CTRL, sizeof(rrc_imu_stream_ack_t)},
+    {RRC_IMU_ONESHOT, sizeof(rrc_imu_sample_t)},
+    {RRC_IMU_STREAM_CTRL, sizeof(rrc_imu_stream_frame_t)},
     {RRC_IMU_STREAM_ACK, sizeof(rrc_imu_frame_ack_t)},
     {RRC_IMU_SET_PRIMARY, sizeof(rrc_imu_primary_ack_t)},
     {RRC_IMU_SET_PRESET, sizeof(rrc_imu_preset_ack_t)},
     {RRC_IMU_SET_BIASES, sizeof(rrc_imu_bias_ack_t)},
-    {RRC_IMU_WHOAMI_STATUS, 3U},
+    {RRC_IMU_WHOAMI_STATUS, sizeof(rrc_imu_whoami_resp_t)},
 };
 
 static const rrc_func_entry_t g_func_table[] = {

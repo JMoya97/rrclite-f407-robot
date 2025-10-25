@@ -220,12 +220,29 @@ typedef enum {
     RRC_IMU_WHOAMI_STATUS          = 0xA5
 } rrc_imu_sub_t;
 
+#define RRC_IMU_STREAM_FRAME RRC_IMU_STREAM_CTRL
+
 typedef struct __attribute__((packed)) {
     uint8_t txid;
     uint8_t sources_mask;
     uint16_t period_ms_le;
     uint8_t ack_each_frame;
 } rrc_imu_stream_ack_t;
+
+typedef struct __attribute__((packed)) {
+    uint8_t source_id;
+    uint32_t t_ms;
+    float ax;
+    float ay;
+    float az;
+    float gx;
+    float gy;
+    float gz;
+    float mx;
+    float my;
+    float mz;
+    float temp_c;
+} rrc_imu_sample_t;
 
 typedef struct __attribute__((packed)) {
     uint8_t txid;
@@ -263,6 +280,12 @@ typedef struct __attribute__((packed)) {
     uint8_t source_id;
     uint16_t seq;
 } rrc_imu_frame_ack_t;
+
+typedef struct __attribute__((packed)) {
+    uint8_t source_id;
+    uint8_t whoami;
+    uint8_t status;
+} rrc_imu_whoami_resp_t;
 
 /* -------------------------------------------------------------------------- */
 /* Helper API                                                                 */
