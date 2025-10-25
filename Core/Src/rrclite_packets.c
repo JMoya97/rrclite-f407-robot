@@ -46,7 +46,7 @@ static const rrc_sub_entry_t g_motor_subs[] = {
     {RRC_MOTOR_PWM_ACK_SINGLE, sizeof(rrc_motor_pwm_ack_t)},
     {RRC_MOTOR_PWM_ACK_MULTI, STREAM_PAYLOAD_MAX},
     {RRC_MOTOR_ENCODER_ONESHOT, sizeof(rrc_encoder_stream_frame_t)},
-    {RRC_MOTOR_ENCODER_STREAM_CTRL, sizeof(rrc_encoder_stream_ack_t)},
+    {RRC_MOTOR_ENCODER_STREAM_CTRL, sizeof(rrc_encoder_stream_frame_t)},
     {RRC_MOTOR_ENCODER_STREAM_ACK, sizeof(rrc_encoder_frame_ack_t)},
 };
 

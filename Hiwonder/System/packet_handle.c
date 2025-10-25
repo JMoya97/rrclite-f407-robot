@@ -11,7 +11,7 @@
 
 #include <stdbool.h>
 
-extern void encoders_set_stream(uint8_t enable, uint16_t period_ms);
+extern uint16_t encoders_set_stream(uint8_t enable, uint16_t period_ms);
 extern void encoders_read_once_and_report(uint8_t sub);
 extern void imu_set_stream(uint8_t enable, uint16_t period_ms);
 extern void imu_read_once_and_report(uint8_t sub);
@@ -647,10 +647,33 @@ static void packet_encoder_handle(struct PacketRawFrame *frame)
             break;
         }
         case 0x91: { /* stream control */
-            const EncoderStreamCtrlCommandTypeDef* cmd =
-                (const EncoderStreamCtrlCommandTypeDef*)frame->data_and_checksum;
-            uint16_t p = cmd->period_ms; if (p < 5) p = 5;
-            encoders_set_stream(cmd->enable, p);
+            const uint8_t *payload = frame->data_and_checksum;
+            const size_t payload_len = frame->data_length;
+            if (payload_len < 4U) {
+                break;
+            }
+
+            uint8_t txid = RRC_TXID_NONE;
+            if (payload_len == 5U) {
+                txid = payload[4];
+            } else if (payload_len != 4U) {
+                break;
+            }
+
+            const uint8_t requested_enable = payload[1];
+            const uint16_t requested_period =
+                (uint16_t)((uint16_t)payload[2] | ((uint16_t)payload[3] << 8));
+            const uint16_t applied_period =
+                encoders_set_stream(requested_enable, requested_period);
+
+            rrc_encoder_stream_ack_t ack = {
+                .txid = txid,
+                .enable = (uint8_t)(requested_enable ? 1U : 0U),
+                .period_ms_le = applied_period,
+            };
+
+            (void)rrc_send_ack(RRC_FUNC_MOTOR, RRC_MOTOR_ENCODER_STREAM_CTRL,
+                                &ack, sizeof(ack), txid);
             break;
         }
         default: break;

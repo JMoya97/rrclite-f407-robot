@@ -18,7 +18,7 @@ void imu_read_once_and_report(uint8_t sub_cmd);
 
 void imu_set_stream(uint8_t enable, uint16_t period_ms);
 
-void encoders_set_stream(uint8_t enable, uint16_t period_ms);
+uint16_t encoders_set_stream(uint8_t enable, uint16_t period_ms);
 
 void encoders_read_once_and_report(uint8_t sub);
 

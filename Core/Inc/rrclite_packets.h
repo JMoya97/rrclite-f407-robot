@@ -127,6 +127,8 @@ typedef enum {
     RRC_MOTOR_ENCODER_STREAM_ACK   = 0x99
 } rrc_motor_sub_t;
 
+#define RRC_MOTOR_ENCODER_STREAM_FRAME RRC_MOTOR_ENCODER_STREAM_CTRL
+
 typedef struct __attribute__((packed)) {
     uint8_t motor_id;
     int16_t pwm;
