@@ -3,6 +3,7 @@
 #include "led.h"
 #include "buzzer.h"
 #include "serial_servo.h"
+#include "icm20948.h"
 #include "packet_reports.h"
 #include "motors_param.h"
 #include "tim.h"
@@ -1209,6 +1210,17 @@ static void packet_imu_handle(struct PacketRawFrame *frame)
         uint8_t applied_preset = payload[2];
         if (applied_preset > 2U) {
             applied_preset = 2U;
+        }
+
+        if (source_id == 0U) {
+            if (!icm20948_apply_preset(applied_preset)) {
+                const uint32_t now = HAL_GetTick();
+                const uint8_t err_txid = (txid == RRC_TXID_NONE) ? 0U : txid;
+                (void)rrc_send_err(RRC_FUNC_IMU, RRC_IMU_SET_PRESET,
+                                   RRC_SYS_ERR_UNSUPPORTED,
+                                   applied_preset, now, err_txid);
+                break;
+            }
         }
 
         g_imu_preset[source_id] = applied_preset;

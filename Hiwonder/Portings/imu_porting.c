@@ -43,6 +43,7 @@ static bool imu0_ensure_init(void);
 static bool imu1_ensure_init(void);
 static bool imu0_read_sample(rrc_imu_sample_t *out);
 static bool imu1_read_sample(rrc_imu_sample_t *out);
+static bool icm20948_apply_preset(uint8_t preset);
 
 #if ENABLE_IMU
 static void imu_backoff_init_once(uint8_t source_id)
@@ -234,6 +235,11 @@ static bool imu1_read_sample(rrc_imu_sample_t *out)
     out->temp_c = 0.0f;
 
     return true;
+}
+
+static bool icm20948_apply_preset(uint8_t preset)
+{
+    return icm20948_configure_preset(preset);
 }
 
 void imu_task_entry(void *argument)
