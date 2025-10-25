@@ -264,17 +264,216 @@ static void packet_oled_handle(struct PacketRawFrame *frame)
 
 static void packet_led_handle(struct PacketRawFrame *frame)
 {
-    LedCommandTypeDef *cmd = (LedCommandTypeDef*)frame->data_and_checksum;
-    uint8_t led_id = cmd->led_id - 1;
-    if(led_id < 2) { /* IDs start from 1 */
+    const uint8_t *payload = frame->data_and_checksum;
+    const size_t payload_len = frame->data_length;
+
+    if (payload_len == 0U) {
+        return;
+    }
+
+    if (payload[0] == RRC_IO_LED_SET) {
+        if (payload_len <= 1U) {
+            return;
+        }
+
+        const uint8_t *body = &payload[1];
+        size_t body_len = payload_len - 1U;
+        uint8_t txid = RRC_TXID_NONE;
+
+        const size_t legacy_simple_len = sizeof(LedCommandTypeDef);
+        if (body_len == legacy_simple_len ||
+            body_len == (legacy_simple_len + 1U)) {
+            if (body_len == (legacy_simple_len + 1U)) {
+                txid = body[legacy_simple_len];
+                body_len = legacy_simple_len;
+            }
+
+            const LedCommandTypeDef *cmd =
+                (const LedCommandTypeDef *)body;
+            if (cmd->led_id == 0U) {
+                const uint32_t now = HAL_GetTick();
+                (void)rrc_send_err(RRC_FUNC_IO, RRC_IO_LED_SET,
+                                   RRC_SYS_ERR_INVALID_ARG, 0U, now, 0U);
+                return;
+            }
+
+            const uint8_t led_index = (uint8_t)(cmd->led_id - 1U);
+            if (led_index >= 2U) {
+                const uint32_t now = HAL_GetTick();
+                const uint8_t err_txid =
+                    (txid == RRC_TXID_NONE) ? 0U : txid;
+                (void)rrc_send_err(RRC_FUNC_IO, RRC_IO_LED_SET,
+                                   RRC_SYS_ERR_INVALID_ARG, 0U, now, err_txid);
+                return;
+            }
+
+            led_flash(leds[led_index], cmd->on_time, cmd->off_time,
+                      cmd->repeat);
+
+            const uint8_t mode = (cmd->on_time > 0U) ? 1U : 0U;
+            const rrc_io_led_ack_t ack = {
+                .txid = txid,
+                .mode = mode,
+            };
+
+            (void)rrc_send_ack(RRC_FUNC_IO, RRC_IO_LED_SET, &ack, sizeof(ack),
+                                txid);
+            return;
+        }
+
+        if (body_len >= 2U) {
+            const uint8_t rgb_id = body[0];
+            size_t rgb_data_len = body_len - 1U;
+            const uint8_t *rgb_data = &body[1];
+            size_t expected_len = 0U;
+
+            if (rgb_id == 0U) {
+                expected_len = 6U;
+            } else if (rgb_id == 1U || rgb_id == 2U) {
+                expected_len = 3U;
+            }
+
+            if (expected_len != 0U) {
+                if (rgb_data_len == (expected_len + 1U)) {
+                    txid = rgb_data[expected_len];
+                    rgb_data_len = expected_len;
+                }
+
+                if (rgb_data_len == expected_len) {
+                    if (rgb_id == 0U) {
+                        set_rgb_color((uint8_t *)rgb_data);
+                    } else {
+                        set_id_rgb_color((uint8_t)(rgb_id - 1U),
+                                         (uint8_t *)rgb_data);
+                    }
+
+                    const rrc_io_led_ack_t ack = {
+                        .txid = txid,
+                        .mode = 2U,
+                    };
+
+                    (void)rrc_send_ack(RRC_FUNC_IO, RRC_IO_LED_SET, &ack,
+                                        sizeof(ack), txid);
+                    return;
+                }
+            }
+        }
+
+        const uint32_t now = HAL_GetTick();
+        (void)rrc_send_err(RRC_FUNC_IO, RRC_IO_LED_SET,
+                           RRC_SYS_ERR_INVALID_ARG, 0U, now, 0U);
+        return;
+    }
+
+    LedCommandTypeDef *cmd = (LedCommandTypeDef*)payload;
+    uint8_t led_id = cmd->led_id - 1U;
+    if (led_id < 2U) { /* IDs start from 1 */
         led_flash(leds[led_id], cmd->on_time, cmd->off_time, cmd->repeat);
     }
 }
 
 static void packet_buzzer_handle(struct PacketRawFrame *frame)
 {
-    BuzzerCommandTypeDef *cmd = (BuzzerCommandTypeDef*)frame->data_and_checksum;
-    buzzer_didi(buzzers[0], cmd->freq, cmd->on_time, cmd->off_time, cmd->repeat);
+    const uint8_t *payload = frame->data_and_checksum;
+    const size_t payload_len = frame->data_length;
+
+    if (payload_len == 0U) {
+        return;
+    }
+
+    if (payload[0] == RRC_IO_BUZZER_SET) {
+        if (payload_len <= 1U) {
+            return;
+        }
+
+        const uint8_t *body = &payload[1];
+        size_t body_len = payload_len - 1U;
+        uint8_t txid = RRC_TXID_NONE;
+
+        const size_t new_len = 5U; /* freq(2) + duty(1) + duration(2) */
+        if (body_len == new_len || body_len == (new_len + 1U)) {
+            if (body_len == (new_len + 1U)) {
+                txid = body[new_len];
+                body_len = new_len;
+            }
+
+            const uint16_t freq_hz = (uint16_t)body[0] |
+                                      ((uint16_t)body[1] << 8);
+            uint8_t duty_pct = body[2];
+            const uint16_t duration_ms = (uint16_t)body[3] |
+                                          ((uint16_t)body[4] << 8);
+
+            if (duty_pct > 100U) {
+                duty_pct = 100U;
+            }
+
+            if (freq_hz == 0U || duty_pct == 0U || duration_ms == 0U) {
+                buzzer_off(buzzers[0]);
+            } else {
+                const uint32_t on_time =
+                    ((uint32_t)duration_ms * (uint32_t)duty_pct) / 100U;
+                const uint32_t off_time = duration_ms - on_time;
+                buzzer_didi(buzzers[0], freq_hz, on_time, off_time, 1U);
+            }
+
+            const rrc_io_buzzer_ack_t ack = {
+                .txid = txid,
+                .freq_hz = freq_hz,
+                .duty_pct = duty_pct,
+                .duration_ms = duration_ms,
+            };
+
+            (void)rrc_send_ack(RRC_FUNC_IO, RRC_IO_BUZZER_SET, &ack,
+                                sizeof(ack), txid);
+            return;
+        }
+
+        const size_t legacy_len = sizeof(BuzzerCommandTypeDef);
+        if (body_len == legacy_len || body_len == (legacy_len + 1U)) {
+            if (body_len == (legacy_len + 1U)) {
+                txid = body[legacy_len];
+                body_len = legacy_len;
+            }
+
+            const BuzzerCommandTypeDef *cmd =
+                (const BuzzerCommandTypeDef *)body;
+            buzzer_didi(buzzers[0], cmd->freq, cmd->on_time, cmd->off_time,
+                        cmd->repeat);
+
+            uint8_t duty_pct = 0U;
+            const uint32_t total =
+                (uint32_t)cmd->on_time + (uint32_t)cmd->off_time;
+            if (total > 0U) {
+                uint32_t duty_calc =
+                    ((uint32_t)cmd->on_time * 100U) / total;
+                if (duty_calc > 100U) {
+                    duty_calc = 100U;
+                }
+                duty_pct = (uint8_t)duty_calc;
+            }
+
+            const rrc_io_buzzer_ack_t ack = {
+                .txid = txid,
+                .freq_hz = cmd->freq,
+                .duty_pct = duty_pct,
+                .duration_ms = cmd->on_time,
+            };
+
+            (void)rrc_send_ack(RRC_FUNC_IO, RRC_IO_BUZZER_SET, &ack,
+                                sizeof(ack), txid);
+            return;
+        }
+
+        const uint32_t now = HAL_GetTick();
+        const uint8_t err_txid = (txid == RRC_TXID_NONE) ? 0U : txid;
+        (void)rrc_send_err(RRC_FUNC_IO, RRC_IO_BUZZER_SET,
+                           RRC_SYS_ERR_INVALID_ARG, 0U, now, err_txid);
+        return;
+    }
+
+    BuzzerCommandTypeDef *cmd = (BuzzerCommandTypeDef*)payload;
+    buzzer_didi(buzzers[0], cmd->freq, cmd->on_time, cmd->off_time,
+                cmd->repeat);
 }
 
 

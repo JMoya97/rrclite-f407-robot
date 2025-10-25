@@ -91,4 +91,4 @@
 
 ## TO FIX
 
-- `Hiwonder/System/packet_handle.c`: extend IO LED (0x20) and buzzer (0x21) paths to issue the documented ACK payloads via `rrc_send_ack()`.
+- *(none)*
