@@ -30,7 +30,7 @@ typedef struct {
 
 static const rrc_sub_entry_t g_sys_subs[] = {
     {RRC_SYS_BATTERY_ONESHOT, sizeof(uint16_t)},
-    {RRC_SYS_BATTERY_STREAM_CTRL, sizeof(rrc_sys_battery_stream_ack_t)},
+    {RRC_SYS_BATTERY_STREAM_CTRL, sizeof(rrc_sys_battery_stream_frame_t)},
     {RRC_SYS_MOTOR_FAILSAFE_SET, sizeof(rrc_sys_motor_failsafe_ack_t)},
     {RRC_SYS_HEALTH_PERIOD_SET, sizeof(rrc_sys_period_ack_t)},
     {RRC_SYS_UART_BAUD_SET, sizeof(rrc_sys_uart_baud_ack_t)},

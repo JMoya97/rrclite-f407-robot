@@ -37,6 +37,8 @@ typedef enum {
     RRC_SYS_CAPABILITIES           = 0xF1,
 } rrc_sys_sub_t;
 
+#define RRC_SYS_BATTERY_STREAM_FRAME RRC_SYS_BATTERY_STREAM_CTRL
+
 #define RRC_PROTO_VERSION_MAJOR      0x02U
 #define RRC_PROTO_VERSION_MINOR      0x00U
 #define RRC_PROTO_VERSION_PATCH      0x0000U
@@ -82,6 +84,11 @@ typedef struct __attribute__((packed)) {
     uint8_t enable;
     uint16_t period_ms_le;
 } rrc_sys_battery_stream_ack_t;
+
+typedef struct __attribute__((packed)) {
+    uint16_t seq;
+    uint16_t millivolts_le;
+} rrc_sys_battery_stream_frame_t;
 
 typedef struct __attribute__((packed)) {
     uint8_t txid;
@@ -170,6 +177,8 @@ typedef enum {
     RRC_IO_BUTTON_STREAM_CTRL      = 0x23,
     RRC_IO_BUTTON_STREAM_ACK       = 0x29
 } rrc_io_sub_t;
+
+#define RRC_IO_BUTTON_STREAM_FRAME RRC_IO_BUTTON_STREAM_CTRL
 
 typedef struct __attribute__((packed)) {
     uint8_t txid;

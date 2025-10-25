@@ -10,12 +10,38 @@
 #include "rrclite_packets.h"
 
 #include <stdbool.h>
+#include <stddef.h>
 
 extern uint16_t encoders_set_stream(uint8_t enable, uint16_t period_ms);
 extern void encoders_read_once_and_report(uint8_t sub);
 extern void imu_set_stream(uint8_t enable, uint16_t period_ms);
 extern void imu_read_once_and_report(uint8_t sub);
 extern volatile int motors_pwm_current[2];
+extern uint16_t battery_set_stream(uint8_t enable, uint16_t period_ms);
+extern uint16_t battery_latest_millivolts_le(void);
+extern uint16_t buttons_set_stream(uint8_t enable, uint16_t period_ms);
+extern uint8_t buttons_read_mask(void);
+
+static bool motor_pwm_fault_active;
+static rrc_error_code_t motor_pwm_last_error;
+
+static bool motor_pwm_try_reinit(void)
+{
+    /* Stub hook for quick reinitialisation after an apply failure. */
+    return true;
+}
+
+static bool motor_pwm_apply(uint8_t id, int pwm)
+{
+    extern void motor_set_target_pwm(uint8_t id, int cmd);
+
+    if (id >= 2U) {
+        return false;
+    }
+
+    motor_set_target_pwm(id, pwm);
+    return true;
+}
 
 static bool motor_pwm_fault_active;
 static rrc_error_code_t motor_pwm_last_error;
@@ -376,6 +402,46 @@ static void packet_serial_servo_handle(struct PacketRawFrame *frame)
 
 static void packet_pwm_servo_handle(struct PacketRawFrame *frame)
 {
+    const uint8_t sub = frame->data_and_checksum[0];
+
+    if (sub == RRC_IO_BUTTON_ONESHOT) {
+        const uint8_t mask = buttons_read_mask();
+        (void)rrc_transport_send(RRC_FUNC_IO, RRC_IO_BUTTON_ONESHOT,
+                                 &mask, sizeof(mask));
+        return;
+    }
+
+    if (sub == RRC_IO_BUTTON_STREAM_CTRL) {
+        const uint8_t *payload = frame->data_and_checksum;
+        const size_t payload_len = frame->data_length;
+        if (payload_len < 4U) {
+            return;
+        }
+
+        uint8_t txid = RRC_TXID_NONE;
+        if (payload_len == 5U) {
+            txid = payload[4];
+        } else if (payload_len != 4U) {
+            return;
+        }
+
+        const uint8_t requested_enable = payload[1];
+        const uint16_t requested_period =
+            (uint16_t)((uint16_t)payload[2] | ((uint16_t)payload[3] << 8));
+        const uint16_t applied_period =
+            buttons_set_stream(requested_enable, requested_period);
+
+        rrc_button_stream_ack_t ack = {
+            .txid = txid,
+            .enable = (uint8_t)(requested_enable ? 1U : 0U),
+            .period_ms_le = applied_period,
+        };
+
+        (void)rrc_send_ack(RRC_FUNC_IO, RRC_IO_BUTTON_STREAM_CTRL,
+                            &ack, sizeof(ack), txid);
+        return;
+    }
+
     switch(frame->data_and_checksum[0]) {
         case 0x01: {    // Control multiple servos
             PWMServoSetMultiPositionCommandTypeDef *cmd = (PWMServoSetMultiPositionCommandTypeDef *)frame->data_and_checksum;
@@ -607,11 +673,55 @@ static void packet_imu_handle(struct PacketRawFrame *frame)
 
 static void packet_battery_limit_handle(struct PacketRawFrame *frame)
 {
-    BatteryWarnTypeDef *cmd = (BatteryWarnTypeDef*)frame->data_and_checksum;
-    switch(frame->data_and_checksum[0]) {
+    const uint8_t *payload = frame->data_and_checksum;
+    const size_t payload_len = frame->data_length;
+
+    if (payload_len == 0U) {
+        return;
+    }
+
+    switch (payload[0]) {
+        case RRC_SYS_BATTERY_ONESHOT: {
+            const uint16_t mv = battery_latest_millivolts_le();
+            (void)rrc_transport_send(RRC_FUNC_SYS, RRC_SYS_BATTERY_ONESHOT,
+                                     &mv, sizeof(mv));
+            break;
+        }
+        case RRC_SYS_BATTERY_STREAM_CTRL: {
+            if (payload_len < 4U) {
+                break;
+            }
+
+            uint8_t txid = RRC_TXID_NONE;
+            if (payload_len == 5U) {
+                txid = payload[4];
+            } else if (payload_len != 4U) {
+                break;
+            }
+
+            const uint8_t requested_enable = payload[1];
+            const uint16_t requested_period =
+                (uint16_t)((uint16_t)payload[2] | ((uint16_t)payload[3] << 8));
+            const uint16_t applied_period =
+                battery_set_stream(requested_enable, requested_period);
+
+            rrc_sys_battery_stream_ack_t ack = {
+                .txid = txid,
+                .enable = (uint8_t)(requested_enable ? 1U : 0U),
+                .period_ms_le = applied_period,
+            };
+
+            (void)rrc_send_ack(RRC_FUNC_SYS, RRC_SYS_BATTERY_STREAM_CTRL,
+                                &ack, sizeof(ack), txid);
+            break;
+        }
         case 1: {
-            change_battery_limit(cmd->limit);
-        }break;
+            if (payload_len >= sizeof(BatteryWarnTypeDef)) {
+                const BatteryWarnTypeDef *cmd = (const BatteryWarnTypeDef*)payload;
+                change_battery_limit(cmd->limit);
+            }
+            break;
+        }
         default:
             break;
     }
