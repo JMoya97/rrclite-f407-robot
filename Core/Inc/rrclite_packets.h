@@ -13,6 +13,7 @@ typedef enum {
     RRC_FUNC_SYS                = 0x00U,
     RRC_FUNC_MOTOR              = 0x03U,
     RRC_FUNC_IO                 = 0x04U,
+    RRC_FUNC_BUS_SERVO          = 0x06U,
     RRC_FUNC_IMU                = 0x07U,
 } rrc_func_t;
 
@@ -200,6 +201,19 @@ typedef struct __attribute__((packed)) {
     uint8_t duty_pct;
     uint16_t duration_ms;
 } rrc_io_buzzer_ack_t;
+
+/* BUS-SERVO (0x06) sub-commands ------------------------------------------- */
+
+typedef enum {
+    RRC_BUS_SERVO_SET_POSITION   = 0x01U,
+    RRC_BUS_SERVO_ACK            = 0x03U,
+} rrc_bus_servo_sub_t;
+
+typedef struct __attribute__((packed)) {
+    /* ACK echoes the host-supplied txid and the number of accepted targets. */
+    uint8_t txid;
+    uint8_t applied_count;
+} rrc_bus_servo_ack_t;
 
 typedef struct __attribute__((packed)) {
     uint16_t seq;
