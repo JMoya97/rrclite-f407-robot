@@ -9,9 +9,11 @@
 #include "cmsis_os2.h"
 #include "rrclite_config.h"
 #include "rrclite_packets.h"
+#include "rrc_backoff.h"
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <string.h>
 
 extern uint16_t encoders_set_stream(uint8_t enable, uint16_t period_ms);
@@ -33,6 +35,9 @@ volatile uint16_t rrc_heartbeat_period_ms = RRC_HEARTBEAT_MS;
 
 static bool motor_pwm_fault_active;
 static rrc_error_code_t motor_pwm_last_error;
+static rrc_backoff_t g_motor_backoff;
+static uint8_t g_motor_err_active;
+static uint32_t g_motor_retry_due_ms;
 
 typedef struct {
     float bax;
@@ -74,6 +79,38 @@ static bool motor_pwm_try_reinit(void)
 {
     /* Stub hook for quick reinitialisation after an apply failure. */
     return true;
+}
+
+static void motor_backoff_ensure_init(void)
+{
+    static uint8_t backoff_init_done;
+    if (backoff_init_done == 0U) {
+        rrc_backoff_init(&g_motor_backoff, 50U, 3.0f, 1000U);
+        backoff_init_done = 1U;
+    }
+}
+
+void rrc_motor_recovery_tick(uint32_t now_ms)
+{
+    motor_backoff_ensure_init();
+
+    if (g_motor_err_active == 0U) {
+        return;
+    }
+
+    if ((int32_t)(now_ms - g_motor_retry_due_ms) < 0) {
+        return;
+    }
+
+    if (motor_pwm_try_reinit()) {
+        g_motor_err_active = 0U;
+        rrc_backoff_reset(&g_motor_backoff);
+        (void)rrc_send_recovered(RRC_FUNC_MOTOR, RRC_MOTOR_PWM_SET,
+                                 RRC_SYS_ERR_IO_FAIL, now_ms);
+    } else {
+        const uint32_t delay_ms = rrc_backoff_next(&g_motor_backoff);
+        g_motor_retry_due_ms = now_ms + delay_ms;
+    }
 }
 
 static bool motor_pwm_apply(uint8_t id, int pwm)
@@ -748,7 +785,6 @@ static void packet_motor_handle(struct PacketRawFrame *frame)
                                        motor_pwm_last_error,
                                        (uint8_t)payload_len, now, err_txid);
                 }
-                (void)motor_pwm_try_reinit();
                 break;
             }
 
@@ -766,22 +802,26 @@ static void packet_motor_handle(struct PacketRawFrame *frame)
 
             if (!applied) {
                 const uint8_t err_txid = (txid == RRC_TXID_NONE) ? 0U : txid;
-                if (!motor_pwm_fault_active) {
-                    motor_pwm_fault_active = true;
-                    motor_pwm_last_error = RRC_SYS_ERR_INVALID_ARG;
+                motor_backoff_ensure_init();
+                motor_pwm_last_error = RRC_SYS_ERR_IO_FAIL;
+                if (g_motor_err_active == 0U) {
+                    g_motor_err_active = 1U;
                     (void)rrc_send_err(RRC_FUNC_MOTOR, RRC_MOTOR_PWM_SET,
-                                       motor_pwm_last_error, raw_id,
+                                       RRC_SYS_ERR_IO_FAIL, raw_id,
                                        now, err_txid);
+                    rrc_backoff_reset(&g_motor_backoff);
+                    const uint32_t delay_ms = rrc_backoff_next(&g_motor_backoff);
+                    g_motor_retry_due_ms = now + delay_ms;
                 }
-
-                (void)motor_pwm_try_reinit();
                 break;
             }
 
             if (motor_pwm_fault_active) {
                 motor_pwm_fault_active = false;
-                (void)rrc_send_recovered(RRC_FUNC_MOTOR, RRC_MOTOR_PWM_SET,
-                                         motor_pwm_last_error, now);
+                if (motor_pwm_last_error != RRC_SYS_ERR_IO_FAIL) {
+                    (void)rrc_send_recovered(RRC_FUNC_MOTOR, RRC_MOTOR_PWM_SET,
+                                             motor_pwm_last_error, now);
+                }
             }
 
             const uint8_t id = (uint8_t)(raw_id & 0x03U);
@@ -1288,6 +1328,10 @@ void packet_handle_init(void)
     packet_register_callback(&packet_controller, PACKET_FUNC_RGB, packet_RGB_Ctl_handle);
     packet_register_callback(&packet_controller, PACKET_FUNC_ENCODER, packet_encoder_handle);
 #if ENABLE_OLED
-	packet_register_callback(&packet_controller, PACKET_FUNC_OLED, packet_oled_handle);
+    packet_register_callback(&packet_controller, PACKET_FUNC_OLED, packet_oled_handle);
 #endif
+
+    rrc_backoff_init(&g_motor_backoff, 50U, 3.0f, 1000U);
+    g_motor_err_active = 0U;
+    g_motor_retry_due_ms = 0U;
 }

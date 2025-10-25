@@ -25,6 +25,7 @@
 #include "global.h"
 #include "tim.h"
 #include "serial_servo.h"
+#include "packet_handle.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -457,6 +458,8 @@ void TIM7_IRQHandler(void)
                 }
             }
         }
+
+        rrc_motor_recovery_tick(now_ms);
 
         // keep your existing 10 ms math exactly as-is
         uint32_t c0 = __HAL_TIM_GET_COUNTER(&htim5);
