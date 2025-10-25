@@ -40,21 +40,9 @@ static rrc_backoff_t g_motor_backoff;
 static uint8_t g_motor_err_active;
 static uint32_t g_motor_retry_due_ms;
 
-typedef struct {
-    float bax;
-    float bay;
-    float baz;
-    float bgx;
-    float bgy;
-    float bgz;
-    float bmx;
-    float bmy;
-    float bmz;
-} rrc_imu_bias_store_t;
-
 /* IMU configuration shadow (RAM only, reset on boot). */
 static uint8_t g_imu_primary;
-static rrc_imu_bias_store_t g_imu_bias[2];
+rrc_imu_bias_store_t g_imu_bias[2];
 static uint8_t g_imu_preset[2];
 
 typedef struct {

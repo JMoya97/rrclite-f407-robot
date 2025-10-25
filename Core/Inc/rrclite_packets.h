@@ -253,6 +253,18 @@ typedef struct __attribute__((packed)) {
     float temp_c;
 } rrc_imu_sample_t;
 
+typedef struct {
+    float bax;
+    float bay;
+    float baz;
+    float bgx;
+    float bgy;
+    float bgz;
+    float bmx;
+    float bmy;
+    float bmz;
+} rrc_imu_bias_store_t;
+
 typedef struct __attribute__((packed)) {
     uint8_t txid;
     uint8_t source_id;

@@ -11,6 +11,7 @@
 #include <stdbool.h>
 
 extern osSemaphoreId_t IMU_data_readyHandle;
+extern rrc_imu_bias_store_t g_imu_bias[2];
 
 static volatile uint8_t imu_stream_enabled;
 static uint8_t imu_stream_sources_mask;
@@ -195,17 +196,19 @@ static bool imu0_read_sample(rrc_imu_sample_t *out)
         return false;
     }
 
+    const rrc_imu_bias_store_t *bias = &g_imu_bias[0];
+
     out->source_id = 0U;
     out->t_ms = HAL_GetTick();
-    out->ax = raw.ax;
-    out->ay = raw.ay;
-    out->az = raw.az;
-    out->gx = raw.gx;
-    out->gy = raw.gy;
-    out->gz = raw.gz;
-    out->mx = raw.mx;
-    out->my = raw.my;
-    out->mz = raw.mz;
+    out->ax = raw.ax - bias->bax;
+    out->ay = raw.ay - bias->bay;
+    out->az = raw.az - bias->baz;
+    out->gx = raw.gx - bias->bgx;
+    out->gy = raw.gy - bias->bgy;
+    out->gz = raw.gz - bias->bgz;
+    out->mx = raw.mx - bias->bmx;
+    out->my = raw.my - bias->bmy;
+    out->mz = raw.mz - bias->bmz;
     out->temp_c = raw.temp_c;
 
     return true;
@@ -221,14 +224,16 @@ static bool imu1_read_sample(rrc_imu_sample_t *out)
     float gyro[3] = {0.0f, 0.0f, 0.0f};
     read_sensor_data(acc, gyro);
 
+    const rrc_imu_bias_store_t *bias = &g_imu_bias[1];
+
     out->source_id = 1U;
     out->t_ms = HAL_GetTick();
-    out->ax = acc[0];
-    out->ay = acc[1];
-    out->az = acc[2];
-    out->gx = gyro[0];
-    out->gy = gyro[1];
-    out->gz = gyro[2];
+    out->ax = acc[0] - bias->bax;
+    out->ay = acc[1] - bias->bay;
+    out->az = acc[2] - bias->baz;
+    out->gx = gyro[0] - bias->bgx;
+    out->gy = gyro[1] - bias->bgy;
+    out->gz = gyro[2] - bias->bgz;
     out->mx = 0.0f;
     out->my = 0.0f;
     out->mz = 0.0f;
