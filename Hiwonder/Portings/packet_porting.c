@@ -4,8 +4,10 @@
 #include "packet.h"
 #include "cmsis_os2.h"
 #include <stdio.h>
+#include <string.h>
 #include "lwmem_porting.h"
 #include "packet_handle.h"
+#include "rrclite_packets.h"
 
 #define PACKET_RX_FIFO_BUFFER_SIZE 2048 /* FIFO buffer length */
 #define PACKET_RX_DMA_BUFFER_SIZE 256 /* DMA buffer length */
@@ -23,6 +25,34 @@ static void packet_uart_error_callblack(UART_HandleTypeDef *huart);
 extern osSemaphoreId_t packet_tx_idleHandle;
 extern osSemaphoreId_t packet_rx_not_emptyHandle;
 extern osMessageQueueId_t packet_tx_queueHandle;
+
+bool rrc_transport_send(uint8_t func, uint8_t sub, const void *payload, size_t len)
+{
+    if (!rrc_func_is_supported(func)) {
+        return false;
+    }
+
+    if (!rrc_sub_is_supported(func, sub)) {
+        return false;
+    }
+
+    if (!rrc_payload_len_valid_for(func, sub, len)) {
+        return false;
+    }
+
+    const size_t total = len + 1U;
+    uint8_t frame[RRC_MAX_PAYLOAD_LEN];
+
+    frame[0] = sub;
+    if (len > 0U) {
+        if (payload == NULL) {
+            return false;
+        }
+        memcpy(&frame[1], payload, len);
+    }
+
+    return packet_transmit(&packet_controller, func, frame, total) == 0;
+}
 
 void packet_init(void)
 {
