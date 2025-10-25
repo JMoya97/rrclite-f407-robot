@@ -31,10 +31,40 @@ typedef enum {
     RRC_SYS_UART_BAUD_SET          = 0xC0,
     RRC_SYS_UART_BAUD_GET          = 0xC1,
     RRC_SYS_PING_ECHO              = 0xE0,
-    RRC_SYS_VERSION                = 0xF0,
     RRC_SYS_ERROR_EVENT            = 0xEE,
-    RRC_SYS_RECOVERED_EVENT        = 0xEF
+    RRC_SYS_RECOVERED_EVENT        = 0xEF,
+    RRC_SYS_VERSION                = 0xF0,
+    RRC_SYS_CAPABILITIES           = 0xF1,
 } rrc_sys_sub_t;
+
+#define RRC_PROTO_VERSION_MAJOR      0x02U
+#define RRC_PROTO_VERSION_MINOR      0x00U
+#define RRC_PROTO_VERSION_PATCH      0x0000U
+
+typedef enum {
+    RRC_SYS_CAP_TXID_ACKS          = (1U << 0),
+    RRC_SYS_CAP_SEQ_STREAMS        = (1U << 1),
+    RRC_SYS_CAP_STREAM_ACK_OPT     = (1U << 2),
+    RRC_SYS_CAP_DUAL_IMU           = (1U << 3),
+    RRC_SYS_CAP_BAUD_1M            = (1U << 4),
+    RRC_SYS_CAP_FAILSAFE           = (1U << 5),
+} rrc_sys_capability_flags_t;
+
+typedef struct __attribute__((packed)) {
+    uint8_t major;
+    uint8_t minor;
+    uint16_t patch_le;
+} rrc_sys_version_resp_t;
+
+typedef struct __attribute__((packed)) {
+    uint8_t proto_major;
+    uint8_t proto_minor;
+    uint8_t rsvd0[2];
+    uint32_t caps0_le;
+    uint32_t max_baud_le;
+    uint16_t max_imu_hz_le;
+    uint16_t max_enc_hz_le;
+} rrc_sys_capabilities_resp_t;
 
 typedef enum {
     RRC_SYS_ERR_INVALID_ARG        = 0x01,
@@ -237,6 +267,9 @@ bool rrc_sub_is_supported(uint8_t func, uint8_t sub);
 bool rrc_payload_len_valid(size_t len);
 bool rrc_payload_len_valid_for(uint8_t func, uint8_t sub, size_t len);
 uint16_t rrc_payload_max_for(uint8_t func, uint8_t sub);
+
+bool rrc_dispatch_command(uint8_t func, uint8_t sub,
+                          const void *payload, size_t len);
 
 bool rrc_uart_baud_is_supported(uint32_t baud);
 uint16_t rrc_uart_baud_apply_delay_ms(uint32_t baud);

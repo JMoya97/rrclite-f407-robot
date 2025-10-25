@@ -99,6 +99,14 @@ current rate with `{txid, baud_le, apply_after_ms_le}` (default 100 ms) and
 switches once the delay expires. Hosts must wait for the ACK, reconfigure their
 UART within the specified window, and resume communication at the new rate.
 
+### Protocol v2 scaffolding
+
+- `SYS/0xF0` reports the firmware protocol revision `{major=2, minor=0, patch=0}`.
+- `SYS/0xF1` exposes capability bits (txid ACKs, sequenced streams, optional
+  frame ACKs, dual-IMU streaming, 1 Mbaud support, and motor failsafe) along
+  with the maximum supported UART baud (1,000,000 bps) plus representative IMU
+  (200 Hz) and encoder (1,000 Hz) streaming rates.
+
 ## Repository maintenance
 
 To allow local testing of Git operations without an external host, a bare

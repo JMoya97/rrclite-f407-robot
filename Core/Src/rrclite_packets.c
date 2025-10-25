@@ -4,6 +4,15 @@
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
+#define RRC_SYS_CAPABILITIES_FLAGS_DEFAULT \
+    (RRC_SYS_CAP_TXID_ACKS | RRC_SYS_CAP_SEQ_STREAMS | \
+     RRC_SYS_CAP_STREAM_ACK_OPT | RRC_SYS_CAP_DUAL_IMU | \
+     RRC_SYS_CAP_BAUD_1M | RRC_SYS_CAP_FAILSAFE)
+
+#define RRC_SYS_CAPABILITIES_MAX_BAUD   1000000U
+#define RRC_SYS_CAPABILITIES_MAX_IMU_HZ 200U
+#define RRC_SYS_CAPABILITIES_MAX_ENC_HZ 1000U
+
 typedef struct {
     uint8_t sub;
     uint16_t max_payload;
@@ -25,9 +34,10 @@ static const rrc_sub_entry_t g_sys_subs[] = {
     {RRC_SYS_UART_BAUD_SET, sizeof(rrc_sys_uart_baud_ack_t)},
     {RRC_SYS_UART_BAUD_GET, sizeof(uint32_t)},
     {RRC_SYS_PING_ECHO, STREAM_PAYLOAD_MAX},
-    {RRC_SYS_VERSION, 4U},
     {RRC_SYS_ERROR_EVENT, sizeof(rrc_sys_error_report_t)},
     {RRC_SYS_RECOVERED_EVENT, sizeof(rrc_sys_recovered_report_t)},
+    {RRC_SYS_VERSION, sizeof(rrc_sys_version_resp_t)},
+    {RRC_SYS_CAPABILITIES, sizeof(rrc_sys_capabilities_resp_t)},
 };
 
 static const rrc_sub_entry_t g_motor_subs[] = {
@@ -92,6 +102,53 @@ static const rrc_sub_entry_t *rrc_lookup_sub_entry(uint8_t func, uint8_t sub)
     return NULL;
 }
 
+static bool rrc_handle_sys_version(const void *payload, size_t len)
+{
+    (void)payload;
+    (void)len;
+
+    const rrc_sys_version_resp_t resp = {
+        .major = RRC_PROTO_VERSION_MAJOR,
+        .minor = RRC_PROTO_VERSION_MINOR,
+        .patch_le = RRC_PROTO_VERSION_PATCH,
+    };
+
+    return rrc_send_ack(RRC_FUNC_SYS, RRC_SYS_VERSION, &resp, sizeof(resp));
+}
+
+static bool rrc_handle_sys_capabilities(const void *payload, size_t len)
+{
+    (void)payload;
+    (void)len;
+
+    const rrc_sys_capabilities_resp_t resp = {
+        .proto_major = RRC_PROTO_VERSION_MAJOR,
+        .proto_minor = RRC_PROTO_VERSION_MINOR,
+        .rsvd0 = {0U, 0U},
+        .caps0_le = RRC_SYS_CAPABILITIES_FLAGS_DEFAULT,
+        .max_baud_le = RRC_SYS_CAPABILITIES_MAX_BAUD,
+        .max_imu_hz_le = RRC_SYS_CAPABILITIES_MAX_IMU_HZ,
+        .max_enc_hz_le = RRC_SYS_CAPABILITIES_MAX_ENC_HZ,
+    };
+
+    return rrc_send_ack(RRC_FUNC_SYS, RRC_SYS_CAPABILITIES,
+                        &resp, sizeof(resp));
+}
+
+static bool rrc_dispatch_sys(uint8_t sub, const void *payload, size_t len)
+{
+    switch (sub) {
+    case RRC_SYS_VERSION:
+        return rrc_handle_sys_version(payload, len);
+    case RRC_SYS_CAPABILITIES:
+        return rrc_handle_sys_capabilities(payload, len);
+    default:
+        break;
+    }
+
+    return false;
+}
+
 #ifndef RRC_UART_DEFAULT_APPLY_DELAY_MS
 #define RRC_UART_DEFAULT_APPLY_DELAY_MS 100U
 #endif
@@ -143,6 +200,19 @@ bool rrc_payload_len_valid_for(uint8_t func, uint8_t sub, size_t len)
     }
 
     return len <= (size_t)max_payload;
+}
+
+bool rrc_dispatch_command(uint8_t func, uint8_t sub,
+                          const void *payload, size_t len)
+{
+    switch (func) {
+    case RRC_FUNC_SYS:
+        return rrc_dispatch_sys(sub, payload, len);
+    default:
+        break;
+    }
+
+    return false;
 }
 
 bool rrc_send_ack(uint8_t func, uint8_t sub, const void *payload, size_t len)
