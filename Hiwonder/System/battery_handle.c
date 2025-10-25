@@ -31,6 +31,8 @@ static uint16_t battery_stream_period_ms;
 static uint16_t battery_stream_elapsed_ms;
 static uint16_t batt_seq;
 
+extern volatile uint16_t rrc_heartbeat_period_ms;
+
 static uint16_t battery_latest_millivolts(void)
 {
     const float v = battery_volt;
@@ -108,8 +110,7 @@ void battery_check_timer_callback(void *argument)
         battery_volt = battery_volt == 0 ? volt : battery_volt * 0.95f + volt * 0.05f;
     }
     HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc_value, 2);
-    static int battery_report_count = 0;
-    battery_report_count++;
+    static uint32_t battery_report_elapsed_ms = 0U;
     /* BATTERY_LED_UPDATE: map voltage to color bands with hysteresis */
     int v = (int)battery_volt; /* mV */
     uint8_t next_band = battery_led_band;
@@ -128,26 +129,34 @@ void battery_check_timer_callback(void *argument)
         battery_led_band = next_band;
         battery_led_apply(battery_led_band);
     }
+    const uint16_t heartbeat_period = rrc_heartbeat_period_ms;
+    if (heartbeat_period > 0U) {
+        uint32_t elapsed = battery_report_elapsed_ms + BATTERY_TASK_PERIOD;
+        if (elapsed >= heartbeat_period) {
+            battery_report_elapsed_ms = 0U;
 
-
-    if(battery_report_count > (int)(1 * 1000 / BATTERY_TASK_PERIOD)) { /* Periodically report voltage over Bluetooth */
-        battery_report_count = 0;
-                PacketReportBatteryVoltageTypeDef report;
-                report.sub_cmd = 0x04;
-                report.voltage = (int)(battery_volt + 0.5f);
-        packet_transmit(&packet_controller, PACKET_FUNC_SYS, &report, sizeof(PacketReportBatteryVoltageTypeDef));
+            PacketReportBatteryVoltageTypeDef report;
+            report.sub_cmd = 0x04;
+            report.voltage = (int)(battery_volt + 0.5f);
+            packet_transmit(&packet_controller, PACKET_FUNC_SYS, &report,
+                            sizeof(PacketReportBatteryVoltageTypeDef));
 
 #if ENABLE_OLED
-		extern int oled_battery;
-		oled_battery = (int)(battery_volt + 0.5f);
+            extern int oled_battery;
+            oled_battery = (int)(battery_volt + 0.5f);
 #endif
-		
+
 #if ENABLE_LVGL
-        ObjectTypeDef object;
-        object.structure.type_id = OBJECT_TYPE_ID_BATTERY_VOLTAGE;
-        *((uint16_t*)object.structure.data) = (int)(battery_volt + 0.5f);
-        osMessageQueuePut(lvgl_event_queueHandle, &object, 0, 0);
+            ObjectTypeDef object;
+            object.structure.type_id = OBJECT_TYPE_ID_BATTERY_VOLTAGE;
+            *((uint16_t*)object.structure.data) = (int)(battery_volt + 0.5f);
+            osMessageQueuePut(lvgl_event_queueHandle, &object, 0, 0);
 #endif
+        } else {
+            battery_report_elapsed_ms = elapsed;
+        }
+    } else {
+        battery_report_elapsed_ms = 0U;
     }
 
 #if ENABLE_BATTERY_LOW_ALARM

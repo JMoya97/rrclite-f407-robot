@@ -7,6 +7,7 @@
 #include "motors_param.h"
 #include "tim.h"
 #include "cmsis_os2.h"
+#include "rrclite_config.h"
 #include "rrclite_packets.h"
 
 #include <stdbool.h>
@@ -24,6 +25,10 @@ extern uint16_t battery_set_stream(uint8_t enable, uint16_t period_ms);
 extern uint16_t battery_latest_millivolts_le(void);
 extern uint16_t buttons_set_stream(uint8_t enable, uint16_t period_ms);
 extern uint8_t buttons_read_mask(void);
+
+volatile uint16_t rrc_motor_failsafe_timeout_ms;
+volatile uint32_t rrc_motor_last_cmd_ms;
+volatile uint16_t rrc_heartbeat_period_ms = RRC_HEARTBEAT_MS;
 
 static bool motor_pwm_fault_active;
 static rrc_error_code_t motor_pwm_last_error;
@@ -550,6 +555,8 @@ static void packet_motor_handle(struct PacketRawFrame *frame)
                 applied_pwm = (int16_t)motors_pwm_current[id];
             }
 
+            rrc_motor_last_cmd_ms = now;
+
             rrc_motor_pwm_ack_t ack = {
                 .txid = txid,
                 .motor_id = id,
@@ -744,6 +751,59 @@ static void packet_battery_limit_handle(struct PacketRawFrame *frame)
             };
 
             (void)rrc_send_ack(RRC_FUNC_SYS, RRC_SYS_BATTERY_STREAM_CTRL,
+                                &ack, sizeof(ack), txid);
+            break;
+        }
+        case RRC_SYS_MOTOR_FAILSAFE_SET: {
+            if (payload_len < 3U) {
+                break;
+            }
+
+            uint8_t txid = RRC_TXID_NONE;
+            if (payload_len == 4U) {
+                txid = payload[3];
+            } else if (payload_len != 3U) {
+                break;
+            }
+
+            const uint16_t timeout_ms =
+                (uint16_t)((uint16_t)payload[1] | ((uint16_t)payload[2] << 8));
+
+            rrc_motor_failsafe_timeout_ms = timeout_ms;
+            rrc_motor_last_cmd_ms = HAL_GetTick();
+
+            const rrc_sys_motor_failsafe_ack_t ack = {
+                .txid = txid,
+                .timeout_ms_le = timeout_ms,
+            };
+
+            (void)rrc_send_ack(RRC_FUNC_SYS, RRC_SYS_MOTOR_FAILSAFE_SET,
+                                &ack, sizeof(ack), txid);
+            break;
+        }
+        case RRC_SYS_HEALTH_PERIOD_SET: {
+            if (payload_len < 3U) {
+                break;
+            }
+
+            uint8_t txid = RRC_TXID_NONE;
+            if (payload_len == 4U) {
+                txid = payload[3];
+            } else if (payload_len != 3U) {
+                break;
+            }
+
+            const uint16_t period_ms =
+                (uint16_t)((uint16_t)payload[1] | ((uint16_t)payload[2] << 8));
+
+            rrc_heartbeat_period_ms = period_ms;
+
+            const rrc_sys_period_ack_t ack = {
+                .txid = txid,
+                .period_ms_le = period_ms,
+            };
+
+            (void)rrc_send_ack(RRC_FUNC_SYS, RRC_SYS_HEALTH_PERIOD_SET,
                                 &ack, sizeof(ack), txid);
             break;
         }
