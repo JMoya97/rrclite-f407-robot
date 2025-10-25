@@ -52,7 +52,7 @@ int serial_servo_read_id(SerialServoControllerTypeDef *self, uint32_t servo_id, 
     return -1;
 }
 
-void serial_servo_set_position(SerialServoControllerTypeDef *self, uint32_t servo_id, int position, uint32_t duration)
+int serial_servo_set_position(SerialServoControllerTypeDef *self, uint32_t servo_id, int position, uint32_t duration)
 {
     SerialServoCmdTypeDef frame;
     position = position > 1000 ? 1000 : position;
@@ -62,7 +62,7 @@ void serial_servo_set_position(SerialServoControllerTypeDef *self, uint32_t serv
     frame.elements.args[2] = GET_LOW_BYTE(duration);
     frame.elements.args[3] = GET_HIGH_BYTE(duration);
     cmd_frame_complete(&frame, 4);
-    self->serial_write_and_read(self, &frame, true);
+    return self->serial_write_and_read(self, &frame, true);
 }
 
 int serial_servo_read_position(SerialServoControllerTypeDef *self, uint32_t servo_id, int16_t *position)

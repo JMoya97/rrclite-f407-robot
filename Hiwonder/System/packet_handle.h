@@ -33,6 +33,8 @@ extern volatile uint32_t rrc_motor_last_cmd_ms;
 extern volatile uint16_t rrc_heartbeat_period_ms;
 
 void rrc_motor_recovery_tick(uint32_t now_ms);
+void rrc_imu_recovery_tick(uint32_t now_ms);
+void rrc_io_recovery_tick(uint32_t now_ms);
 
 #endif
 

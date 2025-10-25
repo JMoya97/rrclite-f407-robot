@@ -56,6 +56,20 @@ static uint8_t g_imu_primary;
 static rrc_imu_bias_store_t g_imu_bias[2];
 static uint8_t g_imu_preset[2];
 
+typedef struct {
+    rrc_backoff_t backoff;
+    uint8_t init;
+    uint8_t err_active;
+    uint32_t retry_due_ms;
+    uint8_t detail;
+    uint16_t extra0;
+    uint16_t extra1;
+} rrc_io_recovery_state_t;
+
+static rrc_io_recovery_state_t g_led_recovery;
+static rrc_io_recovery_state_t g_buzzer_recovery;
+static rrc_io_recovery_state_t g_steering_recovery;
+
 static void rrc_uart_apply_with_delay(uint32_t baud, uint16_t delay_ms,
                                       uint8_t txid)
 {
@@ -123,6 +137,123 @@ static bool motor_pwm_apply(uint8_t id, int pwm)
 
     motor_set_target_pwm(id, pwm);
     return true;
+}
+
+static void rrc_io_recovery_schedule(rrc_io_recovery_state_t *state,
+                                     uint8_t func, uint8_t sub,
+                                     uint8_t detail,
+                                     uint16_t extra0,
+                                     uint16_t extra1)
+{
+    if (state == NULL) {
+        return;
+    }
+
+    if (state->init == 0U) {
+        rrc_backoff_init(&state->backoff, 50U, 3.0f, 1000U);
+        state->init = 1U;
+    }
+
+    state->detail = detail;
+    state->extra0 = extra0;
+    state->extra1 = extra1;
+
+    const uint32_t now = HAL_GetTick();
+
+    if (state->err_active == 0U) {
+        state->err_active = 1U;
+        (void)rrc_send_err(func, sub, RRC_SYS_ERR_IO_FAIL, detail, now, 0U);
+        rrc_backoff_reset(&state->backoff);
+    }
+
+    const uint32_t delay_ms = rrc_backoff_next(&state->backoff);
+    state->retry_due_ms = now + delay_ms;
+}
+
+static void rrc_io_recovery_clear(rrc_io_recovery_state_t *state,
+                                  uint8_t func, uint8_t sub)
+{
+    if ((state == NULL) || (state->err_active == 0U)) {
+        return;
+    }
+
+    state->err_active = 0U;
+    rrc_backoff_reset(&state->backoff);
+    state->retry_due_ms = 0U;
+
+    const uint32_t now = HAL_GetTick();
+    (void)rrc_send_recovered(func, sub, RRC_SYS_ERR_IO_FAIL, now);
+}
+
+static bool rrc_led_try_reinit(const rrc_io_recovery_state_t *state)
+{
+    if (state == NULL) {
+        return false;
+    }
+
+    const uint8_t led_index = state->detail;
+    if (led_index >= LED_NUM) {
+        return false;
+    }
+
+    LEDObjectTypeDef *led = leds[led_index];
+    if (led == NULL) {
+        return false;
+    }
+
+    return led_flash(led, 0U, 0U, 0U) == 0;
+}
+
+static bool rrc_buzzer_try_reinit(const rrc_io_recovery_state_t *state)
+{
+    (void)state;
+    return buzzer_off(buzzers[0]) == 0;
+}
+
+static bool rrc_steering_try_reinit(const rrc_io_recovery_state_t *state)
+{
+    if (state == NULL) {
+        return false;
+    }
+
+    uint8_t servo_id = state->detail;
+
+    return serial_servo_set_position(&serial_servo_controller, servo_id,
+                                     (int)state->extra0, state->extra1) == 0;
+}
+
+static void rrc_io_recovery_tick_one(rrc_io_recovery_state_t *state,
+                                     uint8_t func, uint8_t sub,
+                                     bool (*try_reinit)(const rrc_io_recovery_state_t *),
+                                     uint32_t now_ms)
+{
+    if ((state == NULL) || (state->err_active == 0U)) {
+        return;
+    }
+
+    if ((int32_t)(now_ms - state->retry_due_ms) < 0) {
+        return;
+    }
+
+    if ((try_reinit != NULL) && try_reinit(state)) {
+        state->err_active = 0U;
+        rrc_backoff_reset(&state->backoff);
+        state->retry_due_ms = 0U;
+        (void)rrc_send_recovered(func, sub, RRC_SYS_ERR_IO_FAIL, now_ms);
+    } else {
+        const uint32_t delay = rrc_backoff_next(&state->backoff);
+        state->retry_due_ms = now_ms + delay;
+    }
+}
+
+void rrc_io_recovery_tick(uint32_t now_ms)
+{
+    rrc_io_recovery_tick_one(&g_led_recovery, RRC_FUNC_IO, RRC_IO_LED_SET,
+                             rrc_led_try_reinit, now_ms);
+    rrc_io_recovery_tick_one(&g_buzzer_recovery, RRC_FUNC_IO, RRC_IO_BUZZER_SET,
+                             rrc_buzzer_try_reinit, now_ms);
+    rrc_io_recovery_tick_one(&g_steering_recovery, PACKET_FUNC_BUS_SERVO, 0x01U,
+                             rrc_steering_try_reinit, now_ms);
 }
 
 #pragma pack(1)
@@ -344,8 +475,17 @@ static void packet_led_handle(struct PacketRawFrame *frame)
                 return;
             }
 
-            led_flash(leds[led_index], cmd->on_time, cmd->off_time,
-                      cmd->repeat);
+            const int apply_rc =
+                led_flash(leds[led_index], cmd->on_time, cmd->off_time,
+                          cmd->repeat);
+            if (apply_rc != 0) {
+                rrc_io_recovery_schedule(&g_led_recovery, RRC_FUNC_IO,
+                                         RRC_IO_LED_SET, led_index, 0U, 0U);
+                return;
+            }
+
+            rrc_io_recovery_clear(&g_led_recovery, RRC_FUNC_IO,
+                                  RRC_IO_LED_SET);
 
             const uint8_t mode = (cmd->on_time > 0U) ? 1U : 0U;
             const rrc_io_led_ack_t ack = {
@@ -389,6 +529,8 @@ static void packet_led_handle(struct PacketRawFrame *frame)
                         .mode = 2U,
                     };
 
+                    rrc_io_recovery_clear(&g_led_recovery, RRC_FUNC_IO,
+                                          RRC_IO_LED_SET);
                     (void)rrc_send_ack(RRC_FUNC_IO, RRC_IO_LED_SET, &ack,
                                         sizeof(ack), txid);
                     return;
@@ -444,14 +586,26 @@ static void packet_buzzer_handle(struct PacketRawFrame *frame)
                 duty_pct = 100U;
             }
 
+            int apply_rc;
             if (freq_hz == 0U || duty_pct == 0U || duration_ms == 0U) {
-                buzzer_off(buzzers[0]);
+                apply_rc = buzzer_off(buzzers[0]);
             } else {
                 const uint32_t on_time =
                     ((uint32_t)duration_ms * (uint32_t)duty_pct) / 100U;
                 const uint32_t off_time = duration_ms - on_time;
-                buzzer_didi(buzzers[0], freq_hz, on_time, off_time, 1U);
+                apply_rc = buzzer_didi(buzzers[0], freq_hz, on_time, off_time,
+                                        1U);
             }
+
+            if (apply_rc != 0) {
+                rrc_io_recovery_schedule(&g_buzzer_recovery, RRC_FUNC_IO,
+                                         RRC_IO_BUZZER_SET, 0U, freq_hz,
+                                         duration_ms);
+                return;
+            }
+
+            rrc_io_recovery_clear(&g_buzzer_recovery, RRC_FUNC_IO,
+                                  RRC_IO_BUZZER_SET);
 
             const rrc_io_buzzer_ack_t ack = {
                 .txid = txid,
@@ -474,8 +628,19 @@ static void packet_buzzer_handle(struct PacketRawFrame *frame)
 
             const BuzzerCommandTypeDef *cmd =
                 (const BuzzerCommandTypeDef *)body;
-            buzzer_didi(buzzers[0], cmd->freq, cmd->on_time, cmd->off_time,
-                        cmd->repeat);
+            const int apply_rc =
+                buzzer_didi(buzzers[0], cmd->freq, cmd->on_time,
+                            cmd->off_time, cmd->repeat);
+
+            if (apply_rc != 0) {
+                rrc_io_recovery_schedule(&g_buzzer_recovery, RRC_FUNC_IO,
+                                         RRC_IO_BUZZER_SET, 0U, cmd->freq,
+                                         cmd->on_time);
+                return;
+            }
+
+            rrc_io_recovery_clear(&g_buzzer_recovery, RRC_FUNC_IO,
+                                  RRC_IO_BUZZER_SET);
 
             uint8_t duty_pct = 0U;
             const uint32_t total =
@@ -527,9 +692,25 @@ static void packet_serial_servo_handle(struct PacketRawFrame *frame)
     switch(frame->data_and_checksum[0]) {
         case 0x01: { /* Servo control */
             SerialServoSetPositionCommandTypeDef *cmd=(SerialServoSetPositionCommandTypeDef *)frame->data_and_checksum;
+            bool all_ok = true;
             for(int i = 0; i < cmd->servo_num; i++) {
-                serial_servo_set_position(&serial_servo_controller, cmd->elements[i].servo_id,
-                            							cmd->elements[i].position, cmd->duration);
+                const uint8_t servo_id = cmd->elements[i].servo_id;
+                const uint16_t position = cmd->elements[i].position;
+                const uint16_t duration = cmd->duration;
+                if (serial_servo_set_position(&serial_servo_controller,
+                                              servo_id, (int)position,
+                                              duration) != 0) {
+                    rrc_io_recovery_schedule(&g_steering_recovery,
+                                             PACKET_FUNC_BUS_SERVO, 0x01U,
+                                             servo_id, position, duration);
+                    all_ok = false;
+                    break;
+                }
+            }
+
+            if (all_ok) {
+                rrc_io_recovery_clear(&g_steering_recovery,
+                                      PACKET_FUNC_BUS_SERVO, 0x01U);
             }
             break;
         }

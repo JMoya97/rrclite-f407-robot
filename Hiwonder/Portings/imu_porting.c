@@ -5,6 +5,7 @@
 #include "tim.h"
 #include "stm32f4xx_hal.h"
 #include "rrclite_packets.h"
+#include "rrc_backoff.h"
 #include "QMI8658.h"
 
 #include <stdbool.h>
@@ -24,6 +25,18 @@ static bool imu1_init_done;
 static bool imu1_available;
 static uint8_t imu1_whoami;
 
+static rrc_backoff_t g_imu_backoff[2];
+static uint8_t g_imu_backoff_init_mask;
+static uint8_t g_imu_err_active[2];
+static uint8_t g_imu_last_origin_sub[2] = {RRC_IMU_STREAM_CTRL, RRC_IMU_STREAM_CTRL};
+static uint32_t g_imu_retry_due_ms[2];
+
+static void imu_backoff_init_once(uint8_t source_id);
+static void imu_schedule_failure(uint8_t source_id, uint8_t origin_sub,
+                                 rrc_error_code_t err_code);
+static void imu_clear_error(uint8_t source_id);
+static bool imu_try_recover(uint8_t source_id);
+
 static void imu_timer_start(uint16_t period_ms);
 static void imu_timer_stop(void);
 static bool imu0_ensure_init(void);
@@ -32,6 +45,80 @@ static bool imu0_read_sample(rrc_imu_sample_t *out);
 static bool imu1_read_sample(rrc_imu_sample_t *out);
 
 #if ENABLE_IMU
+static void imu_backoff_init_once(uint8_t source_id)
+{
+    if (source_id >= 2U) {
+        return;
+    }
+
+    const uint8_t mask = (uint8_t)(1U << source_id);
+    if ((g_imu_backoff_init_mask & mask) == 0U) {
+        rrc_backoff_init(&g_imu_backoff[source_id], 50U, 3.0f, 1000U);
+        g_imu_backoff_init_mask |= mask;
+    }
+}
+
+static void imu_schedule_failure(uint8_t source_id, uint8_t origin_sub,
+                                 rrc_error_code_t err_code)
+{
+    if (source_id >= 2U) {
+        return;
+    }
+
+    const uint32_t now = HAL_GetTick();
+
+    imu_backoff_init_once(source_id);
+    g_imu_last_origin_sub[source_id] = origin_sub;
+
+    if (g_imu_err_active[source_id] == 0U) {
+        g_imu_err_active[source_id] = 1U;
+        (void)rrc_send_err(RRC_FUNC_IMU, origin_sub, err_code, source_id, now,
+                           0U);
+        rrc_backoff_reset(&g_imu_backoff[source_id]);
+    }
+
+    const uint32_t delay_ms = rrc_backoff_next(&g_imu_backoff[source_id]);
+    g_imu_retry_due_ms[source_id] = now + delay_ms;
+
+    if (source_id == 0U) {
+        imu0_init_done = false;
+    } else if (source_id == 1U) {
+        imu1_init_done = false;
+    }
+}
+
+static void imu_clear_error(uint8_t source_id)
+{
+    if (source_id >= 2U) {
+        return;
+    }
+
+    if (g_imu_err_active[source_id] != 0U) {
+        g_imu_err_active[source_id] = 0U;
+        rrc_backoff_reset(&g_imu_backoff[source_id]);
+        g_imu_retry_due_ms[source_id] = 0U;
+        const uint32_t now = HAL_GetTick();
+        (void)rrc_send_recovered(RRC_FUNC_IMU,
+                                 g_imu_last_origin_sub[source_id],
+                                 RRC_SYS_ERR_IO_FAIL, now);
+    }
+}
+
+static bool imu_try_recover(uint8_t source_id)
+{
+    rrc_imu_sample_t sample;
+
+    if (source_id == 0U) {
+        return imu0_read_sample(&sample);
+    }
+
+    if (source_id == 1U) {
+        return imu1_read_sample(&sample);
+    }
+
+    return false;
+}
+
 static void imu_timer_start(uint16_t period_ms)
 {
     if (period_ms < 5U) {
@@ -157,6 +244,9 @@ void imu_task_entry(void *argument)
 
     for (;;) {
         osSemaphoreAcquire(IMU_data_readyHandle, osWaitForever);
+        const uint32_t now_ms = HAL_GetTick();
+        rrc_imu_recovery_tick(now_ms);
+
         if (!imu_stream_enabled) {
             continue;
         }
@@ -165,10 +255,17 @@ void imu_task_entry(void *argument)
             continue;
         }
 
-        rrc_imu_sample_t sample;
-        if (!imu0_read_sample(&sample)) {
+        if (g_imu_err_active[0] != 0U) {
             continue;
         }
+
+        rrc_imu_sample_t sample;
+        if (!imu0_read_sample(&sample)) {
+            imu_schedule_failure(0U, RRC_IMU_STREAM_CTRL, RRC_SYS_ERR_IO_FAIL);
+            continue;
+        }
+
+        imu_clear_error(0U);
 
         const rrc_imu_stream_frame_t frame = {
             .source_id = sample.source_id,
@@ -204,16 +301,22 @@ void imu_emit_oneshot(uint8_t sources_mask)
     if ((sources_mask & 0x01U) != 0U) {
         rrc_imu_sample_t sample;
         if (imu0_read_sample(&sample)) {
+            imu_clear_error(0U);
             (void)rrc_transport_send(RRC_FUNC_IMU, RRC_IMU_ONESHOT,
                                      &sample, sizeof(sample));
+        } else {
+            imu_schedule_failure(0U, RRC_IMU_ONESHOT, RRC_SYS_ERR_IO_FAIL);
         }
     }
 
     if ((sources_mask & 0x02U) != 0U) {
         rrc_imu_sample_t sample;
         if (imu1_read_sample(&sample)) {
+            imu_clear_error(1U);
             (void)rrc_transport_send(RRC_FUNC_IMU, RRC_IMU_ONESHOT,
                                      &sample, sizeof(sample));
+        } else {
+            imu_schedule_failure(1U, RRC_IMU_ONESHOT, RRC_SYS_ERR_IO_FAIL);
         }
     }
 }
@@ -283,6 +386,31 @@ void imu_emit_whoami(uint8_t source_id)
 
     (void)rrc_transport_send(RRC_FUNC_IMU, RRC_IMU_WHOAMI_STATUS,
                              &resp, sizeof(resp));
+}
+
+void rrc_imu_recovery_tick(uint32_t now_ms)
+{
+    for (uint8_t source = 0U; source < 2U; ++source) {
+        if (g_imu_err_active[source] == 0U) {
+            continue;
+        }
+
+        if ((int32_t)(now_ms - g_imu_retry_due_ms[source]) < 0) {
+            continue;
+        }
+
+        if (imu_try_recover(source)) {
+            g_imu_err_active[source] = 0U;
+            rrc_backoff_reset(&g_imu_backoff[source]);
+            g_imu_retry_due_ms[source] = 0U;
+            (void)rrc_send_recovered(RRC_FUNC_IMU,
+                                     g_imu_last_origin_sub[source],
+                                     RRC_SYS_ERR_IO_FAIL, now_ms);
+        } else {
+            const uint32_t delay = rrc_backoff_next(&g_imu_backoff[source]);
+            g_imu_retry_due_ms[source] = now_ms + delay;
+        }
+    }
 }
 
 #endif // ENABLE_IMU
