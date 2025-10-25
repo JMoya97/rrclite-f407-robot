@@ -1,4 +1,2 @@
-* text=auto eol=lf
-*.bat text eol=crlf
-*.sh  text eol=lf
+*.sh text eol=lf
 setup text eol=lf

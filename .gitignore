@@ -1,14 +1,9 @@
-# STM32CubeIDE / Eclipse
 .settings/
 *.launch
 .metadata/
-
-# Build dirs
 Debug/
 Release/
 build/
-
-# Binaries / objects
 *.o
 *.d
 *.elf
@@ -18,6 +13,3 @@ build/
 *.out
 *.lst
 *.log
-
-# Misc tools
-JLinkLog.txt
