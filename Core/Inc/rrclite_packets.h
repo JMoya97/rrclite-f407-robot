@@ -256,11 +256,13 @@ typedef struct __attribute__((packed)) {
 /* -------------------------------------------------------------------------- */
 /* Helper API                                                                 */
 
-bool rrc_send_ack(uint8_t func, uint8_t sub, const void *payload, size_t len);
+bool rrc_send_ack(uint8_t func, uint8_t sub, const void *payload, size_t len,
+                  uint8_t txid);
 bool rrc_send_err(uint8_t origin_func, uint8_t origin_sub,
-                  rrc_error_code_t err_code, uint8_t detail, uint8_t txid);
+                  rrc_error_code_t err_code, uint8_t detail,
+                  uint32_t t_ms, uint8_t txid_or_0);
 bool rrc_send_recovered(uint8_t origin_func, uint8_t origin_sub,
-                        rrc_error_code_t prev_err_code);
+                        rrc_error_code_t prev_err_code, uint32_t t_ms);
 
 bool rrc_func_is_supported(uint8_t func);
 bool rrc_sub_is_supported(uint8_t func, uint8_t sub);

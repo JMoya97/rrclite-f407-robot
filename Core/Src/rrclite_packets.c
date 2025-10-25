@@ -2,6 +2,8 @@
 
 #include "stm32f4xx_hal.h"
 
+#include <string.h>
+
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
 
 #define RRC_SYS_CAPABILITIES_FLAGS_DEFAULT \
@@ -113,7 +115,8 @@ static bool rrc_handle_sys_version(const void *payload, size_t len)
         .patch_le = RRC_PROTO_VERSION_PATCH,
     };
 
-    return rrc_send_ack(RRC_FUNC_SYS, RRC_SYS_VERSION, &resp, sizeof(resp));
+    return rrc_send_ack(RRC_FUNC_SYS, RRC_SYS_VERSION, &resp, sizeof(resp),
+                        RRC_TXID_NONE);
 }
 
 static bool rrc_handle_sys_capabilities(const void *payload, size_t len)
@@ -132,7 +135,7 @@ static bool rrc_handle_sys_capabilities(const void *payload, size_t len)
     };
 
     return rrc_send_ack(RRC_FUNC_SYS, RRC_SYS_CAPABILITIES,
-                        &resp, sizeof(resp));
+                        &resp, sizeof(resp), RRC_TXID_NONE);
 }
 
 static bool rrc_dispatch_sys(uint8_t sub, const void *payload, size_t len)
@@ -215,21 +218,49 @@ bool rrc_dispatch_command(uint8_t func, uint8_t sub,
     return false;
 }
 
-bool rrc_send_ack(uint8_t func, uint8_t sub, const void *payload, size_t len)
+bool rrc_send_ack(uint8_t func, uint8_t sub, const void *payload, size_t len,
+                  uint8_t txid)
 {
-    return rrc_transport_send(func, sub, payload, len);
+    if (txid == RRC_TXID_NONE) {
+        return rrc_transport_send(func, sub, payload, len);
+    }
+
+    uint8_t scratch[RRC_MAX_PAYLOAD_LEN];
+    const void *out_payload = payload;
+    size_t out_len = len;
+
+    if (len == 0U) {
+        scratch[0] = txid;
+        out_payload = scratch;
+        out_len = 1U;
+    } else {
+        if (len > sizeof(scratch)) {
+            return false;
+        }
+
+        if (payload == NULL) {
+            return false;
+        }
+
+        memcpy(scratch, payload, len);
+        scratch[0] = txid;
+        out_payload = scratch;
+    }
+
+    return rrc_transport_send(func, sub, out_payload, out_len);
 }
 
 bool rrc_send_err(uint8_t origin_func, uint8_t origin_sub,
-                  rrc_error_code_t err_code, uint8_t detail, uint8_t txid)
+                  rrc_error_code_t err_code, uint8_t detail,
+                  uint32_t t_ms, uint8_t txid_or_0)
 {
     rrc_sys_error_report_t evt = {
         .origin_func = origin_func,
         .origin_sub = origin_sub,
         .err_code = (uint8_t)err_code,
         .detail = detail,
-        .t_ms_le = HAL_GetTick(),
-        .txid = txid,
+        .t_ms_le = t_ms,
+        .txid = txid_or_0,
     };
 
     return rrc_transport_send(RRC_FUNC_SYS, RRC_SYS_ERROR_EVENT,
@@ -237,13 +268,13 @@ bool rrc_send_err(uint8_t origin_func, uint8_t origin_sub,
 }
 
 bool rrc_send_recovered(uint8_t origin_func, uint8_t origin_sub,
-                        rrc_error_code_t prev_err_code)
+                        rrc_error_code_t prev_err_code, uint32_t t_ms)
 {
     rrc_sys_recovered_report_t evt = {
         .origin_func = origin_func,
         .origin_sub = origin_sub,
         .prev_err_code = (uint8_t)prev_err_code,
-        .t_ms_le = HAL_GetTick(),
+        .t_ms_le = t_ms,
     };
 
     return rrc_transport_send(RRC_FUNC_SYS, RRC_SYS_RECOVERED_EVENT,
