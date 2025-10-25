@@ -7,12 +7,49 @@
 #include "motors_param.h"
 #include "tim.h"
 #include "cmsis_os2.h"
+#include "rrclite_config.h"
+#include "rrclite_packets.h"
 
-extern void encoders_set_stream(uint8_t enable, uint16_t period_ms);
+#include <stdbool.h>
+#include <stddef.h>
+
+extern uint16_t encoders_set_stream(uint8_t enable, uint16_t period_ms);
 extern void encoders_read_once_and_report(uint8_t sub);
-extern void imu_set_stream(uint8_t enable, uint16_t period_ms);
-extern void imu_read_once_and_report(uint8_t sub);
+extern uint16_t imu_set_stream(uint8_t sources_mask, uint16_t period_ms,
+                               uint8_t ack_each_frame, uint8_t *applied_mask,
+                               uint8_t *applied_ack_each_frame);
+extern void imu_emit_oneshot(uint8_t sources_mask);
+extern void imu_emit_whoami(uint8_t source_id);
 extern volatile int motors_pwm_current[2];
+extern uint16_t battery_set_stream(uint8_t enable, uint16_t period_ms);
+extern uint16_t battery_latest_millivolts_le(void);
+extern uint16_t buttons_set_stream(uint8_t enable, uint16_t period_ms);
+extern uint8_t buttons_read_mask(void);
+
+volatile uint16_t rrc_motor_failsafe_timeout_ms;
+volatile uint32_t rrc_motor_last_cmd_ms;
+volatile uint16_t rrc_heartbeat_period_ms = RRC_HEARTBEAT_MS;
+
+static bool motor_pwm_fault_active;
+static rrc_error_code_t motor_pwm_last_error;
+
+static bool motor_pwm_try_reinit(void)
+{
+    /* Stub hook for quick reinitialisation after an apply failure. */
+    return true;
+}
+
+static bool motor_pwm_apply(uint8_t id, int pwm)
+{
+    extern void motor_set_target_pwm(uint8_t id, int cmd);
+
+    if (id >= 2U) {
+        return false;
+    }
+
+    motor_set_target_pwm(id, pwm);
+    return true;
+}
 
 #pragma pack(1)
 typedef struct {
@@ -352,6 +389,46 @@ static void packet_serial_servo_handle(struct PacketRawFrame *frame)
 
 static void packet_pwm_servo_handle(struct PacketRawFrame *frame)
 {
+    const uint8_t sub = frame->data_and_checksum[0];
+
+    if (sub == RRC_IO_BUTTON_ONESHOT) {
+        const uint8_t mask = buttons_read_mask();
+        (void)rrc_transport_send(RRC_FUNC_IO, RRC_IO_BUTTON_ONESHOT,
+                                 &mask, sizeof(mask));
+        return;
+    }
+
+    if (sub == RRC_IO_BUTTON_STREAM_CTRL) {
+        const uint8_t *payload = frame->data_and_checksum;
+        const size_t payload_len = frame->data_length;
+        if (payload_len < 4U) {
+            return;
+        }
+
+        uint8_t txid = RRC_TXID_NONE;
+        if (payload_len == 5U) {
+            txid = payload[4];
+        } else if (payload_len != 4U) {
+            return;
+        }
+
+        const uint8_t requested_enable = payload[1];
+        const uint16_t requested_period =
+            (uint16_t)((uint16_t)payload[2] | ((uint16_t)payload[3] << 8));
+        const uint16_t applied_period =
+            buttons_set_stream(requested_enable, requested_period);
+
+        rrc_button_stream_ack_t ack = {
+            .txid = txid,
+            .enable = (uint8_t)(requested_enable ? 1U : 0U),
+            .period_ms_le = applied_period,
+        };
+
+        (void)rrc_send_ack(RRC_FUNC_IO, RRC_IO_BUTTON_STREAM_CTRL,
+                            &ack, sizeof(ack), txid);
+        return;
+    }
+
     switch(frame->data_and_checksum[0]) {
         case 0x01: {    // Control multiple servos
             PWMServoSetMultiPositionCommandTypeDef *cmd = (PWMServoSetMultiPositionCommandTypeDef *)frame->data_and_checksum;
@@ -416,22 +493,79 @@ static void packet_motor_handle(struct PacketRawFrame *frame)
         /* ---------------- PWM (open-loop) ---------------- */
 
         case 0x10: { /* single motor PWM set */
-            MotorPWMSingleCommandTypeDef *cmd = (void*)frame->data_and_checksum;
+            const uint8_t *payload = frame->data_and_checksum;
+            const size_t payload_len = frame->data_length;
+            if (payload_len < 4U) {
+                break;
+            }
 
-            uint8_t id = (uint8_t)(cmd->motor_id & 0x03);
-            int pwm = (int)cmd->pwm;
-            if (pwm > 1000) pwm = 1000; else if (pwm < -1000) pwm = -1000;
+            uint8_t txid = RRC_TXID_NONE;
+            if (payload_len == 5U) {
+                txid = payload[4];
+            } else if (payload_len != 4U) {
+                const uint32_t now = HAL_GetTick();
+                const uint8_t err_txid = (payload_len > 4U) ? payload[4] : 0U;
+                if (!motor_pwm_fault_active) {
+                    motor_pwm_fault_active = true;
+                    motor_pwm_last_error = RRC_SYS_ERR_INVALID_ARG;
+                    (void)rrc_send_err(RRC_FUNC_MOTOR, RRC_MOTOR_PWM_SET,
+                                       motor_pwm_last_error,
+                                       (uint8_t)payload_len, now, err_txid);
+                }
+                (void)motor_pwm_try_reinit();
+                break;
+            }
 
-            motor_set_target_pwm(id, pwm);
+            const uint8_t raw_id = payload[1];
+            int pwm = (int16_t)((uint16_t)payload[2] | ((uint16_t)payload[3] << 8));
 
-            /* ACK: echo what we accepted + where the ramp currently is */
-            PacketReportMotorPwmAck_Single rep;
-            rep.sub         = 0x18;
-            rep.t_ms        = HAL_GetTick();
-            rep.motor_id    = id;
-            rep.pwm_target  = (int16_t)pwm;
-            rep.pwm_applied = (int16_t)motors_pwm_current[id];
-            packet_transmit(&packet_controller, PACKET_FUNC_MOTOR, &rep, sizeof(rep));
+            if (pwm > 1000) {
+                pwm = 1000;
+            } else if (pwm < -1000) {
+                pwm = -1000;
+            }
+
+            const bool applied = motor_pwm_apply(raw_id & 0x03U, pwm);
+            const uint32_t now = HAL_GetTick();
+
+            if (!applied) {
+                const uint8_t err_txid = (txid == RRC_TXID_NONE) ? 0U : txid;
+                if (!motor_pwm_fault_active) {
+                    motor_pwm_fault_active = true;
+                    motor_pwm_last_error = RRC_SYS_ERR_INVALID_ARG;
+                    (void)rrc_send_err(RRC_FUNC_MOTOR, RRC_MOTOR_PWM_SET,
+                                       motor_pwm_last_error, raw_id,
+                                       now, err_txid);
+                }
+
+                (void)motor_pwm_try_reinit();
+                break;
+            }
+
+            if (motor_pwm_fault_active) {
+                motor_pwm_fault_active = false;
+                (void)rrc_send_recovered(RRC_FUNC_MOTOR, RRC_MOTOR_PWM_SET,
+                                         motor_pwm_last_error, now);
+            }
+
+            const uint8_t id = (uint8_t)(raw_id & 0x03U);
+
+            int16_t applied_pwm = 0;
+            if (id < 2U) {
+                applied_pwm = (int16_t)motors_pwm_current[id];
+            }
+
+            rrc_motor_last_cmd_ms = now;
+
+            rrc_motor_pwm_ack_t ack = {
+                .txid = txid,
+                .motor_id = id,
+                .pwm_target = (int16_t)pwm,
+                .pwm_applied = applied_pwm,
+            };
+
+            (void)rrc_send_ack(RRC_FUNC_MOTOR, RRC_MOTOR_PWM_ACK_SINGLE,
+                                &ack, sizeof(ack), txid);
             break;
         }
 
@@ -511,28 +645,175 @@ static void packet_motor_handle(struct PacketRawFrame *frame)
 
 static void packet_imu_handle(struct PacketRawFrame *frame)
 {
-    switch (frame->data_and_checksum[0]) {
-        case 0xA0: { /* one-shot now */
-            imu_read_once_and_report(0xA0);
+    const uint8_t *payload = frame->data_and_checksum;
+    const size_t payload_len = frame->data_length;
+
+    if (payload_len == 0U) {
+        return;
+    }
+
+    const uint8_t sub = payload[0];
+
+    switch (sub) {
+    case RRC_IMU_ONESHOT: {
+        if (payload_len >= 2U) {
+            const uint8_t sources_mask = payload[1];
+            imu_emit_oneshot(sources_mask);
+        }
+        break;
+    }
+    case RRC_IMU_STREAM_CTRL: {
+        if (payload_len < 5U) {
             break;
         }
-        case 0xA1: { /* stream control */
-            const IMUStreamCtrlCmd* c = (const IMUStreamCtrlCmd*)frame->data_and_checksum;
-            uint16_t p = c->period_ms; if (p < 5) p = 5;
-            imu_set_stream(c->enable, p);
+
+        uint8_t txid = RRC_TXID_NONE;
+        if (payload_len == 6U) {
+            txid = payload[5];
+        } else if (payload_len != 5U) {
             break;
         }
-        default: break;
+
+        const uint8_t requested_mask = payload[1];
+        const uint16_t requested_period =
+            (uint16_t)((uint16_t)payload[2] | ((uint16_t)payload[3] << 8));
+        const uint8_t requested_ack = payload[4];
+
+        uint8_t applied_mask = 0U;
+        uint8_t applied_ack = 0U;
+        const uint16_t applied_period =
+            imu_set_stream(requested_mask, requested_period, requested_ack,
+                           &applied_mask, &applied_ack);
+
+        rrc_imu_stream_ack_t ack = {
+            .txid = txid,
+            .sources_mask = applied_mask,
+            .period_ms_le = applied_period,
+            .ack_each_frame = applied_ack,
+        };
+
+        (void)rrc_send_ack(RRC_FUNC_IMU, RRC_IMU_STREAM_CTRL,
+                            &ack, sizeof(ack), txid);
+        break;
+    }
+    case RRC_IMU_WHOAMI_STATUS: {
+        uint8_t source_id = 0U;
+        if (payload_len >= 2U) {
+            source_id = payload[1];
+        }
+
+        imu_emit_whoami(source_id);
+        break;
+    }
+    default:
+        break;
     }
 }
 
 static void packet_battery_limit_handle(struct PacketRawFrame *frame)
 {
-    BatteryWarnTypeDef *cmd = (BatteryWarnTypeDef*)frame->data_and_checksum;
-    switch(frame->data_and_checksum[0]) {
+    const uint8_t *payload = frame->data_and_checksum;
+    const size_t payload_len = frame->data_length;
+
+    if (payload_len == 0U) {
+        return;
+    }
+
+    switch (payload[0]) {
+        case RRC_SYS_BATTERY_ONESHOT: {
+            const uint16_t mv = battery_latest_millivolts_le();
+            (void)rrc_transport_send(RRC_FUNC_SYS, RRC_SYS_BATTERY_ONESHOT,
+                                     &mv, sizeof(mv));
+            break;
+        }
+        case RRC_SYS_BATTERY_STREAM_CTRL: {
+            if (payload_len < 4U) {
+                break;
+            }
+
+            uint8_t txid = RRC_TXID_NONE;
+            if (payload_len == 5U) {
+                txid = payload[4];
+            } else if (payload_len != 4U) {
+                break;
+            }
+
+            const uint8_t requested_enable = payload[1];
+            const uint16_t requested_period =
+                (uint16_t)((uint16_t)payload[2] | ((uint16_t)payload[3] << 8));
+            const uint16_t applied_period =
+                battery_set_stream(requested_enable, requested_period);
+
+            rrc_sys_battery_stream_ack_t ack = {
+                .txid = txid,
+                .enable = (uint8_t)(requested_enable ? 1U : 0U),
+                .period_ms_le = applied_period,
+            };
+
+            (void)rrc_send_ack(RRC_FUNC_SYS, RRC_SYS_BATTERY_STREAM_CTRL,
+                                &ack, sizeof(ack), txid);
+            break;
+        }
+        case RRC_SYS_MOTOR_FAILSAFE_SET: {
+            if (payload_len < 3U) {
+                break;
+            }
+
+            uint8_t txid = RRC_TXID_NONE;
+            if (payload_len == 4U) {
+                txid = payload[3];
+            } else if (payload_len != 3U) {
+                break;
+            }
+
+            const uint16_t timeout_ms =
+                (uint16_t)((uint16_t)payload[1] | ((uint16_t)payload[2] << 8));
+
+            rrc_motor_failsafe_timeout_ms = timeout_ms;
+            rrc_motor_last_cmd_ms = HAL_GetTick();
+
+            const rrc_sys_motor_failsafe_ack_t ack = {
+                .txid = txid,
+                .timeout_ms_le = timeout_ms,
+            };
+
+            (void)rrc_send_ack(RRC_FUNC_SYS, RRC_SYS_MOTOR_FAILSAFE_SET,
+                                &ack, sizeof(ack), txid);
+            break;
+        }
+        case RRC_SYS_HEALTH_PERIOD_SET: {
+            if (payload_len < 3U) {
+                break;
+            }
+
+            uint8_t txid = RRC_TXID_NONE;
+            if (payload_len == 4U) {
+                txid = payload[3];
+            } else if (payload_len != 3U) {
+                break;
+            }
+
+            const uint16_t period_ms =
+                (uint16_t)((uint16_t)payload[1] | ((uint16_t)payload[2] << 8));
+
+            rrc_heartbeat_period_ms = period_ms;
+
+            const rrc_sys_period_ack_t ack = {
+                .txid = txid,
+                .period_ms_le = period_ms,
+            };
+
+            (void)rrc_send_ack(RRC_FUNC_SYS, RRC_SYS_HEALTH_PERIOD_SET,
+                                &ack, sizeof(ack), txid);
+            break;
+        }
         case 1: {
-            change_battery_limit(cmd->limit);
-        }break;
+            if (payload_len >= sizeof(BatteryWarnTypeDef)) {
+                const BatteryWarnTypeDef *cmd = (const BatteryWarnTypeDef*)payload;
+                change_battery_limit(cmd->limit);
+            }
+            break;
+        }
         default:
             break;
     }
@@ -568,10 +849,33 @@ static void packet_encoder_handle(struct PacketRawFrame *frame)
             break;
         }
         case 0x91: { /* stream control */
-            const EncoderStreamCtrlCommandTypeDef* cmd =
-                (const EncoderStreamCtrlCommandTypeDef*)frame->data_and_checksum;
-            uint16_t p = cmd->period_ms; if (p < 5) p = 5;
-            encoders_set_stream(cmd->enable, p);
+            const uint8_t *payload = frame->data_and_checksum;
+            const size_t payload_len = frame->data_length;
+            if (payload_len < 4U) {
+                break;
+            }
+
+            uint8_t txid = RRC_TXID_NONE;
+            if (payload_len == 5U) {
+                txid = payload[4];
+            } else if (payload_len != 4U) {
+                break;
+            }
+
+            const uint8_t requested_enable = payload[1];
+            const uint16_t requested_period =
+                (uint16_t)((uint16_t)payload[2] | ((uint16_t)payload[3] << 8));
+            const uint16_t applied_period =
+                encoders_set_stream(requested_enable, requested_period);
+
+            rrc_encoder_stream_ack_t ack = {
+                .txid = txid,
+                .enable = (uint8_t)(requested_enable ? 1U : 0U),
+                .period_ms_le = applied_period,
+            };
+
+            (void)rrc_send_ack(RRC_FUNC_MOTOR, RRC_MOTOR_ENCODER_STREAM_CTRL,
+                                &ack, sizeof(ack), txid);
             break;
         }
         default: break;
