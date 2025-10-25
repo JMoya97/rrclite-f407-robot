@@ -88,7 +88,7 @@ struct SerialServoControllerTypeDef {
 void serial_servo_controller_object_init(SerialServoControllerTypeDef *self);
 void serial_servo_set_id(SerialServoControllerTypeDef *self, uint32_t old_id, uint32_t new_id);
 int serial_servo_read_id(SerialServoControllerTypeDef *self, uint32_t servo_id, uint8_t *ret_servo_id);
-void serial_servo_set_position(SerialServoControllerTypeDef *self, uint32_t servo_id, int position, uint32_t duration);
+int serial_servo_set_position(SerialServoControllerTypeDef *self, uint32_t servo_id, int position, uint32_t duration);
 int serial_servo_read_position(SerialServoControllerTypeDef *self, uint32_t servo_id, int16_t *position);
 void serial_servo_stop(SerialServoControllerTypeDef *self, uint32_t servo_id);
 void serial_servo_set_deviation(SerialServoControllerTypeDef *self, uint32_t servo_id, int new_deviation);

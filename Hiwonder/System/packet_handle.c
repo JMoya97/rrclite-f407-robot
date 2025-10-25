@@ -7,12 +7,254 @@
 #include "motors_param.h"
 #include "tim.h"
 #include "cmsis_os2.h"
+#include "rrclite_config.h"
+#include "rrclite_packets.h"
+#include "rrc_backoff.h"
 
-extern void encoders_set_stream(uint8_t enable, uint16_t period_ms);
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
+
+extern uint16_t encoders_set_stream(uint8_t enable, uint16_t period_ms);
 extern void encoders_read_once_and_report(uint8_t sub);
-extern void imu_set_stream(uint8_t enable, uint16_t period_ms);
-extern void imu_read_once_and_report(uint8_t sub);
+extern uint16_t imu_set_stream(uint8_t sources_mask, uint16_t period_ms,
+                               uint8_t ack_each_frame, uint8_t *applied_mask,
+                               uint8_t *applied_ack_each_frame);
+extern void imu_emit_oneshot(uint8_t sources_mask);
+extern void imu_emit_whoami(uint8_t source_id);
 extern volatile int motors_pwm_current[2];
+extern uint16_t battery_set_stream(uint8_t enable, uint16_t period_ms);
+extern uint16_t battery_latest_millivolts_le(void);
+extern uint16_t buttons_set_stream(uint8_t enable, uint16_t period_ms);
+extern uint8_t buttons_read_mask(void);
+
+volatile uint16_t rrc_motor_failsafe_timeout_ms;
+volatile uint32_t rrc_motor_last_cmd_ms;
+volatile uint16_t rrc_heartbeat_period_ms = RRC_HEARTBEAT_MS;
+
+static bool motor_pwm_fault_active;
+static rrc_error_code_t motor_pwm_last_error;
+static rrc_backoff_t g_motor_backoff;
+static uint8_t g_motor_err_active;
+static uint32_t g_motor_retry_due_ms;
+
+typedef struct {
+    float bax;
+    float bay;
+    float baz;
+    float bgx;
+    float bgy;
+    float bgz;
+    float bmx;
+    float bmy;
+    float bmz;
+} rrc_imu_bias_store_t;
+
+/* IMU configuration shadow (RAM only, reset on boot). */
+static uint8_t g_imu_primary;
+static rrc_imu_bias_store_t g_imu_bias[2];
+static uint8_t g_imu_preset[2];
+
+typedef struct {
+    rrc_backoff_t backoff;
+    uint8_t init;
+    uint8_t err_active;
+    uint32_t retry_due_ms;
+    uint8_t detail;
+    uint16_t extra0;
+    uint16_t extra1;
+} rrc_io_recovery_state_t;
+
+static rrc_io_recovery_state_t g_led_recovery;
+static rrc_io_recovery_state_t g_buzzer_recovery;
+static rrc_io_recovery_state_t g_steering_recovery;
+
+static void rrc_uart_apply_with_delay(uint32_t baud, uint16_t delay_ms,
+                                      uint8_t txid)
+{
+    if (delay_ms == 0U) {
+        delay_ms = rrc_uart_baud_apply_delay_ms(baud);
+    }
+
+    if (delay_ms != 0U) {
+        osDelay(delay_ms);
+    }
+
+    if (!rrc_uart_runtime_reconfigure(baud)) {
+        const uint32_t now = HAL_GetTick();
+        const uint8_t err_txid = (txid == RRC_TXID_NONE) ? 0U : txid;
+        (void)rrc_send_err(RRC_FUNC_SYS, RRC_SYS_UART_BAUD_SET,
+                           RRC_SYS_ERR_IO_FAIL, 0U, now, err_txid);
+    }
+}
+
+static bool motor_pwm_try_reinit(void)
+{
+    /* Stub hook for quick reinitialisation after an apply failure. */
+    return true;
+}
+
+static void motor_backoff_ensure_init(void)
+{
+    static uint8_t backoff_init_done;
+    if (backoff_init_done == 0U) {
+        rrc_backoff_init(&g_motor_backoff, 50U, 3.0f, 1000U);
+        backoff_init_done = 1U;
+    }
+}
+
+void rrc_motor_recovery_tick(uint32_t now_ms)
+{
+    motor_backoff_ensure_init();
+
+    if (g_motor_err_active == 0U) {
+        return;
+    }
+
+    if ((int32_t)(now_ms - g_motor_retry_due_ms) < 0) {
+        return;
+    }
+
+    if (motor_pwm_try_reinit()) {
+        g_motor_err_active = 0U;
+        rrc_backoff_reset(&g_motor_backoff);
+        (void)rrc_send_recovered(RRC_FUNC_MOTOR, RRC_MOTOR_PWM_SET,
+                                 RRC_SYS_ERR_IO_FAIL, now_ms);
+    } else {
+        const uint32_t delay_ms = rrc_backoff_next(&g_motor_backoff);
+        g_motor_retry_due_ms = now_ms + delay_ms;
+    }
+}
+
+static bool motor_pwm_apply(uint8_t id, int pwm)
+{
+    extern void motor_set_target_pwm(uint8_t id, int cmd);
+
+    if (id >= 2U) {
+        return false;
+    }
+
+    motor_set_target_pwm(id, pwm);
+    return true;
+}
+
+static void rrc_io_recovery_schedule(rrc_io_recovery_state_t *state,
+                                     uint8_t func, uint8_t sub,
+                                     uint8_t detail,
+                                     uint16_t extra0,
+                                     uint16_t extra1)
+{
+    if (state == NULL) {
+        return;
+    }
+
+    if (state->init == 0U) {
+        rrc_backoff_init(&state->backoff, 50U, 3.0f, 1000U);
+        state->init = 1U;
+    }
+
+    state->detail = detail;
+    state->extra0 = extra0;
+    state->extra1 = extra1;
+
+    const uint32_t now = HAL_GetTick();
+
+    if (state->err_active == 0U) {
+        state->err_active = 1U;
+        (void)rrc_send_err(func, sub, RRC_SYS_ERR_IO_FAIL, detail, now, 0U);
+        rrc_backoff_reset(&state->backoff);
+    }
+
+    const uint32_t delay_ms = rrc_backoff_next(&state->backoff);
+    state->retry_due_ms = now + delay_ms;
+}
+
+static void rrc_io_recovery_clear(rrc_io_recovery_state_t *state,
+                                  uint8_t func, uint8_t sub)
+{
+    if ((state == NULL) || (state->err_active == 0U)) {
+        return;
+    }
+
+    state->err_active = 0U;
+    rrc_backoff_reset(&state->backoff);
+    state->retry_due_ms = 0U;
+
+    const uint32_t now = HAL_GetTick();
+    (void)rrc_send_recovered(func, sub, RRC_SYS_ERR_IO_FAIL, now);
+}
+
+static bool rrc_led_try_reinit(const rrc_io_recovery_state_t *state)
+{
+    if (state == NULL) {
+        return false;
+    }
+
+    const uint8_t led_index = state->detail;
+    if (led_index >= LED_NUM) {
+        return false;
+    }
+
+    LEDObjectTypeDef *led = leds[led_index];
+    if (led == NULL) {
+        return false;
+    }
+
+    return led_flash(led, 0U, 0U, 0U) == 0;
+}
+
+static bool rrc_buzzer_try_reinit(const rrc_io_recovery_state_t *state)
+{
+    (void)state;
+    return buzzer_off(buzzers[0]) == 0;
+}
+
+static bool rrc_steering_try_reinit(const rrc_io_recovery_state_t *state)
+{
+    if (state == NULL) {
+        return false;
+    }
+
+    uint8_t servo_id = state->detail;
+
+    return serial_servo_set_position(&serial_servo_controller, servo_id,
+                                     (int)state->extra0, state->extra1) == 0;
+}
+
+static void rrc_io_recovery_tick_one(rrc_io_recovery_state_t *state,
+                                     uint8_t func, uint8_t sub,
+                                     bool (*try_reinit)(const rrc_io_recovery_state_t *),
+                                     uint32_t now_ms)
+{
+    if ((state == NULL) || (state->err_active == 0U)) {
+        return;
+    }
+
+    if ((int32_t)(now_ms - state->retry_due_ms) < 0) {
+        return;
+    }
+
+    if ((try_reinit != NULL) && try_reinit(state)) {
+        state->err_active = 0U;
+        rrc_backoff_reset(&state->backoff);
+        state->retry_due_ms = 0U;
+        (void)rrc_send_recovered(func, sub, RRC_SYS_ERR_IO_FAIL, now_ms);
+    } else {
+        const uint32_t delay = rrc_backoff_next(&state->backoff);
+        state->retry_due_ms = now_ms + delay;
+    }
+}
+
+void rrc_io_recovery_tick(uint32_t now_ms)
+{
+    rrc_io_recovery_tick_one(&g_led_recovery, RRC_FUNC_IO, RRC_IO_LED_SET,
+                             rrc_led_try_reinit, now_ms);
+    rrc_io_recovery_tick_one(&g_buzzer_recovery, RRC_FUNC_IO, RRC_IO_BUZZER_SET,
+                             rrc_buzzer_try_reinit, now_ms);
+    rrc_io_recovery_tick_one(&g_steering_recovery, PACKET_FUNC_BUS_SERVO, 0x01U,
+                             rrc_steering_try_reinit, now_ms);
+}
 
 #pragma pack(1)
 typedef struct {
@@ -190,17 +432,250 @@ static void packet_oled_handle(struct PacketRawFrame *frame)
 
 static void packet_led_handle(struct PacketRawFrame *frame)
 {
-    LedCommandTypeDef *cmd = (LedCommandTypeDef*)frame->data_and_checksum;
-    uint8_t led_id = cmd->led_id - 1;
-    if(led_id < 2) { /* IDs start from 1 */
+    const uint8_t *payload = frame->data_and_checksum;
+    const size_t payload_len = frame->data_length;
+
+    if (payload_len == 0U) {
+        return;
+    }
+
+    if (payload[0] == RRC_IO_LED_SET) {
+        if (payload_len <= 1U) {
+            return;
+        }
+
+        const uint8_t *body = &payload[1];
+        size_t body_len = payload_len - 1U;
+        uint8_t txid = RRC_TXID_NONE;
+
+        const size_t legacy_simple_len = sizeof(LedCommandTypeDef);
+        if (body_len == legacy_simple_len ||
+            body_len == (legacy_simple_len + 1U)) {
+            if (body_len == (legacy_simple_len + 1U)) {
+                txid = body[legacy_simple_len];
+                body_len = legacy_simple_len;
+            }
+
+            const LedCommandTypeDef *cmd =
+                (const LedCommandTypeDef *)body;
+            if (cmd->led_id == 0U) {
+                const uint32_t now = HAL_GetTick();
+                (void)rrc_send_err(RRC_FUNC_IO, RRC_IO_LED_SET,
+                                   RRC_SYS_ERR_INVALID_ARG, 0U, now, 0U);
+                return;
+            }
+
+            const uint8_t led_index = (uint8_t)(cmd->led_id - 1U);
+            if (led_index >= 2U) {
+                const uint32_t now = HAL_GetTick();
+                const uint8_t err_txid =
+                    (txid == RRC_TXID_NONE) ? 0U : txid;
+                (void)rrc_send_err(RRC_FUNC_IO, RRC_IO_LED_SET,
+                                   RRC_SYS_ERR_INVALID_ARG, 0U, now, err_txid);
+                return;
+            }
+
+            const int apply_rc =
+                led_flash(leds[led_index], cmd->on_time, cmd->off_time,
+                          cmd->repeat);
+            if (apply_rc != 0) {
+                rrc_io_recovery_schedule(&g_led_recovery, RRC_FUNC_IO,
+                                         RRC_IO_LED_SET, led_index, 0U, 0U);
+                return;
+            }
+
+            rrc_io_recovery_clear(&g_led_recovery, RRC_FUNC_IO,
+                                  RRC_IO_LED_SET);
+
+            const uint8_t mode = (cmd->on_time > 0U) ? 1U : 0U;
+            const rrc_io_led_ack_t ack = {
+                .txid = txid,
+                .mode = mode,
+            };
+
+            (void)rrc_send_ack(RRC_FUNC_IO, RRC_IO_LED_SET, &ack, sizeof(ack),
+                                txid);
+            return;
+        }
+
+        if (body_len >= 2U) {
+            const uint8_t rgb_id = body[0];
+            size_t rgb_data_len = body_len - 1U;
+            const uint8_t *rgb_data = &body[1];
+            size_t expected_len = 0U;
+
+            if (rgb_id == 0U) {
+                expected_len = 6U;
+            } else if (rgb_id == 1U || rgb_id == 2U) {
+                expected_len = 3U;
+            }
+
+            if (expected_len != 0U) {
+                if (rgb_data_len == (expected_len + 1U)) {
+                    txid = rgb_data[expected_len];
+                    rgb_data_len = expected_len;
+                }
+
+                if (rgb_data_len == expected_len) {
+                    if (rgb_id == 0U) {
+                        set_rgb_color((uint8_t *)rgb_data);
+                    } else {
+                        set_id_rgb_color((uint8_t)(rgb_id - 1U),
+                                         (uint8_t *)rgb_data);
+                    }
+
+                    const rrc_io_led_ack_t ack = {
+                        .txid = txid,
+                        .mode = 2U,
+                    };
+
+                    rrc_io_recovery_clear(&g_led_recovery, RRC_FUNC_IO,
+                                          RRC_IO_LED_SET);
+                    (void)rrc_send_ack(RRC_FUNC_IO, RRC_IO_LED_SET, &ack,
+                                        sizeof(ack), txid);
+                    return;
+                }
+            }
+        }
+
+        const uint32_t now = HAL_GetTick();
+        (void)rrc_send_err(RRC_FUNC_IO, RRC_IO_LED_SET,
+                           RRC_SYS_ERR_INVALID_ARG, 0U, now, 0U);
+        return;
+    }
+
+    LedCommandTypeDef *cmd = (LedCommandTypeDef*)payload;
+    uint8_t led_id = cmd->led_id - 1U;
+    if (led_id < 2U) { /* IDs start from 1 */
         led_flash(leds[led_id], cmd->on_time, cmd->off_time, cmd->repeat);
     }
 }
 
 static void packet_buzzer_handle(struct PacketRawFrame *frame)
 {
-    BuzzerCommandTypeDef *cmd = (BuzzerCommandTypeDef*)frame->data_and_checksum;
-    buzzer_didi(buzzers[0], cmd->freq, cmd->on_time, cmd->off_time, cmd->repeat);
+    const uint8_t *payload = frame->data_and_checksum;
+    const size_t payload_len = frame->data_length;
+
+    if (payload_len == 0U) {
+        return;
+    }
+
+    if (payload[0] == RRC_IO_BUZZER_SET) {
+        if (payload_len <= 1U) {
+            return;
+        }
+
+        const uint8_t *body = &payload[1];
+        size_t body_len = payload_len - 1U;
+        uint8_t txid = RRC_TXID_NONE;
+
+        const size_t new_len = 5U; /* freq(2) + duty(1) + duration(2) */
+        if (body_len == new_len || body_len == (new_len + 1U)) {
+            if (body_len == (new_len + 1U)) {
+                txid = body[new_len];
+                body_len = new_len;
+            }
+
+            const uint16_t freq_hz = (uint16_t)body[0] |
+                                      ((uint16_t)body[1] << 8);
+            uint8_t duty_pct = body[2];
+            const uint16_t duration_ms = (uint16_t)body[3] |
+                                          ((uint16_t)body[4] << 8);
+
+            if (duty_pct > 100U) {
+                duty_pct = 100U;
+            }
+
+            int apply_rc;
+            if (freq_hz == 0U || duty_pct == 0U || duration_ms == 0U) {
+                apply_rc = buzzer_off(buzzers[0]);
+            } else {
+                const uint32_t on_time =
+                    ((uint32_t)duration_ms * (uint32_t)duty_pct) / 100U;
+                const uint32_t off_time = duration_ms - on_time;
+                apply_rc = buzzer_didi(buzzers[0], freq_hz, on_time, off_time,
+                                        1U);
+            }
+
+            if (apply_rc != 0) {
+                rrc_io_recovery_schedule(&g_buzzer_recovery, RRC_FUNC_IO,
+                                         RRC_IO_BUZZER_SET, 0U, freq_hz,
+                                         duration_ms);
+                return;
+            }
+
+            rrc_io_recovery_clear(&g_buzzer_recovery, RRC_FUNC_IO,
+                                  RRC_IO_BUZZER_SET);
+
+            const rrc_io_buzzer_ack_t ack = {
+                .txid = txid,
+                .freq_hz = freq_hz,
+                .duty_pct = duty_pct,
+                .duration_ms = duration_ms,
+            };
+
+            (void)rrc_send_ack(RRC_FUNC_IO, RRC_IO_BUZZER_SET, &ack,
+                                sizeof(ack), txid);
+            return;
+        }
+
+        const size_t legacy_len = sizeof(BuzzerCommandTypeDef);
+        if (body_len == legacy_len || body_len == (legacy_len + 1U)) {
+            if (body_len == (legacy_len + 1U)) {
+                txid = body[legacy_len];
+                body_len = legacy_len;
+            }
+
+            const BuzzerCommandTypeDef *cmd =
+                (const BuzzerCommandTypeDef *)body;
+            const int apply_rc =
+                buzzer_didi(buzzers[0], cmd->freq, cmd->on_time,
+                            cmd->off_time, cmd->repeat);
+
+            if (apply_rc != 0) {
+                rrc_io_recovery_schedule(&g_buzzer_recovery, RRC_FUNC_IO,
+                                         RRC_IO_BUZZER_SET, 0U, cmd->freq,
+                                         cmd->on_time);
+                return;
+            }
+
+            rrc_io_recovery_clear(&g_buzzer_recovery, RRC_FUNC_IO,
+                                  RRC_IO_BUZZER_SET);
+
+            uint8_t duty_pct = 0U;
+            const uint32_t total =
+                (uint32_t)cmd->on_time + (uint32_t)cmd->off_time;
+            if (total > 0U) {
+                uint32_t duty_calc =
+                    ((uint32_t)cmd->on_time * 100U) / total;
+                if (duty_calc > 100U) {
+                    duty_calc = 100U;
+                }
+                duty_pct = (uint8_t)duty_calc;
+            }
+
+            const rrc_io_buzzer_ack_t ack = {
+                .txid = txid,
+                .freq_hz = cmd->freq,
+                .duty_pct = duty_pct,
+                .duration_ms = cmd->on_time,
+            };
+
+            (void)rrc_send_ack(RRC_FUNC_IO, RRC_IO_BUZZER_SET, &ack,
+                                sizeof(ack), txid);
+            return;
+        }
+
+        const uint32_t now = HAL_GetTick();
+        const uint8_t err_txid = (txid == RRC_TXID_NONE) ? 0U : txid;
+        (void)rrc_send_err(RRC_FUNC_IO, RRC_IO_BUZZER_SET,
+                           RRC_SYS_ERR_INVALID_ARG, 0U, now, err_txid);
+        return;
+    }
+
+    BuzzerCommandTypeDef *cmd = (BuzzerCommandTypeDef*)payload;
+    buzzer_didi(buzzers[0], cmd->freq, cmd->on_time, cmd->off_time,
+                cmd->repeat);
 }
 
 
@@ -217,9 +692,25 @@ static void packet_serial_servo_handle(struct PacketRawFrame *frame)
     switch(frame->data_and_checksum[0]) {
         case 0x01: { /* Servo control */
             SerialServoSetPositionCommandTypeDef *cmd=(SerialServoSetPositionCommandTypeDef *)frame->data_and_checksum;
+            bool all_ok = true;
             for(int i = 0; i < cmd->servo_num; i++) {
-                serial_servo_set_position(&serial_servo_controller, cmd->elements[i].servo_id,
-                            							cmd->elements[i].position, cmd->duration);
+                const uint8_t servo_id = cmd->elements[i].servo_id;
+                const uint16_t position = cmd->elements[i].position;
+                const uint16_t duration = cmd->duration;
+                if (serial_servo_set_position(&serial_servo_controller,
+                                              servo_id, (int)position,
+                                              duration) != 0) {
+                    rrc_io_recovery_schedule(&g_steering_recovery,
+                                             PACKET_FUNC_BUS_SERVO, 0x01U,
+                                             servo_id, position, duration);
+                    all_ok = false;
+                    break;
+                }
+            }
+
+            if (all_ok) {
+                rrc_io_recovery_clear(&g_steering_recovery,
+                                      PACKET_FUNC_BUS_SERVO, 0x01U);
             }
             break;
         }
@@ -352,6 +843,46 @@ static void packet_serial_servo_handle(struct PacketRawFrame *frame)
 
 static void packet_pwm_servo_handle(struct PacketRawFrame *frame)
 {
+    const uint8_t sub = frame->data_and_checksum[0];
+
+    if (sub == RRC_IO_BUTTON_ONESHOT) {
+        const uint8_t mask = buttons_read_mask();
+        (void)rrc_transport_send(RRC_FUNC_IO, RRC_IO_BUTTON_ONESHOT,
+                                 &mask, sizeof(mask));
+        return;
+    }
+
+    if (sub == RRC_IO_BUTTON_STREAM_CTRL) {
+        const uint8_t *payload = frame->data_and_checksum;
+        const size_t payload_len = frame->data_length;
+        if (payload_len < 4U) {
+            return;
+        }
+
+        uint8_t txid = RRC_TXID_NONE;
+        if (payload_len == 5U) {
+            txid = payload[4];
+        } else if (payload_len != 4U) {
+            return;
+        }
+
+        const uint8_t requested_enable = payload[1];
+        const uint16_t requested_period =
+            (uint16_t)((uint16_t)payload[2] | ((uint16_t)payload[3] << 8));
+        const uint16_t applied_period =
+            buttons_set_stream(requested_enable, requested_period);
+
+        rrc_button_stream_ack_t ack = {
+            .txid = txid,
+            .enable = (uint8_t)(requested_enable ? 1U : 0U),
+            .period_ms_le = applied_period,
+        };
+
+        (void)rrc_send_ack(RRC_FUNC_IO, RRC_IO_BUTTON_STREAM_CTRL,
+                            &ack, sizeof(ack), txid);
+        return;
+    }
+
     switch(frame->data_and_checksum[0]) {
         case 0x01: {    // Control multiple servos
             PWMServoSetMultiPositionCommandTypeDef *cmd = (PWMServoSetMultiPositionCommandTypeDef *)frame->data_and_checksum;
@@ -416,22 +947,82 @@ static void packet_motor_handle(struct PacketRawFrame *frame)
         /* ---------------- PWM (open-loop) ---------------- */
 
         case 0x10: { /* single motor PWM set */
-            MotorPWMSingleCommandTypeDef *cmd = (void*)frame->data_and_checksum;
+            const uint8_t *payload = frame->data_and_checksum;
+            const size_t payload_len = frame->data_length;
+            if (payload_len < 4U) {
+                break;
+            }
 
-            uint8_t id = (uint8_t)(cmd->motor_id & 0x03);
-            int pwm = (int)cmd->pwm;
-            if (pwm > 1000) pwm = 1000; else if (pwm < -1000) pwm = -1000;
+            uint8_t txid = RRC_TXID_NONE;
+            if (payload_len == 5U) {
+                txid = payload[4];
+            } else if (payload_len != 4U) {
+                const uint32_t now = HAL_GetTick();
+                const uint8_t err_txid = (payload_len > 4U) ? payload[4] : 0U;
+                if (!motor_pwm_fault_active) {
+                    motor_pwm_fault_active = true;
+                    motor_pwm_last_error = RRC_SYS_ERR_INVALID_ARG;
+                    (void)rrc_send_err(RRC_FUNC_MOTOR, RRC_MOTOR_PWM_SET,
+                                       motor_pwm_last_error,
+                                       (uint8_t)payload_len, now, err_txid);
+                }
+                break;
+            }
 
-            motor_set_target_pwm(id, pwm);
+            const uint8_t raw_id = payload[1];
+            int pwm = (int16_t)((uint16_t)payload[2] | ((uint16_t)payload[3] << 8));
 
-            /* ACK: echo what we accepted + where the ramp currently is */
-            PacketReportMotorPwmAck_Single rep;
-            rep.sub         = 0x18;
-            rep.t_ms        = HAL_GetTick();
-            rep.motor_id    = id;
-            rep.pwm_target  = (int16_t)pwm;
-            rep.pwm_applied = (int16_t)motors_pwm_current[id];
-            packet_transmit(&packet_controller, PACKET_FUNC_MOTOR, &rep, sizeof(rep));
+            if (pwm > 1000) {
+                pwm = 1000;
+            } else if (pwm < -1000) {
+                pwm = -1000;
+            }
+
+            const bool applied = motor_pwm_apply(raw_id & 0x03U, pwm);
+            const uint32_t now = HAL_GetTick();
+
+            if (!applied) {
+                const uint8_t err_txid = (txid == RRC_TXID_NONE) ? 0U : txid;
+                motor_backoff_ensure_init();
+                motor_pwm_last_error = RRC_SYS_ERR_IO_FAIL;
+                if (g_motor_err_active == 0U) {
+                    g_motor_err_active = 1U;
+                    (void)rrc_send_err(RRC_FUNC_MOTOR, RRC_MOTOR_PWM_SET,
+                                       RRC_SYS_ERR_IO_FAIL, raw_id,
+                                       now, err_txid);
+                    rrc_backoff_reset(&g_motor_backoff);
+                    const uint32_t delay_ms = rrc_backoff_next(&g_motor_backoff);
+                    g_motor_retry_due_ms = now + delay_ms;
+                }
+                break;
+            }
+
+            if (motor_pwm_fault_active) {
+                motor_pwm_fault_active = false;
+                if (motor_pwm_last_error != RRC_SYS_ERR_IO_FAIL) {
+                    (void)rrc_send_recovered(RRC_FUNC_MOTOR, RRC_MOTOR_PWM_SET,
+                                             motor_pwm_last_error, now);
+                }
+            }
+
+            const uint8_t id = (uint8_t)(raw_id & 0x03U);
+
+            int16_t applied_pwm = 0;
+            if (id < 2U) {
+                applied_pwm = (int16_t)motors_pwm_current[id];
+            }
+
+            rrc_motor_last_cmd_ms = now;
+
+            rrc_motor_pwm_ack_t ack = {
+                .txid = txid,
+                .motor_id = id,
+                .pwm_target = (int16_t)pwm,
+                .pwm_applied = applied_pwm,
+            };
+
+            (void)rrc_send_ack(RRC_FUNC_MOTOR, RRC_MOTOR_PWM_ACK_SINGLE,
+                                &ack, sizeof(ack), txid);
             break;
         }
 
@@ -511,28 +1102,333 @@ static void packet_motor_handle(struct PacketRawFrame *frame)
 
 static void packet_imu_handle(struct PacketRawFrame *frame)
 {
-    switch (frame->data_and_checksum[0]) {
-        case 0xA0: { /* one-shot now */
-            imu_read_once_and_report(0xA0);
+    const uint8_t *payload = frame->data_and_checksum;
+    const size_t payload_len = frame->data_length;
+
+    if (payload_len == 0U) {
+        return;
+    }
+
+    const uint8_t sub = payload[0];
+
+    switch (sub) {
+    case RRC_IMU_ONESHOT: {
+        if (payload_len >= 2U) {
+            const uint8_t sources_mask = payload[1];
+            imu_emit_oneshot(sources_mask);
+        }
+        break;
+    }
+    case RRC_IMU_STREAM_CTRL: {
+        if (payload_len < 5U) {
             break;
         }
-        case 0xA1: { /* stream control */
-            const IMUStreamCtrlCmd* c = (const IMUStreamCtrlCmd*)frame->data_and_checksum;
-            uint16_t p = c->period_ms; if (p < 5) p = 5;
-            imu_set_stream(c->enable, p);
+
+        uint8_t txid = RRC_TXID_NONE;
+        if (payload_len == 6U) {
+            txid = payload[5];
+        } else if (payload_len != 5U) {
             break;
         }
-        default: break;
+
+        const uint8_t requested_mask = payload[1];
+        const uint16_t requested_period =
+            (uint16_t)((uint16_t)payload[2] | ((uint16_t)payload[3] << 8));
+        const uint8_t requested_ack = payload[4];
+
+        uint8_t applied_mask = 0U;
+        uint8_t applied_ack = 0U;
+        const uint16_t applied_period =
+            imu_set_stream(requested_mask, requested_period, requested_ack,
+                           &applied_mask, &applied_ack);
+
+        rrc_imu_stream_ack_t ack = {
+            .txid = txid,
+            .sources_mask = applied_mask,
+            .period_ms_le = applied_period,
+            .ack_each_frame = applied_ack,
+        };
+
+        (void)rrc_send_ack(RRC_FUNC_IMU, RRC_IMU_STREAM_CTRL,
+                            &ack, sizeof(ack), txid);
+        break;
+    }
+    case RRC_IMU_SET_PRIMARY: {
+        if (payload_len < 2U) {
+            break;
+        }
+
+        uint8_t txid = RRC_TXID_NONE;
+        if (payload_len == 3U) {
+            txid = payload[2];
+        } else if (payload_len != 2U) {
+            break;
+        }
+
+        const uint8_t source_id = payload[1];
+        if (source_id > 1U) {
+            const uint32_t now = HAL_GetTick();
+            const uint8_t err_txid = (txid == RRC_TXID_NONE) ? 0U : txid;
+            (void)rrc_send_err(RRC_FUNC_IMU, RRC_IMU_SET_PRIMARY,
+                               RRC_SYS_ERR_INVALID_ARG, 0U, now, err_txid);
+            break;
+        }
+
+        g_imu_primary = source_id;
+
+        const rrc_imu_primary_ack_t ack = {
+            .txid = txid,
+            .source_id = source_id,
+        };
+
+        (void)rrc_send_ack(RRC_FUNC_IMU, RRC_IMU_SET_PRIMARY,
+                            &ack, sizeof(ack), txid);
+        break;
+    }
+    case RRC_IMU_SET_PRESET: {
+        if (payload_len < 3U) {
+            break;
+        }
+
+        uint8_t txid = RRC_TXID_NONE;
+        if (payload_len == 4U) {
+            txid = payload[3];
+        } else if (payload_len != 3U) {
+            break;
+        }
+
+        const uint8_t source_id = payload[1];
+        if (source_id > 1U) {
+            const uint32_t now = HAL_GetTick();
+            const uint8_t err_txid = (txid == RRC_TXID_NONE) ? 0U : txid;
+            (void)rrc_send_err(RRC_FUNC_IMU, RRC_IMU_SET_PRESET,
+                               RRC_SYS_ERR_INVALID_ARG, 0U, now, err_txid);
+            break;
+        }
+
+        uint8_t applied_preset = payload[2];
+        if (applied_preset > 2U) {
+            applied_preset = 2U;
+        }
+
+        g_imu_preset[source_id] = applied_preset;
+
+        const rrc_imu_preset_ack_t ack = {
+            .txid = txid,
+            .source_id = source_id,
+            .preset = applied_preset,
+        };
+
+        (void)rrc_send_ack(RRC_FUNC_IMU, RRC_IMU_SET_PRESET,
+                            &ack, sizeof(ack), txid);
+        break;
+    }
+    case RRC_IMU_SET_BIASES: {
+        const size_t min_len =
+            1U + 1U + sizeof(rrc_imu_bias_store_t); /* sub + source + bias */
+        if (payload_len < min_len) {
+            break;
+        }
+
+        uint8_t txid = RRC_TXID_NONE;
+        if (payload_len == (min_len + 1U)) {
+            txid = payload[min_len];
+        } else if (payload_len != min_len) {
+            break;
+        }
+
+        const uint8_t source_id = payload[1];
+        if (source_id > 1U) {
+            const uint32_t now = HAL_GetTick();
+            const uint8_t err_txid = (txid == RRC_TXID_NONE) ? 0U : txid;
+            (void)rrc_send_err(RRC_FUNC_IMU, RRC_IMU_SET_BIASES,
+                               RRC_SYS_ERR_INVALID_ARG, 0U, now, err_txid);
+            break;
+        }
+
+        const size_t bias_offset = 2U; /* sub + source */
+        rrc_imu_bias_store_t biases;
+        memcpy(&biases, &payload[bias_offset], sizeof(biases));
+        g_imu_bias[source_id] = biases;
+
+        const rrc_imu_bias_ack_t ack = {
+            .txid = txid,
+            .source_id = source_id,
+        };
+
+        (void)rrc_send_ack(RRC_FUNC_IMU, RRC_IMU_SET_BIASES,
+                            &ack, sizeof(ack), txid);
+        break;
+    }
+    case RRC_IMU_WHOAMI_STATUS: {
+        uint8_t source_id = 0U;
+        if (payload_len >= 2U) {
+            source_id = payload[1];
+        }
+
+        imu_emit_whoami(source_id);
+        break;
+    }
+    default:
+        break;
     }
 }
 
 static void packet_battery_limit_handle(struct PacketRawFrame *frame)
 {
-    BatteryWarnTypeDef *cmd = (BatteryWarnTypeDef*)frame->data_and_checksum;
-    switch(frame->data_and_checksum[0]) {
+    const uint8_t *payload = frame->data_and_checksum;
+    const size_t payload_len = frame->data_length;
+
+    if (payload_len == 0U) {
+        return;
+    }
+
+    switch (payload[0]) {
+        case RRC_SYS_BATTERY_ONESHOT: {
+            const uint16_t mv = battery_latest_millivolts_le();
+            (void)rrc_transport_send(RRC_FUNC_SYS, RRC_SYS_BATTERY_ONESHOT,
+                                     &mv, sizeof(mv));
+            break;
+        }
+        case RRC_SYS_BATTERY_STREAM_CTRL: {
+            if (payload_len < 4U) {
+                break;
+            }
+
+            uint8_t txid = RRC_TXID_NONE;
+            if (payload_len == 5U) {
+                txid = payload[4];
+            } else if (payload_len != 4U) {
+                break;
+            }
+
+            const uint8_t requested_enable = payload[1];
+            const uint16_t requested_period =
+                (uint16_t)((uint16_t)payload[2] | ((uint16_t)payload[3] << 8));
+            const uint16_t applied_period =
+                battery_set_stream(requested_enable, requested_period);
+
+            rrc_sys_battery_stream_ack_t ack = {
+                .txid = txid,
+                .enable = (uint8_t)(requested_enable ? 1U : 0U),
+                .period_ms_le = applied_period,
+            };
+
+            (void)rrc_send_ack(RRC_FUNC_SYS, RRC_SYS_BATTERY_STREAM_CTRL,
+                                &ack, sizeof(ack), txid);
+            break;
+        }
+        case RRC_SYS_MOTOR_FAILSAFE_SET: {
+            if (payload_len < 3U) {
+                break;
+            }
+
+            uint8_t txid = RRC_TXID_NONE;
+            if (payload_len == 4U) {
+                txid = payload[3];
+            } else if (payload_len != 3U) {
+                break;
+            }
+
+            const uint16_t timeout_ms =
+                (uint16_t)((uint16_t)payload[1] | ((uint16_t)payload[2] << 8));
+
+            rrc_motor_failsafe_timeout_ms = timeout_ms;
+            rrc_motor_last_cmd_ms = HAL_GetTick();
+
+            const rrc_sys_motor_failsafe_ack_t ack = {
+                .txid = txid,
+                .timeout_ms_le = timeout_ms,
+            };
+
+            (void)rrc_send_ack(RRC_FUNC_SYS, RRC_SYS_MOTOR_FAILSAFE_SET,
+                                &ack, sizeof(ack), txid);
+            break;
+        }
+        case RRC_SYS_HEALTH_PERIOD_SET: {
+            if (payload_len < 3U) {
+                break;
+            }
+
+            uint8_t txid = RRC_TXID_NONE;
+            if (payload_len == 4U) {
+                txid = payload[3];
+            } else if (payload_len != 3U) {
+                break;
+            }
+
+            const uint16_t period_ms =
+                (uint16_t)((uint16_t)payload[1] | ((uint16_t)payload[2] << 8));
+
+            rrc_heartbeat_period_ms = period_ms;
+
+            const rrc_sys_period_ack_t ack = {
+                .txid = txid,
+                .period_ms_le = period_ms,
+            };
+
+            (void)rrc_send_ack(RRC_FUNC_SYS, RRC_SYS_HEALTH_PERIOD_SET,
+                                &ack, sizeof(ack), txid);
+            break;
+        }
+        case RRC_SYS_UART_BAUD_SET: {
+            if (payload_len < 7U) {
+                break;
+            }
+
+            uint8_t txid = RRC_TXID_NONE;
+            if (payload_len == 8U) {
+                txid = payload[7];
+            } else if (payload_len != 7U) {
+                break;
+            }
+
+            const uint32_t baud = (uint32_t)payload[1] |
+                                   ((uint32_t)payload[2] << 8) |
+                                   ((uint32_t)payload[3] << 16) |
+                                   ((uint32_t)payload[4] << 24);
+            uint16_t apply_after_ms =
+                (uint16_t)((uint16_t)payload[5] | ((uint16_t)payload[6] << 8));
+
+            if (!rrc_uart_baud_is_supported(baud)) {
+                const uint8_t err_txid = (txid == RRC_TXID_NONE) ? 0U : txid;
+                (void)rrc_send_err(RRC_FUNC_SYS, RRC_SYS_UART_BAUD_SET,
+                                   RRC_SYS_ERR_UNSUPPORTED, 0U, HAL_GetTick(),
+                                   err_txid);
+                break;
+            }
+
+            if (apply_after_ms == 0U) {
+                apply_after_ms = rrc_uart_baud_apply_delay_ms(baud);
+            }
+
+            const rrc_sys_uart_baud_ack_t ack = {
+                .txid = txid,
+                .baud_le = baud,
+                .apply_after_ms_le = apply_after_ms,
+            };
+
+            if (!rrc_send_ack(RRC_FUNC_SYS, RRC_SYS_UART_BAUD_SET,
+                              &ack, sizeof(ack), txid)) {
+                break;
+            }
+
+            rrc_uart_apply_with_delay(baud, apply_after_ms, txid);
+            break;
+        }
+        case RRC_SYS_UART_BAUD_GET: {
+            const uint32_t baud_le = rrc_uart_current_baud();
+            (void)rrc_transport_send(RRC_FUNC_SYS, RRC_SYS_UART_BAUD_GET,
+                                     &baud_le, sizeof(baud_le));
+            break;
+        }
         case 1: {
-            change_battery_limit(cmd->limit);
-        }break;
+            if (payload_len >= sizeof(BatteryWarnTypeDef)) {
+                const BatteryWarnTypeDef *cmd = (const BatteryWarnTypeDef*)payload;
+                change_battery_limit(cmd->limit);
+            }
+            break;
+        }
         default:
             break;
     }
@@ -568,10 +1464,33 @@ static void packet_encoder_handle(struct PacketRawFrame *frame)
             break;
         }
         case 0x91: { /* stream control */
-            const EncoderStreamCtrlCommandTypeDef* cmd =
-                (const EncoderStreamCtrlCommandTypeDef*)frame->data_and_checksum;
-            uint16_t p = cmd->period_ms; if (p < 5) p = 5;
-            encoders_set_stream(cmd->enable, p);
+            const uint8_t *payload = frame->data_and_checksum;
+            const size_t payload_len = frame->data_length;
+            if (payload_len < 4U) {
+                break;
+            }
+
+            uint8_t txid = RRC_TXID_NONE;
+            if (payload_len == 5U) {
+                txid = payload[4];
+            } else if (payload_len != 4U) {
+                break;
+            }
+
+            const uint8_t requested_enable = payload[1];
+            const uint16_t requested_period =
+                (uint16_t)((uint16_t)payload[2] | ((uint16_t)payload[3] << 8));
+            const uint16_t applied_period =
+                encoders_set_stream(requested_enable, requested_period);
+
+            rrc_encoder_stream_ack_t ack = {
+                .txid = txid,
+                .enable = (uint8_t)(requested_enable ? 1U : 0U),
+                .period_ms_le = applied_period,
+            };
+
+            (void)rrc_send_ack(RRC_FUNC_MOTOR, RRC_MOTOR_ENCODER_STREAM_CTRL,
+                                &ack, sizeof(ack), txid);
             break;
         }
         default: break;
@@ -590,6 +1509,10 @@ void packet_handle_init(void)
     packet_register_callback(&packet_controller, PACKET_FUNC_RGB, packet_RGB_Ctl_handle);
     packet_register_callback(&packet_controller, PACKET_FUNC_ENCODER, packet_encoder_handle);
 #if ENABLE_OLED
-	packet_register_callback(&packet_controller, PACKET_FUNC_OLED, packet_oled_handle);
+    packet_register_callback(&packet_controller, PACKET_FUNC_OLED, packet_oled_handle);
 #endif
+
+    rrc_backoff_init(&g_motor_backoff, 50U, 3.0f, 1000U);
+    g_motor_err_active = 0U;
+    g_motor_retry_due_ms = 0U;
 }
