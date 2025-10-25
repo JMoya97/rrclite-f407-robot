@@ -7,12 +7,36 @@
 #include "motors_param.h"
 #include "tim.h"
 #include "cmsis_os2.h"
+#include "rrclite_packets.h"
+
+#include <stdbool.h>
 
 extern void encoders_set_stream(uint8_t enable, uint16_t period_ms);
 extern void encoders_read_once_and_report(uint8_t sub);
 extern void imu_set_stream(uint8_t enable, uint16_t period_ms);
 extern void imu_read_once_and_report(uint8_t sub);
 extern volatile int motors_pwm_current[2];
+
+static bool motor_pwm_fault_active;
+static rrc_error_code_t motor_pwm_last_error;
+
+static bool motor_pwm_try_reinit(void)
+{
+    /* Stub hook for quick reinitialisation after an apply failure. */
+    return true;
+}
+
+static bool motor_pwm_apply(uint8_t id, int pwm)
+{
+    extern void motor_set_target_pwm(uint8_t id, int cmd);
+
+    if (id >= 2U) {
+        return false;
+    }
+
+    motor_set_target_pwm(id, pwm);
+    return true;
+}
 
 #pragma pack(1)
 typedef struct {
@@ -416,22 +440,77 @@ static void packet_motor_handle(struct PacketRawFrame *frame)
         /* ---------------- PWM (open-loop) ---------------- */
 
         case 0x10: { /* single motor PWM set */
-            MotorPWMSingleCommandTypeDef *cmd = (void*)frame->data_and_checksum;
+            const uint8_t *payload = frame->data_and_checksum;
+            const size_t payload_len = frame->data_length;
+            if (payload_len < 4U) {
+                break;
+            }
 
-            uint8_t id = (uint8_t)(cmd->motor_id & 0x03);
-            int pwm = (int)cmd->pwm;
-            if (pwm > 1000) pwm = 1000; else if (pwm < -1000) pwm = -1000;
+            uint8_t txid = RRC_TXID_NONE;
+            if (payload_len == 5U) {
+                txid = payload[4];
+            } else if (payload_len != 4U) {
+                const uint32_t now = HAL_GetTick();
+                const uint8_t err_txid = (payload_len > 4U) ? payload[4] : 0U;
+                if (!motor_pwm_fault_active) {
+                    motor_pwm_fault_active = true;
+                    motor_pwm_last_error = RRC_SYS_ERR_INVALID_ARG;
+                    (void)rrc_send_err(RRC_FUNC_MOTOR, RRC_MOTOR_PWM_SET,
+                                       motor_pwm_last_error,
+                                       (uint8_t)payload_len, now, err_txid);
+                }
+                (void)motor_pwm_try_reinit();
+                break;
+            }
 
-            motor_set_target_pwm(id, pwm);
+            const uint8_t raw_id = payload[1];
+            int pwm = (int16_t)((uint16_t)payload[2] | ((uint16_t)payload[3] << 8));
 
-            /* ACK: echo what we accepted + where the ramp currently is */
-            PacketReportMotorPwmAck_Single rep;
-            rep.sub         = 0x18;
-            rep.t_ms        = HAL_GetTick();
-            rep.motor_id    = id;
-            rep.pwm_target  = (int16_t)pwm;
-            rep.pwm_applied = (int16_t)motors_pwm_current[id];
-            packet_transmit(&packet_controller, PACKET_FUNC_MOTOR, &rep, sizeof(rep));
+            if (pwm > 1000) {
+                pwm = 1000;
+            } else if (pwm < -1000) {
+                pwm = -1000;
+            }
+
+            const bool applied = motor_pwm_apply(raw_id & 0x03U, pwm);
+            const uint32_t now = HAL_GetTick();
+
+            if (!applied) {
+                const uint8_t err_txid = (txid == RRC_TXID_NONE) ? 0U : txid;
+                if (!motor_pwm_fault_active) {
+                    motor_pwm_fault_active = true;
+                    motor_pwm_last_error = RRC_SYS_ERR_INVALID_ARG;
+                    (void)rrc_send_err(RRC_FUNC_MOTOR, RRC_MOTOR_PWM_SET,
+                                       motor_pwm_last_error, raw_id,
+                                       now, err_txid);
+                }
+
+                (void)motor_pwm_try_reinit();
+                break;
+            }
+
+            if (motor_pwm_fault_active) {
+                motor_pwm_fault_active = false;
+                (void)rrc_send_recovered(RRC_FUNC_MOTOR, RRC_MOTOR_PWM_SET,
+                                         motor_pwm_last_error, now);
+            }
+
+            const uint8_t id = (uint8_t)(raw_id & 0x03U);
+
+            int16_t applied_pwm = 0;
+            if (id < 2U) {
+                applied_pwm = (int16_t)motors_pwm_current[id];
+            }
+
+            rrc_motor_pwm_ack_t ack = {
+                .txid = txid,
+                .motor_id = id,
+                .pwm_target = (int16_t)pwm,
+                .pwm_applied = applied_pwm,
+            };
+
+            (void)rrc_send_ack(RRC_FUNC_MOTOR, RRC_MOTOR_PWM_ACK_SINGLE,
+                                &ack, sizeof(ack), txid);
             break;
         }
 
