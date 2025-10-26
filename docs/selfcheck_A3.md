@@ -5,7 +5,7 @@
 - One-shot path: `encoders_read_once_and_report()` in `Hiwonder/Portings/encoders_porting.c` (lines 79–88) latches TIM5/TIM2 counts and emits ENC/0x20.
 - Streaming path: `encoders_timer7_cb()` (lines 43–57) captures the same counters into `enc_c1..enc_c4`, and `encoders_task_entry()` (lines 96–120) wraps them into ENC/0x11 sequenced frames. Both paths use the same latched source data.
 
-## IMU dual-source (FUNC 0x07)
+## IMU dual-source (FUNC 0x23)
 - Default primary: `g_imu_primary` is zero-initialised in `Hiwonder/System/packet_handle.c` (lines 54–59), so source 0 (ICM-20948) is selected on boot.
 - WHOAMI/Status: `imu_emit_whoami()` in `Hiwonder/Portings/imu_porting.c` (lines 342–380) reports cached `imu0_whoami` (`0xEA`) for the primary and the onboard value for source 1.
 - ONE_SHOT/STREAM packing: `imu0_read_sample()` (lines 192–226) and `imu1_read_sample()` (lines 229–266) subtract `g_imu_bias[source]` for accel/gyro/mag components before returning samples; `imu_task_entry()` (lines 289–360) reuses those corrected structs when publishing stream frames.

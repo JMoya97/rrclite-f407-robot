@@ -46,20 +46,20 @@
 | BUTTON (0x20) | 0x12 Stream frame ACK | resp | 2 |
 | STEER (0x11) | 0x01 Position set | req | header + 3×servo_count (+1 txid) |
 | STEER (0x11) | 0x03 Position ACK | resp (ACK) | 2 |
-| IMU (0x07) | 0xA0 IMU one-shot | req | 1 |
-| IMU (0x07) | 0xA0 IMU one-shot | resp | 45 |
-| IMU (0x07) | 0xA1 IMU stream ctrl | req | 4 (+1 txid) |
-| IMU (0x07) | 0xA1 IMU stream ctrl | resp (ACK) | 5 |
-| IMU (0x07) | 0xA1 IMU stream frame | resp (frame) | 47 |
-| IMU (0x07) | 0xA2 Set primary source | req | 1 (+1 txid) |
-| IMU (0x07) | 0xA2 Set primary source | resp (ACK) | 2 |
-| IMU (0x07) | 0xA3 Set preset | req | 2 (+1 txid) |
-| IMU (0x07) | 0xA3 Set preset | resp (ACK) | 3 |
-| IMU (0x07) | 0xA4 Set biases | req | 37 (+1 txid) |
-| IMU (0x07) | 0xA4 Set biases | resp (ACK) | 2 |
-| IMU (0x07) | 0xA5 WHOAMI/Status | req | 0 (+1 optional source_id) |
-| IMU (0x07) | 0xA5 WHOAMI/Status | resp | 3 |
-| IMU (0x07) | 0xA9 IMU frame ACK | resp | 3 |
+| IMU (0x23) | 0xA0 IMU one-shot | req | 1 |
+| IMU (0x23) | 0xA0 IMU one-shot | resp | 45 |
+| IMU (0x23) | 0xA1 IMU stream ctrl | req | 4 (+1 txid) |
+| IMU (0x23) | 0xA1 IMU stream ctrl | resp (ACK) | 5 |
+| IMU (0x23) | 0xA1 IMU stream frame | resp (frame) | 47 |
+| IMU (0x23) | 0xA2 Set primary source | req | 1 (+1 txid) |
+| IMU (0x23) | 0xA2 Set primary source | resp (ACK) | 2 |
+| IMU (0x23) | 0xA3 Set preset | req | 2 (+1 txid) |
+| IMU (0x23) | 0xA3 Set preset | resp (ACK) | 3 |
+| IMU (0x23) | 0xA4 Set biases | req | 37 (+1 txid) |
+| IMU (0x23) | 0xA4 Set biases | resp (ACK) | 2 |
+| IMU (0x23) | 0xA5 WHOAMI/Status | req | 0 (+1 optional source_id) |
+| IMU (0x23) | 0xA5 WHOAMI/Status | resp | 3 |
+| IMU (0x23) | 0xA9 IMU frame ACK | resp | 3 |
 
 *Request payload lengths are counted after the sub-command byte; values in parentheses denote the optional txid byte or variable legacy formats. “resp” and “event” rows mirror the maxima registered in `g_*_subs` inside `Core/Src/rrclite_packets.c`.*
 

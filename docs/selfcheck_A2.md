@@ -15,7 +15,7 @@
 - **Retry scheduling state:** `g_motor_err_active` / `g_motor_retry_due_ms` (declared at `packet_handle.c:36-38`) gate retries and store the next attempt deadline via `rrc_backoff_next()`.
 - **RECOVERED emission:** `rrc_motor_recovery_tick()` (`packet_handle.c:107-127`) runs from `TIM7_IRQHandler` and calls `rrc_send_recovered(RRC_FUNC_MOTOR, RRC_MOTOR_PWM_SET, RRC_SYS_ERR_IO_FAIL, …)` after a successful retry.
 
-### IMU (FUNC=0x07 — stream & one-shot)
+### IMU (FUNC=0x23 — stream & one-shot)
 - **First ERR emission:** `imu_schedule_failure()` (`Hiwonder/Portings/imu_porting.c:61-82`) is invoked from both streaming (`imu_task_entry` loop) and one-shot paths; it sends `rrc_send_err(RRC_FUNC_IMU, origin_sub, err_code, source_id, …)` the first time a source fails and marks `g_imu_err_active[source]`.
 - **Backoff parameters:** `imu_backoff_init_once()` (`imu_porting.c:48-58`) initialises each `g_imu_backoff[source]` with `initial_ms=50`, `factor=3.0f`, `max_ms=1000`.
 - **Retry scheduling state:** `g_imu_retry_due_ms[source]` (declared at `imu_porting.c:32`) stores the next retry instant; `imu_schedule_failure()` updates it via `rrc_backoff_next()`.

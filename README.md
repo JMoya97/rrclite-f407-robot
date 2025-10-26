@@ -10,7 +10,7 @@
   - SYS (0x00): telemetry/control plus ACK/NACK helpers
   - MOTOR (0x10): raw PWM set (0x10) with ACK (0x03) and optional batch ACK (0x19); encoder stream frames carry `seq`
   - LED (0x12) / BUZZ (0x13) / BUTTON (0x20): discrete IO controls with txid ACKs and sequenced streams
-  - IMU (0x07): dual-source stream support with optional frame ACK 0xA9
+  - IMU (0x23): dual-source stream support with optional frame ACK 0xA9
 
 ### Slim firmware configuration
 
