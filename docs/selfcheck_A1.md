@@ -25,9 +25,9 @@
 | SYS (0x00) | 0xF0 Version | resp | 4 |
 | SYS (0x00) | 0xF1 Capabilities | req | 0 |
 | SYS (0x00) | 0xF1 Capabilities | resp | 16 |
-| MOTOR (0x03) | 0x10 PWM set (single) | req | 3 (+1 txid) |
-| MOTOR (0x03) | 0x18 PWM ACK (single) | resp | 6 |
-| MOTOR (0x03) | 0x19 PWM ACK (multi) | resp | ≤254 |
+| MOTOR (0x10) | 0x10 PWM set (single) | req | 3 (+1 txid) |
+| MOTOR (0x10) | 0x03 PWM ACK (single) | resp | 6 |
+| MOTOR (0x10) | 0x19 PWM ACK (multi) | resp | ≤254 |
 | ENC (0x21) | 0x20 One-shot | req | 0 |
 | ENC (0x21) | 0x20 One-shot | resp | 10 |
 | ENC (0x21) | 0x10 Stream ctrl | req | 3 (+1 txid) |

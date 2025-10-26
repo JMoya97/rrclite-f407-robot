@@ -8,8 +8,8 @@
   - Core/Src/tim.c
 - Protocol:
   - SYS (0x00): telemetry/control plus ACK/NACK helpers
-  - MOTOR (0x03): 0x10 raw PWM with 0x18/0x19 ACK envelopes; encoder stream frames carry `seq`
-  - IO (0x04): LEDs, buzzer, and button streaming (optional frame ACK 0x29)
+  - MOTOR (0x10): raw PWM set (0x10) with ACK (0x03) and optional batch ACK (0x19); encoder stream frames carry `seq`
+  - LED (0x12) / BUZZ (0x13) / BUTTON (0x20): discrete IO controls with txid ACKs and sequenced streams
   - IMU (0x07): dual-source stream support with optional frame ACK 0xA9
 
 ### Slim firmware configuration
@@ -66,7 +66,7 @@ uint8_t motor_id;
 int16_t pwm;
 uint8_t txid; // optional
 
-// MOTOR/0x18 ACK
+// MOTOR/0x03 ACK
 uint8_t txid;
 uint8_t motor_id;
 int16_t pwm_target;
@@ -163,12 +163,12 @@ UART within the specified window, and resume communication at the new rate.
 
 #### Example payloads (little-endian unless noted)
 
-- **Motor PWM set (`MOTOR/0x10`) & ACK (`MOTOR/0x18`)**
+- **Motor PWM set (`MOTOR/0x10`) & ACK (`MOTOR/0x03`)**
   - Request: `{uint8 motor_id, int16 pwm, [uint8 txid]}`
   - ACK: `{uint8 txid, uint8 motor_id, int16 pwm_target, int16 pwm_applied}`
-- **Encoder stream control (`MOTOR/0x91`) & frame**
+- **Encoder stream control (`ENC/0x10`) & frame**
   - ACK: `{uint8 txid, uint8 enable, uint16 period_ms}`
-  - Stream frame (`MOTOR/0x91` data payload): `{uint16 seq, uint16 c1, uint16 c2,
+  - Stream frame (`ENC/0x11` data payload): `{uint16 seq, uint16 c1, uint16 c2,
     uint16 c3, uint16 c4}`
 - **IMU stream frame (`IMU/0xA11`)**
   - `{uint8 source_id, uint16 seq, uint32 t_ms, float ax, ay, az, float gx, gy, gz,

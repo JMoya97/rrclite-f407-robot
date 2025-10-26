@@ -13,7 +13,7 @@ extern "C" {
 
 typedef enum {
     RRC_FUNC_SYS                = 0x00U,
-    RRC_FUNC_MOTOR              = 0x03U,
+    RRC_FUNC_MOTOR              = RRCV2_FUNC_MOTOR,
     RRC_FUNC_IMU                = 0x07U,
     RRC_FUNC_ENC                = RRCV2_FUNC_ENC,
     RRC_FUNC_STEER              = RRCV2_FUNC_STEER,
@@ -23,6 +23,7 @@ typedef enum {
 } rrc_func_t;
 
 /* Legacy function IDs retained for the compatibility shim. */
+#define RRC_FUNC_MOTOR_LEGACY       0x03U
 #define RRC_FUNC_IO_LEGACY          0x04U
 
 /* Common protocol helpers */
@@ -141,11 +142,11 @@ typedef struct __attribute__((packed)) {
 } rrc_sys_recovered_report_t;
 
 /* -------------------------------------------------------------------------- */
-/* MOTOR (0x03) sub-commands                                                  */
+/* MOTOR (0x10) sub-commands                                                  */
 
 typedef enum {
     RRC_MOTOR_PWM_SET              = 0x10,
-    RRC_MOTOR_PWM_ACK_SINGLE       = 0x18,
+    RRC_MOTOR_PWM_ACK_SINGLE       = RRCV2_SUB_ACK,
     RRC_MOTOR_PWM_ACK_MULTI        = 0x19
 } rrc_motor_sub_t;
 

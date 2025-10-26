@@ -45,7 +45,7 @@ typedef struct {
 } PacketReportIMU_Raw_V2_TypeDef;
 
 typedef struct {
-    uint8_t  sub;          /* 0x18 */
+    uint8_t  sub;          /* MOTOR/0x03 ACK sub-id */
     uint32_t t_ms;         /* HAL_GetTick() */
     uint8_t  motor_id;     /* 0..3 (we use 0..1) */
     int16_t  pwm_target;   /* clamped target we accepted */
