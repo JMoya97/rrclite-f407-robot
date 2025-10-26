@@ -1,101 +1,37 @@
-# A4 Self-Check – RTOS Tasks, ISR Weight, and Stream Pacing
+# A4 Self-Check – RTOS/perf layout, ISR weight, pacing & caps
 
 ## Task inventory
 
 | Task name | Priority | Stack (bytes) | Source | Responsibilities |
 | --- | --- | --- | --- | --- |
-| `defaultTask` | Below normal | 1024 | `Core/Src/freertos.c` | CMSIS auto-generated idle helper; no device work.【F:Core/Src/freertos.c†L54-L60】 |
-| `imu_task` | Normal | 1024 | `Hiwonder/Portings/imu_porting.c` | IMU streaming/one-shot publisher driven by TIM6 semaphore.【F:Core/Src/freertos.c†L61-L67】【F:Hiwonder/Portings/imu_porting.c†L250-L307】 |
-| `encoder_task` | Normal | 512 | `Hiwonder/Portings/encoders_porting.c` | Encoder stream worker waiting on TIM7 semaphore.【F:Core/Src/freertos.c†L68-L74】【F:Hiwonder/Portings/encoders_porting.c†L12-L110】 |
-| `packet_tx_task` | Above normal | 1024 | `Hiwonder/Portings/packet_porting.c` | Serial TX queue pump (DMA submit + idle semaphore).【F:Core/Src/freertos.c†L75-L81】【F:Hiwonder/Portings/packet_porting.c†L176-L210】 |
-| `packet_rx_task` | Above normal | 1024 | `Hiwonder/Portings/packet_porting.c` | Serial RX worker parsing frames into handlers.【F:Core/Src/freertos.c†L82-L88】【F:Hiwonder/Portings/packet_porting.c†L160-L175】 |
-| `gui_task` | Low | 6000 | `Core/Src/freertos.c` | Weak stub (legacy GUI); no transport duties.【F:Core/Src/freertos.c†L89-L95】【F:Core/Src/freertos.c†L446-L456】 |
-| `app_task` | Normal | 2048 | `Hiwonder/System/app.c` | System bring-up, timer start, packet subsystem init, button callbacks.【F:Core/Src/freertos.c†L96-L102】【F:Hiwonder/System/app.c†L24-L96】 |
-| `oled_task` | Below normal | 1024 | `Hiwonder/System/oled_handle.c` | Display refresh (legacy); weak stub if disabled.【F:Core/Src/freertos.c†L103-L109】【F:Hiwonder/System/oled_handle.c†L16-L64】 |
+| `defaultTask` | Below normal | 1024 | `Core/Src/freertos.c` | Auto-generated CMSIS idle helper, no device work.【F:Core/Src/freertos.c†L54-L60】 |
+| `imu_task` | Normal | 1024 | `Core/Src/freertos.c`, `Hiwonder/Portings/imu_porting.c` | Waits on the TIM6 semaphore, applies recovery tick bookkeeping, and publishes IMU stream frames.【F:Core/Src/freertos.c†L61-L67】【F:Hiwonder/Portings/imu_porting.c†L255-L317】 |
+| `encoder_task` | Normal | 512 | `Core/Src/freertos.c`, `Hiwonder/Portings/encoders_porting.c` | Consumes the encoder stream semaphore latched by TIM7 and emits sequenced frames after checking TX backpressure.【F:Core/Src/freertos.c†L68-L74】【F:Hiwonder/Portings/encoders_porting.c†L35-L110】 |
+| `packet_tx_task` | Above normal | 1024 | `Core/Src/freertos.c`, `Hiwonder/Portings/packet_porting.c` | Dequeues transport frames, starts UART DMA, and maintains the transmit idle semaphore.【F:Core/Src/freertos.c†L75-L81】【F:Hiwonder/Portings/packet_porting.c†L146-L176】 |
+| `packet_rx_task` | Above normal | 1024 | `Core/Src/freertos.c`, `Hiwonder/Portings/packet_porting.c` | Waits on the RX-not-empty semaphore and runs the frame parser in task context.【F:Core/Src/freertos.c†L82-L88】【F:Hiwonder/Portings/packet_porting.c†L146-L155】 |
+| `app_task` | Normal | 2048 | `Core/Src/freertos.c`, `Hiwonder/System/app.c` | Performs bring-up (motors/buttons/streams), starts timers, and polls `rrc_recovery_service()` every 10 ms to run deferred reinitialisation outside ISRs.【F:Core/Src/freertos.c†L98-L104】【F:Hiwonder/System/app.c†L34-L107】 |
+| `imu_task`/`encoder_task`/`packet_*` are the only threads that touch transport queues; device actuation stays in their respective workers or timers. GUI and OLED tasks are compiled out in the slim build (`RRC_KEEP_GUI/OLED=0`) so no extra stacks are allocated.【F:Core/Inc/rrclite_config.h†L21-L28】
 
-- `packet_rx_task`/`packet_tx_task` are the only tasks touching the transport queues; device acquisition happens in `imu_task`, `encoder_task`, and the timer callbacks that wake them. GUI/OLED/default tasks remain inert for the slim firmware build.
+## ISR workload (bookkeeping only)
 
-## Interrupt service routines (lightweight)
+- **TIM6_DAC_IRQHandler** only clears the update flag and releases the IMU semaphore—no sensor reads or packet work in the interrupt.【F:Core/Src/stm32f4xx_it.c†L408-L422】
+- **TIM7_IRQHandler** latches encoder counts, enforces the failsafe ramp, and *only* schedules recovery ticks; the actual retries and SYS/0xEF emission happen in `rrc_recovery_service()` that `app_task` calls in thread context.【F:Core/Src/stm32f4xx_it.c†L433-L464】【F:Hiwonder/System/packet_handle.c†L99-L132】【F:Hiwonder/System/packet_handle.c†L263-L305】【F:Hiwonder/System/app.c†L87-L107】
+- **USART1_IRQHandler** simply unlocks the UART state and defers to the HAL IRQ handler; DMA completions drain the queue in `packet_tx_task` instead of the ISR.【F:Core/Src/stm32f4xx_it.c†L254-L265】【F:Hiwonder/Portings/packet_porting.c†L157-L176】
+- **DMA stream ISRs** (RX/TX for USART/I2C/SPI) call the HAL DMA helper and return immediately—no application logic runs in DMA interrupt context.【F:Core/Src/stm32f4xx_it.c†L183-L194】
+- **EXTI15_10_IRQHandler** now only clears the IMU GPIO interrupt (the old semaphore release is disabled), avoiding additional work in the line interrupt.【F:Core/Src/stm32f4xx_it.c†L270-L283】
 
-- **TIM6_DAC_IRQHandler** – releases the IMU semaphore, no I/O inside the ISR.
+## Stream pacing & caps
 
-  ```c
-  if (__HAL_TIM_GET_FLAG(&htim6, TIM_FLAG_UPDATE) != RESET &&
-      __HAL_TIM_GET_IT_SOURCE(&htim6, TIM_IT_UPDATE) != RESET) {
-    __HAL_TIM_CLEAR_IT(&htim6, TIM_IT_UPDATE);
-    if (IMU_data_readyHandle) {
-      osSemaphoreRelease(IMU_data_readyHandle);
-    }
-  }
-  ```
-  【F:Core/Src/stm32f4xx_it.c†L411-L422】
-
-- **TIM7_IRQHandler** – clears the update flag, runs failsafe/backoff bookkeeping, no blocking I/O; encoder streaming is deferred to the task via `encoders_timer7_cb()`.
-
-  ```c
-  if (__HAL_TIM_GET_FLAG(&htim7, TIM_FLAG_UPDATE) != RESET &&
-      __HAL_TIM_GET_IT_SOURCE(&htim7, TIM_IT_UPDATE) != RESET) {
-    __HAL_TIM_CLEAR_IT(&htim7, TIM_IT_UPDATE);
-    encoders_timer7_cb();
-    const uint32_t now_ms = HAL_GetTick();
-    if (failsafe_timeout > 0U &&
-        (uint32_t)(now_ms - rrc_motor_last_cmd_ms) >= (uint32_t)failsafe_timeout) {
-      for (int i = 0; i < 2; ++i) motors_pwm_target[i] = 0;
-    }
-    rrc_motor_recovery_tick(now_ms);
-    rrc_imu_recovery_tick(now_ms);
-    rrc_io_recovery_tick(now_ms);
-  }
-  ```
-  【F:Core/Src/stm32f4xx_it.c†L433-L465】
-
-- **USART1_IRQHandler** – unlocks the HAL state and hands control to the HAL IRQ handler (DMA already manages buffers).
-
-  ```c
-  __HAL_UNLOCK(&huart1);
-  HAL_UART_IRQHandler(&huart1);
-  ```
-  【F:Core/Src/stm32f4xx_it.c†L256-L264】
-
-- **DMA handlers** – delegate to HAL DMA IRQ (no application code).
-
-  ```c
-  HAL_DMA_IRQHandler(&hdma_usart1_rx);
-  HAL_DMA_IRQHandler(&hdma_usart1_tx);
-  HAL_DMA_IRQHandler(&hdma_i2c2_rx);
-  HAL_DMA_IRQHandler(&hdma_i2c2_tx);
-  ```
-  【F:Core/Src/stm32f4xx_it.c†L183-L361】【F:Core/Src/stm32f4xx_it.c†L532-L568】
-
-- **EXTI15_10_IRQHandler** – (legacy) only clears the GPIO interrupt and optionally releases the IMU semaphore; no blocking work occurs here.
-
-  ```c
-  if(__HAL_GPIO_EXTI_GET_IT(IMU_ITR_Pin) != RESET) {
-    __HAL_GPIO_EXTI_CLEAR_IT(IMU_ITR_Pin);
-    osSemaphoreRelease(IMU_data_readyHandle);
-  }
-  ```
-  【F:Core/Src/stm32f4xx_it.c†L270-L281】
-
-## Stream pacing and caps
-
-- **IMU streaming** – `imu_set_stream()` enforces `period_ms >= 5`, so the primary ICM-20948 stream tops out at 200 Hz. TIM6 generates the pacing semaphore, and `imu_task_entry()` drops frames while an error backoff is active.【F:Hiwonder/Portings/imu_porting.c†L335-L376】【F:Hiwonder/Portings/imu_porting.c†L250-L307】
-
-- **Encoder streaming** – TIM7 ISR latches counts and releases `s_enc_stream_sem`; `encoders_set_stream()` rounds the host request to ≥1 tick of the 10 ms TIM7 period (≤100 Hz). A queue depth guard skips publishes when ≥56 items are pending to protect the TX path.【F:Hiwonder/Portings/encoders_porting.c†L10-L110】
-
-- **Buttons** – `buttons_set_stream()` clamps the period to `BUTTON_TASK_PERIOD` (30 ms, ≈33 Hz). The CMSIS timer callback increments `buttons_seq` and sends frames via the transport helper.【F:Hiwonder/Portings/button_porting.c†L13-L107】【F:Hiwonder/System/global_conf.h†L56-L60】
-
-- **Battery** – `battery_set_stream()` enforces `period_ms >= BATTERY_TASK_PERIOD` (50 ms, 20 Hz). The heartbeat timer reuses that guard while reporting `{seq, millivolts}` frames.【F:Hiwonder/System/battery_handle.c†L21-L191】【F:Hiwonder/System/global_conf.h†L56-L60】
-
-All stream producers rely on timer-driven pacing and explicit minimum periods, so no path can exceed the documented caps (IMU ≤200 Hz, encoders ≤100 Hz, buttons/battery tens of Hz).
+- **IMU** – `imu_set_stream()` enforces a minimum `period_ms` of 5 ms (≤200 Hz) and masks unsupported sources; `imu_task_entry()` skips frames when the TX queue has ≥56 entries, incrementing a drop counter instead of blocking.【F:Hiwonder/Portings/imu_porting.c†L345-L359】【F:Hiwonder/Portings/imu_porting.c†L302-L305】
+- **Encoders** – `encoders_set_stream()` rounds the requested period to at least one TIM7 tick (10 ms) and resets the sequence; the task checks the same `>=56` TX depth guard before emitting `{seq,c1..c4}` frames.【F:Hiwonder/Portings/encoders_porting.c†L33-L55】【F:Hiwonder/Portings/encoders_porting.c†L96-L110】
+- **Buttons** – `buttons_set_stream()` clamps to `BUTTON_TASK_PERIOD` (30 ms ≈33 Hz) and zeroes `buttons_seq`; the periodic callback composes `{seq,mask}` frames on timer wakeups.【F:Hiwonder/Portings/button_porting.c†L33-L53】【F:Hiwonder/Portings/button_porting.c†L86-L107】
+- **Battery** – `battery_set_stream()` enforces ≥`BATTERY_TASK_PERIOD` (50 ms = 20 Hz) and maintains `batt_seq`; the battery timer callback packages `{seq,mV}` frames when the period elapses.【F:Hiwonder/System/battery_handle.c†L29-L67】【F:Hiwonder/System/battery_handle.c†L175-L191】
+- All pacing timers derive their base periods from `global_conf.h`, keeping buttons at 30 ms and battery at 50 ms.【F:Hiwonder/System/global_conf.h†L56-L60】
 
 ## Starvation considerations
 
-- Transport priorities favour draining the TX queue: `packet_tx_task` runs at `osPriorityAboveNormal`, one notch above `imu_task`/`encoder_task` at `osPriorityNormal`, so completed frames are flushed before producers resume.【F:Core/Src/freertos.c†L61-L88】
+- Transport priority favours draining the TX queue: both `packet_tx_task` and `packet_rx_task` run at `osPriorityAboveNormal`, one notch above the producer tasks at `osPriorityNormal`.【F:Core/Src/freertos.c†L61-L88】
+- The TX queue holds 64 pending frames; producers drop work once `osMessageQueueGetCount()` reports ≥56 entries (encoders and IMU both use this guard) so actuator ACKs and SYS events continue to flow.【F:Core/Src/freertos.c†L114-L123】【F:Hiwonder/Portings/encoders_porting.c†L99-L110】【F:Hiwonder/Portings/imu_porting.c†L302-L305】
+- With the queue guard and higher TX priority, sustained 200 Hz IMU streaming does not starve packet transmission; further load testing can revisit the 56-slot threshold, but no immediate TO-DOs remain.
 
-- The TX queue has 64 slots, and encoders guard against overfilling by checking `osMessageQueueGetCount(packet_tx_queueHandle) >= 56` before enqueuing a frame.【F:Core/Src/freertos.c†L110-L120】【F:Hiwonder/Portings/encoders_porting.c†L95-L110】
-
-- `imu_task_entry()` currently relies on the higher TX priority (and optional frame ACK disable) rather than an explicit queue-count guard; at the 200 Hz cap the queue still drains promptly, but long ACK bursts could pressure the depth. No action required now, just noted for future load testing.
-
-**Status:** All A4 checks complete; no additional TODOs discovered.
-
+**Status:** A4 checks complete – no outstanding fixes identified.
