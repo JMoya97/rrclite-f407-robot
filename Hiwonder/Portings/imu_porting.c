@@ -31,6 +31,7 @@ static uint8_t g_imu_backoff_init_mask;
 static uint8_t g_imu_err_active[2];
 static uint8_t g_imu_last_origin_sub[2] = {RRC_IMU_STREAM_CTRL, RRC_IMU_STREAM_CTRL};
 static uint32_t g_imu_retry_due_ms[2];
+static volatile uint8_t g_imu_retry_pending[2];
 
 static void imu_backoff_init_once(uint8_t source_id);
 static void imu_schedule_failure(uint8_t source_id, uint8_t origin_sub,
@@ -81,6 +82,7 @@ static void imu_schedule_failure(uint8_t source_id, uint8_t origin_sub,
 
     const uint32_t delay_ms = rrc_backoff_next(&g_imu_backoff[source_id]);
     g_imu_retry_due_ms[source_id] = now + delay_ms;
+    g_imu_retry_pending[source_id] = 0U;
 
     if (source_id == 0U) {
         imu0_init_done = false;
@@ -99,6 +101,7 @@ static void imu_clear_error(uint8_t source_id)
         g_imu_err_active[source_id] = 0U;
         rrc_backoff_reset(&g_imu_backoff[source_id]);
         g_imu_retry_due_ms[source_id] = 0U;
+        g_imu_retry_pending[source_id] = 0U;
         const uint32_t now = HAL_GetTick();
         (void)rrc_send_recovered(RRC_FUNC_IMU,
                                  g_imu_last_origin_sub[source_id],
@@ -409,6 +412,24 @@ void rrc_imu_recovery_tick(uint32_t now_ms)
         if ((int32_t)(now_ms - g_imu_retry_due_ms[source]) < 0) {
             continue;
         }
+
+        g_imu_retry_pending[source] = 1U;
+    }
+}
+
+void rrc_imu_recovery_service(uint32_t now_ms)
+{
+    for (uint8_t source = 0U; source < 2U; ++source) {
+        if ((g_imu_err_active[source] == 0U) ||
+            (g_imu_retry_pending[source] == 0U)) {
+            continue;
+        }
+
+        if ((int32_t)(now_ms - g_imu_retry_due_ms[source]) < 0) {
+            continue;
+        }
+
+        g_imu_retry_pending[source] = 0U;
 
         if (imu_try_recover(source)) {
             g_imu_err_active[source] = 0U;

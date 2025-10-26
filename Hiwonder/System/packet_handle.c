@@ -29,6 +29,7 @@ extern uint16_t battery_set_stream(uint8_t enable, uint16_t period_ms);
 extern uint16_t battery_latest_millivolts_le(void);
 extern uint16_t buttons_set_stream(uint8_t enable, uint16_t period_ms);
 extern uint8_t buttons_read_mask(void);
+extern void rrc_imu_recovery_service(uint32_t now_ms);
 
 volatile uint16_t rrc_motor_failsafe_timeout_ms;
 volatile uint32_t rrc_motor_last_cmd_ms;
@@ -39,6 +40,7 @@ static rrc_error_code_t motor_pwm_last_error;
 static rrc_backoff_t g_motor_backoff;
 static uint8_t g_motor_err_active;
 static uint32_t g_motor_retry_due_ms;
+static volatile uint8_t g_motor_retry_pending;
 
 /* IMU configuration shadow (RAM only, reset on boot). */
 static uint8_t g_imu_primary;
@@ -50,6 +52,7 @@ typedef struct {
     uint8_t init;
     uint8_t err_active;
     uint32_t retry_due_ms;
+    volatile uint8_t retry_pending;
     uint8_t detail;
     uint16_t extra0;
     uint16_t extra1;
@@ -105,9 +108,27 @@ void rrc_motor_recovery_tick(uint32_t now_ms)
         return;
     }
 
+    g_motor_retry_pending = 1U;
+}
+
+static void rrc_motor_recovery_service(uint32_t now_ms)
+{
+    motor_backoff_ensure_init();
+
+    if ((g_motor_err_active == 0U) || (g_motor_retry_pending == 0U)) {
+        return;
+    }
+
+    if ((int32_t)(now_ms - g_motor_retry_due_ms) < 0) {
+        return;
+    }
+
+    g_motor_retry_pending = 0U;
+
     if (motor_pwm_try_reinit()) {
         g_motor_err_active = 0U;
         rrc_backoff_reset(&g_motor_backoff);
+        g_motor_retry_due_ms = 0U;
         (void)rrc_send_recovered(RRC_FUNC_MOTOR, RRC_MOTOR_PWM_SET,
                                  RRC_SYS_ERR_IO_FAIL, now_ms);
     } else {
@@ -155,6 +176,7 @@ static void rrc_io_recovery_schedule(rrc_io_recovery_state_t *state,
         rrc_backoff_reset(&state->backoff);
     }
 
+    state->retry_pending = 0U;
     const uint32_t delay_ms = rrc_backoff_next(&state->backoff);
     state->retry_due_ms = now + delay_ms;
 }
@@ -169,6 +191,7 @@ static void rrc_io_recovery_clear(rrc_io_recovery_state_t *state,
     state->err_active = 0U;
     rrc_backoff_reset(&state->backoff);
     state->retry_due_ms = 0U;
+    state->retry_pending = 0U;
 
     const uint32_t now = HAL_GetTick();
     (void)rrc_send_recovered(func, sub, RRC_SYS_ERR_IO_FAIL, now);
@@ -224,15 +247,7 @@ static void rrc_io_recovery_tick_one(rrc_io_recovery_state_t *state,
         return;
     }
 
-    if ((try_reinit != NULL) && try_reinit(state)) {
-        state->err_active = 0U;
-        rrc_backoff_reset(&state->backoff);
-        state->retry_due_ms = 0U;
-        (void)rrc_send_recovered(func, sub, RRC_SYS_ERR_IO_FAIL, now_ms);
-    } else {
-        const uint32_t delay = rrc_backoff_next(&state->backoff);
-        state->retry_due_ms = now_ms + delay;
-    }
+    state->retry_pending = 1U;
 }
 
 void rrc_io_recovery_tick(uint32_t now_ms)
@@ -243,6 +258,51 @@ void rrc_io_recovery_tick(uint32_t now_ms)
                              rrc_buzzer_try_reinit, now_ms);
     rrc_io_recovery_tick_one(&g_steering_recovery, RRC_FUNC_BUS_SERVO, 0x01U,
                              rrc_steering_try_reinit, now_ms);
+}
+
+static void rrc_io_recovery_service_one(rrc_io_recovery_state_t *state,
+                                        uint8_t func, uint8_t sub,
+                                        bool (*try_reinit)(const rrc_io_recovery_state_t *),
+                                        uint32_t now_ms)
+{
+    if ((state == NULL) || (state->err_active == 0U) ||
+        (state->retry_pending == 0U)) {
+        return;
+    }
+
+    if ((int32_t)(now_ms - state->retry_due_ms) < 0) {
+        return;
+    }
+
+    state->retry_pending = 0U;
+
+    if ((try_reinit != NULL) && try_reinit(state)) {
+        state->err_active = 0U;
+        rrc_backoff_reset(&state->backoff);
+        state->retry_due_ms = 0U;
+        const uint32_t report_time = now_ms;
+        (void)rrc_send_recovered(func, sub, RRC_SYS_ERR_IO_FAIL, report_time);
+    } else {
+        const uint32_t delay = rrc_backoff_next(&state->backoff);
+        state->retry_due_ms = now_ms + delay;
+    }
+}
+
+static void rrc_io_recovery_service(uint32_t now_ms)
+{
+    rrc_io_recovery_service_one(&g_led_recovery, RRC_FUNC_IO, RRC_IO_LED_SET,
+                                rrc_led_try_reinit, now_ms);
+    rrc_io_recovery_service_one(&g_buzzer_recovery, RRC_FUNC_IO, RRC_IO_BUZZER_SET,
+                                rrc_buzzer_try_reinit, now_ms);
+    rrc_io_recovery_service_one(&g_steering_recovery, RRC_FUNC_BUS_SERVO, 0x01U,
+                                rrc_steering_try_reinit, now_ms);
+}
+
+void rrc_recovery_service(uint32_t now_ms)
+{
+    rrc_motor_recovery_service(now_ms);
+    rrc_imu_recovery_service(now_ms);
+    rrc_io_recovery_service(now_ms);
 }
 
 #pragma pack(1)
@@ -1024,6 +1084,7 @@ static void packet_motor_handle(struct PacketRawFrame *frame)
                     rrc_backoff_reset(&g_motor_backoff);
                     const uint32_t delay_ms = rrc_backoff_next(&g_motor_backoff);
                     g_motor_retry_due_ms = now + delay_ms;
+                    g_motor_retry_pending = 0U;
                 }
                 break;
             }
