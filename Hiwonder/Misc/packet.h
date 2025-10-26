@@ -5,6 +5,7 @@
 #include <cmsis_os2.h>
 #include "lwrb.h"
 #include "lwmem.h"
+#include "rrclite_proto.h"
 
 #define PROTO_CONST_STARTBYTE1 0xAAu
 #define PROTO_CONST_STARTBYTE2 0x55u
@@ -35,7 +36,7 @@ enum PACKET_FUNCTION {
     PACKET_FUNC_BUZZER,
     PACKET_FUNC_MOTOR,
     PACKET_FUNC_PWM_SERVO,
-    PACKET_FUNC_BUS_SERVO,
+    PACKET_FUNC_STEER = RRCV2_FUNC_STEER,
     PACKET_FUNC_KEY,
     PACKET_FUNC_IMU,
     PACKET_FUNC_ENCODER,
@@ -43,7 +44,7 @@ enum PACKET_FUNCTION {
     PACKET_FUNC_SBUS,
     PACKET_FUNC_OLED,
     PACKET_FUNC_RGB,
-    PACKET_FUNC_NONE,
+    PACKET_FUNC_NONE = 0x80,
 };
 
 typedef void(*packet_handle)(struct PacketRawFrame *);
