@@ -252,11 +252,12 @@ static void rrc_io_recovery_tick_one(rrc_io_recovery_state_t *state,
 
 void rrc_io_recovery_tick(uint32_t now_ms)
 {
-    rrc_io_recovery_tick_one(&g_led_recovery, RRC_FUNC_IO, RRC_IO_LED_SET,
+    rrc_io_recovery_tick_one(&g_led_recovery, RRC_FUNC_LED, RRC_LED_SET,
                              rrc_led_try_reinit, now_ms);
-    rrc_io_recovery_tick_one(&g_buzzer_recovery, RRC_FUNC_IO, RRC_IO_BUZZER_SET,
+    rrc_io_recovery_tick_one(&g_buzzer_recovery, RRC_FUNC_BUZZ, RRC_BUZZ_SET,
                              rrc_buzzer_try_reinit, now_ms);
-    rrc_io_recovery_tick_one(&g_steering_recovery, RRCV2_FUNC_STEER, 0x01U,
+    rrc_io_recovery_tick_one(&g_steering_recovery, RRCV2_FUNC_STEER,
+                             RRC_STEER_SET_POSITION,
                              rrc_steering_try_reinit, now_ms);
 }
 
@@ -290,11 +291,12 @@ static void rrc_io_recovery_service_one(rrc_io_recovery_state_t *state,
 
 static void rrc_io_recovery_service(uint32_t now_ms)
 {
-    rrc_io_recovery_service_one(&g_led_recovery, RRC_FUNC_IO, RRC_IO_LED_SET,
+    rrc_io_recovery_service_one(&g_led_recovery, RRC_FUNC_LED, RRC_LED_SET,
                                 rrc_led_try_reinit, now_ms);
-    rrc_io_recovery_service_one(&g_buzzer_recovery, RRC_FUNC_IO, RRC_IO_BUZZER_SET,
+    rrc_io_recovery_service_one(&g_buzzer_recovery, RRC_FUNC_BUZZ, RRC_BUZZ_SET,
                                 rrc_buzzer_try_reinit, now_ms);
-    rrc_io_recovery_service_one(&g_steering_recovery, RRCV2_FUNC_STEER, 0x01U,
+    rrc_io_recovery_service_one(&g_steering_recovery, RRCV2_FUNC_STEER,
+                                RRC_STEER_SET_POSITION,
                                 rrc_steering_try_reinit, now_ms);
 }
 
@@ -488,7 +490,7 @@ static void packet_led_handle(struct PacketRawFrame *frame)
         return;
     }
 
-    if (payload[0] == RRC_IO_LED_SET) {
+    if (payload[0] == RRC_LED_SET) {
         if (payload_len <= 1U) {
             return;
         }
@@ -509,7 +511,7 @@ static void packet_led_handle(struct PacketRawFrame *frame)
                 (const LedCommandTypeDef *)body;
             if (cmd->led_id == 0U) {
                 const uint32_t now = HAL_GetTick();
-                (void)rrc_send_err(RRC_FUNC_IO, RRC_IO_LED_SET,
+                (void)rrc_send_err(RRC_FUNC_LED, RRC_LED_SET,
                                    RRC_SYS_ERR_INVALID_ARG, 0U, now, 0U);
                 return;
             }
@@ -519,7 +521,7 @@ static void packet_led_handle(struct PacketRawFrame *frame)
                 const uint32_t now = HAL_GetTick();
                 const uint8_t err_txid =
                     (txid == RRC_TXID_NONE) ? 0U : txid;
-                (void)rrc_send_err(RRC_FUNC_IO, RRC_IO_LED_SET,
+                (void)rrc_send_err(RRC_FUNC_LED, RRC_LED_SET,
                                    RRC_SYS_ERR_INVALID_ARG, 0U, now, err_txid);
                 return;
             }
@@ -528,21 +530,21 @@ static void packet_led_handle(struct PacketRawFrame *frame)
                 led_flash(leds[led_index], cmd->on_time, cmd->off_time,
                           cmd->repeat);
             if (apply_rc != 0) {
-                rrc_io_recovery_schedule(&g_led_recovery, RRC_FUNC_IO,
-                                         RRC_IO_LED_SET, led_index, 0U, 0U);
+                rrc_io_recovery_schedule(&g_led_recovery, RRC_FUNC_LED,
+                                         RRC_LED_SET, led_index, 0U, 0U);
                 return;
             }
 
-            rrc_io_recovery_clear(&g_led_recovery, RRC_FUNC_IO,
-                                  RRC_IO_LED_SET);
+            rrc_io_recovery_clear(&g_led_recovery, RRC_FUNC_LED,
+                                  RRC_LED_SET);
 
             const uint8_t mode = (cmd->on_time > 0U) ? 1U : 0U;
-            const rrc_io_led_ack_t ack = {
+            const rrc_led_ack_t ack = {
                 .txid = txid,
                 .mode = mode,
             };
 
-            (void)rrc_send_ack(RRC_FUNC_IO, RRC_IO_LED_SET, &ack, sizeof(ack),
+            (void)rrc_send_ack(RRC_FUNC_LED, RRC_LED_ACK, &ack, sizeof(ack),
                                 txid);
             return;
         }
@@ -573,14 +575,14 @@ static void packet_led_handle(struct PacketRawFrame *frame)
                                          (uint8_t *)rgb_data);
                     }
 
-                    const rrc_io_led_ack_t ack = {
+                    const rrc_led_ack_t ack = {
                         .txid = txid,
                         .mode = 2U,
                     };
 
-                    rrc_io_recovery_clear(&g_led_recovery, RRC_FUNC_IO,
-                                          RRC_IO_LED_SET);
-                    (void)rrc_send_ack(RRC_FUNC_IO, RRC_IO_LED_SET, &ack,
+                    rrc_io_recovery_clear(&g_led_recovery, RRC_FUNC_LED,
+                                          RRC_LED_SET);
+                    (void)rrc_send_ack(RRC_FUNC_LED, RRC_LED_ACK, &ack,
                                         sizeof(ack), txid);
                     return;
                 }
@@ -588,7 +590,7 @@ static void packet_led_handle(struct PacketRawFrame *frame)
         }
 
         const uint32_t now = HAL_GetTick();
-        (void)rrc_send_err(RRC_FUNC_IO, RRC_IO_LED_SET,
+        (void)rrc_send_err(RRC_FUNC_LED, RRC_LED_SET,
                            RRC_SYS_ERR_INVALID_ARG, 0U, now, 0U);
         return;
     }
@@ -609,7 +611,7 @@ static void packet_buzzer_handle(struct PacketRawFrame *frame)
         return;
     }
 
-    if (payload[0] == RRC_IO_BUZZER_SET) {
+    if (payload[0] == RRC_BUZZ_SET) {
         if (payload_len <= 1U) {
             return;
         }
@@ -647,23 +649,23 @@ static void packet_buzzer_handle(struct PacketRawFrame *frame)
             }
 
             if (apply_rc != 0) {
-                rrc_io_recovery_schedule(&g_buzzer_recovery, RRC_FUNC_IO,
-                                         RRC_IO_BUZZER_SET, 0U, freq_hz,
+                rrc_io_recovery_schedule(&g_buzzer_recovery, RRC_FUNC_BUZZ,
+                                         RRC_BUZZ_SET, 0U, freq_hz,
                                          duration_ms);
                 return;
             }
 
-            rrc_io_recovery_clear(&g_buzzer_recovery, RRC_FUNC_IO,
-                                  RRC_IO_BUZZER_SET);
+            rrc_io_recovery_clear(&g_buzzer_recovery, RRC_FUNC_BUZZ,
+                                  RRC_BUZZ_SET);
 
-            const rrc_io_buzzer_ack_t ack = {
+            const rrc_buzz_ack_t ack = {
                 .txid = txid,
                 .freq_hz = freq_hz,
                 .duty_pct = duty_pct,
                 .duration_ms = duration_ms,
             };
 
-            (void)rrc_send_ack(RRC_FUNC_IO, RRC_IO_BUZZER_SET, &ack,
+            (void)rrc_send_ack(RRC_FUNC_BUZZ, RRC_BUZZ_ACK, &ack,
                                 sizeof(ack), txid);
             return;
         }
@@ -682,14 +684,14 @@ static void packet_buzzer_handle(struct PacketRawFrame *frame)
                             cmd->off_time, cmd->repeat);
 
             if (apply_rc != 0) {
-                rrc_io_recovery_schedule(&g_buzzer_recovery, RRC_FUNC_IO,
-                                         RRC_IO_BUZZER_SET, 0U, cmd->freq,
+                rrc_io_recovery_schedule(&g_buzzer_recovery, RRC_FUNC_BUZZ,
+                                         RRC_BUZZ_SET, 0U, cmd->freq,
                                          cmd->on_time);
                 return;
             }
 
-            rrc_io_recovery_clear(&g_buzzer_recovery, RRC_FUNC_IO,
-                                  RRC_IO_BUZZER_SET);
+            rrc_io_recovery_clear(&g_buzzer_recovery, RRC_FUNC_BUZZ,
+                                  RRC_BUZZ_SET);
 
             uint8_t duty_pct = 0U;
             const uint32_t total =
@@ -703,21 +705,21 @@ static void packet_buzzer_handle(struct PacketRawFrame *frame)
                 duty_pct = (uint8_t)duty_calc;
             }
 
-            const rrc_io_buzzer_ack_t ack = {
+            const rrc_buzz_ack_t ack = {
                 .txid = txid,
                 .freq_hz = cmd->freq,
                 .duty_pct = duty_pct,
                 .duration_ms = cmd->on_time,
             };
 
-            (void)rrc_send_ack(RRC_FUNC_IO, RRC_IO_BUZZER_SET, &ack,
+            (void)rrc_send_ack(RRC_FUNC_BUZZ, RRC_BUZZ_ACK, &ack,
                                 sizeof(ack), txid);
             return;
         }
 
         const uint32_t now = HAL_GetTick();
         const uint8_t err_txid = (txid == RRC_TXID_NONE) ? 0U : txid;
-        (void)rrc_send_err(RRC_FUNC_IO, RRC_IO_BUZZER_SET,
+        (void)rrc_send_err(RRC_FUNC_BUZZ, RRC_BUZZ_SET,
                            RRC_SYS_ERR_INVALID_ARG, 0U, now, err_txid);
         return;
     }
@@ -936,14 +938,14 @@ static void packet_pwm_servo_handle(struct PacketRawFrame *frame)
 {
     const uint8_t sub = frame->data_and_checksum[0];
 
-    if (sub == RRC_IO_BUTTON_ONESHOT) {
+    if (sub == RRC_BUTTON_ONESHOT) {
         const uint8_t mask = buttons_read_mask();
-        (void)rrc_transport_send(RRC_FUNC_IO, RRC_IO_BUTTON_ONESHOT,
+        (void)rrc_transport_send(RRC_FUNC_BUTTON, RRC_BUTTON_ONESHOT,
                                  &mask, sizeof(mask));
         return;
     }
 
-    if (sub == RRC_IO_BUTTON_STREAM_CTRL) {
+    if (sub == RRC_BUTTON_STREAM_CTRL) {
         const uint8_t *payload = frame->data_and_checksum;
         const size_t payload_len = frame->data_length;
         if (payload_len < 4U) {
@@ -969,7 +971,7 @@ static void packet_pwm_servo_handle(struct PacketRawFrame *frame)
             .period_ms_le = applied_period,
         };
 
-        (void)rrc_send_ack(RRC_FUNC_IO, RRC_IO_BUTTON_STREAM_CTRL,
+        (void)rrc_send_ack(RRC_FUNC_BUTTON, RRC_BUTTON_ACK,
                             &ack, sizeof(ack), txid);
         return;
     }
@@ -1607,6 +1609,7 @@ void packet_handle_init(void)
     packet_register_callback(&packet_controller, PACKET_FUNC_MOTOR, packet_motor_handle);
     packet_register_callback(&packet_controller, PACKET_FUNC_STEER, packet_serial_servo_handle);
     packet_register_callback(&packet_controller, PACKET_FUNC_PWM_SERVO, packet_pwm_servo_handle);
+    packet_register_callback(&packet_controller, PACKET_FUNC_KEY, packet_pwm_servo_handle);
     packet_register_callback(&packet_controller, PACKET_FUNC_IMU, packet_imu_handle);
     packet_register_callback(&packet_controller, PACKET_FUNC_SYS, packet_battery_limit_handle);
     packet_register_callback(&packet_controller, PACKET_FUNC_RGB, packet_RGB_Ctl_handle);

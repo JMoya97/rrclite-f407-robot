@@ -50,12 +50,20 @@ static const rrc_sub_entry_t g_motor_subs[] = {
     {RRC_MOTOR_ENCODER_STREAM_ACK, sizeof(rrc_encoder_frame_ack_t)},
 };
 
-static const rrc_sub_entry_t g_io_subs[] = {
-    {RRC_IO_LED_SET, sizeof(rrc_io_led_ack_t)},
-    {RRC_IO_BUZZER_SET, sizeof(rrc_io_buzzer_ack_t)},
-    {RRC_IO_BUTTON_ONESHOT, sizeof(uint8_t)},
-    {RRC_IO_BUTTON_STREAM_CTRL, sizeof(rrc_button_stream_ack_t)},
-    {RRC_IO_BUTTON_STREAM_ACK, sizeof(rrc_button_frame_ack_t)},
+static const rrc_sub_entry_t g_led_subs[] = {
+    {RRC_LED_ACK, sizeof(rrc_led_ack_t)},
+};
+
+static const rrc_sub_entry_t g_buzz_subs[] = {
+    {RRC_BUZZ_ACK, sizeof(rrc_buzz_ack_t)},
+};
+
+static const rrc_sub_entry_t g_button_subs[] = {
+    {RRC_BUTTON_ONESHOT, sizeof(uint8_t)},
+    {RRC_BUTTON_ACK, sizeof(rrc_button_stream_ack_t)},
+    {RRC_BUTTON_STREAM_CTRL, sizeof(rrc_button_stream_ack_t)},
+    {RRC_BUTTON_STREAM_FRAME, sizeof(rrc_button_stream_frame_t)},
+    {RRC_BUTTON_STREAM_ACK, sizeof(rrc_button_frame_ack_t)},
 };
 
 static const rrc_sub_entry_t g_steer_subs[] = {
@@ -76,7 +84,9 @@ static const rrc_sub_entry_t g_imu_subs[] = {
 static const rrc_func_entry_t g_func_table[] = {
     {RRC_FUNC_SYS, g_sys_subs, ARRAY_SIZE(g_sys_subs)},
     {RRC_FUNC_MOTOR, g_motor_subs, ARRAY_SIZE(g_motor_subs)},
-    {RRC_FUNC_IO, g_io_subs, ARRAY_SIZE(g_io_subs)},
+    {RRC_FUNC_LED, g_led_subs, ARRAY_SIZE(g_led_subs)},
+    {RRC_FUNC_BUZZ, g_buzz_subs, ARRAY_SIZE(g_buzz_subs)},
+    {RRC_FUNC_BUTTON, g_button_subs, ARRAY_SIZE(g_button_subs)},
     {RRC_FUNC_STEER, g_steer_subs, ARRAY_SIZE(g_steer_subs)},
     {RRC_FUNC_IMU, g_imu_subs, ARRAY_SIZE(g_imu_subs)},
 };

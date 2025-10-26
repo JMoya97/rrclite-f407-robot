@@ -14,10 +14,15 @@ extern "C" {
 typedef enum {
     RRC_FUNC_SYS                = 0x00U,
     RRC_FUNC_MOTOR              = 0x03U,
-    RRC_FUNC_IO                 = 0x04U,
     RRC_FUNC_IMU                = 0x07U,
     RRC_FUNC_STEER              = RRCV2_FUNC_STEER,
+    RRC_FUNC_LED                = RRCV2_FUNC_LED,
+    RRC_FUNC_BUZZ               = RRCV2_FUNC_BUZZ,
+    RRC_FUNC_BUTTON             = RRCV2_FUNC_BUTTON,
 } rrc_func_t;
+
+/* Legacy function IDs retained for the compatibility shim. */
+#define RRC_FUNC_IO_LEGACY          0x04U
 
 /* Common protocol helpers */
 #define RRC_TXID_NONE               0xFFU
@@ -180,29 +185,37 @@ typedef struct __attribute__((packed)) {
 } rrc_encoder_frame_ack_t;
 
 /* -------------------------------------------------------------------------- */
-/* IO (0x04) sub-commands                                                     */
+/* LED (0x12) sub-commands                                                     */
 
 typedef enum {
-    RRC_IO_LED_SET                 = 0x20,
-    RRC_IO_BUZZER_SET              = 0x21,
-    RRC_IO_BUTTON_ONESHOT          = 0x22,
-    RRC_IO_BUTTON_STREAM_CTRL      = 0x23,
-    RRC_IO_BUTTON_STREAM_ACK       = 0x29
-} rrc_io_sub_t;
+    RRC_LED_SET                   = 0x01,
+    RRC_LED_ACK                   = 0x03,
+} rrc_led_sub_t;
 
-#define RRC_IO_BUTTON_STREAM_FRAME RRC_IO_BUTTON_STREAM_CTRL
+/* Legacy IO sub-commands (for the RX compatibility shim). */
+#define RRC_IO_LED_SET_LEGACY        0x20U
 
 typedef struct __attribute__((packed)) {
     uint8_t txid;
     uint8_t mode;
-} rrc_io_led_ack_t;
+} rrc_led_ack_t;
+
+/* -------------------------------------------------------------------------- */
+/* BUZZER (0x13) sub-commands                                                 */
+
+typedef enum {
+    RRC_BUZZ_SET                  = 0x01,
+    RRC_BUZZ_ACK                  = 0x03,
+} rrc_buzz_sub_t;
 
 typedef struct __attribute__((packed)) {
     uint8_t txid;
     uint16_t freq_hz;
     uint8_t duty_pct;
     uint16_t duration_ms;
-} rrc_io_buzzer_ack_t;
+} rrc_buzz_ack_t;
+
+#define RRC_IO_BUZZER_SET_LEGACY      0x21U
 
 /* STEERING (0x11) sub-commands -------------------------------------------- */
 
@@ -216,6 +229,21 @@ typedef struct __attribute__((packed)) {
     uint8_t txid;
     uint8_t applied_count;
 } rrc_steer_ack_t;
+
+/* -------------------------------------------------------------------------- */
+/* BUTTON (0x20) sub-commands                                                 */
+
+typedef enum {
+    RRC_BUTTON_ACK                = 0x03,
+    RRC_BUTTON_STREAM_CTRL        = 0x10,
+    RRC_BUTTON_STREAM_FRAME       = 0x11,
+    RRC_BUTTON_STREAM_ACK         = 0x12,
+    RRC_BUTTON_ONESHOT            = 0x20,
+} rrc_button_sub_t;
+
+#define RRC_IO_BUTTON_ONESHOT_LEGACY     0x22U
+#define RRC_IO_BUTTON_STREAM_CTRL_LEGACY 0x23U
+#define RRC_IO_BUTTON_STREAM_ACK_LEGACY  0x29U
 
 typedef struct __attribute__((packed)) {
     uint16_t seq;

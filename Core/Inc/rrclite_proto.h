@@ -25,3 +25,12 @@ typedef enum {
  *                 0xC0 (Baud Set), 0xC1 (Baud Get), 0xB0 (Failsafe),
  *                 0xEE (Error), 0xEF (Recovered)
  */
+#define RRCV2_SUB_SET             0x01U
+#define RRCV2_SUB_GET             0x02U
+#define RRCV2_SUB_ACK             0x03U
+#define RRCV2_SUB_STREAM_CTRL     0x10U
+#define RRCV2_SUB_STREAM_FRAME    0x11U
+#define RRCV2_SUB_STREAM_ACK      0x12U
+#define RRCV2_SUB_ONE_SHOT        0x20U
+#define RRCV2_SUB_IMU_SET_PRESET  0x31U
+#define RRCV2_SUB_IMU_SET_BIASES  0x32U

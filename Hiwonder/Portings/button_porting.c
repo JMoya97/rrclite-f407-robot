@@ -98,8 +98,8 @@ void button_timer_callback(void *argument)
                     .mask = buttons_current_mask(),
                 };
 
-                (void)rrc_transport_send(RRC_FUNC_IO,
-                                         RRC_IO_BUTTON_STREAM_CTRL,
+                (void)rrc_transport_send(RRC_FUNC_BUTTON,
+                                         RRC_BUTTON_STREAM_FRAME,
                                          &frame, sizeof(frame));
             }
 

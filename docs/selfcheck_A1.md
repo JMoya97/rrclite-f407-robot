@@ -34,16 +34,16 @@
 | MOTOR (0x03) | 0x91 Encoders stream ctrl | resp (ACK) | 4 |
 | MOTOR (0x03) | 0x91 Encoders stream frame | resp (frame) | 10 |
 | MOTOR (0x03) | 0x99 Encoder frame ACK | resp | 2 |
-| IO (0x04) | 0x20 LEDs set | req | sizeof(LedCommandTypeDef) (+1 txid) or WS2812 length (+1 txid) |
-| IO (0x04) | 0x20 LEDs set | resp (ACK) | 2 |
-| IO (0x04) | 0x21 Buzzer set | req | 5 (+1 txid) or sizeof(BuzzerCommandTypeDef) (+1 txid) |
-| IO (0x04) | 0x21 Buzzer set | resp (ACK) | 6 |
-| IO (0x04) | 0x22 Buttons one-shot | req | 0 |
-| IO (0x04) | 0x22 Buttons one-shot | resp | 1 |
-| IO (0x04) | 0x23 Buttons stream ctrl | req | 3 (+1 txid) |
-| IO (0x04) | 0x23 Buttons stream ctrl | resp (ACK) | 4 |
-| IO (0x04) | 0x23 Buttons stream frame | resp (frame) | 3 |
-| IO (0x04) | 0x29 Buttons frame ACK | resp | 2 |
+| LED (0x12) | 0x01 Set | req | sizeof(LedCommandTypeDef) (+1 txid) or WS2812 length (+1 txid) |
+| LED (0x12) | 0x03 ACK | resp | 2 |
+| BUZZ (0x13) | 0x01 Set | req | 5 (+1 txid) or sizeof(BuzzerCommandTypeDef) (+1 txid) |
+| BUZZ (0x13) | 0x03 ACK | resp | 6 |
+| BUTTON (0x20) | 0x20 One-shot | req | 0 |
+| BUTTON (0x20) | 0x20 One-shot | resp | 1 |
+| BUTTON (0x20) | 0x10 Stream ctrl | req | 3 (+1 txid) |
+| BUTTON (0x20) | 0x03 Stream ctrl ACK | resp | 4 |
+| BUTTON (0x20) | 0x11 Stream frame | resp (frame) | 3 |
+| BUTTON (0x20) | 0x12 Stream frame ACK | resp | 2 |
 | STEER (0x11) | 0x01 Position set | req | header + 3×servo_count (+1 txid) |
 | STEER (0x11) | 0x03 Position ACK | resp (ACK) | 2 |
 | IMU (0x07) | 0xA0 IMU one-shot | req | 1 |
@@ -68,10 +68,10 @@
 - **Motor PWM set (0x10)** — `packet_motor_handle()` in `Hiwonder/System/packet_handle.c` parses 4- or 5-byte payloads (lines 724–804) and echoes `txid` in `rrc_motor_pwm_ack_t` via `rrc_send_ack()`.
 - **Encoder stream ctrl (0x91)** — `packet_encoder_handle()` in `Hiwonder/System/packet_handle.c` (lines 1238–1273) reads the optional `txid`, configures streaming through `encoders_set_stream()`, and replies with `rrc_encoder_stream_ack_t`.
 - **Battery stream ctrl (0xA1)** — `packet_battery_limit_handle()` in `Hiwonder/System/packet_handle.c` (lines 1068–1102) supports both 4- and 5-byte payloads and echoes the `txid` in `rrc_sys_battery_stream_ack_t`.
-- **Button stream ctrl (0x23)** — `packet_pwm_servo_handle()` in `Hiwonder/System/packet_handle.c` (lines 318–350) handles the optional `txid` and returns `rrc_button_stream_ack_t`.
+- **Button stream ctrl (FUNC 0x20, SUB 0x10)** — `packet_pwm_servo_handle()` in `Hiwonder/System/packet_handle.c` (lines 318–350) handles the optional `txid` and returns `rrc_button_stream_ack_t` via `RRC_BUTTON_ACK`.
 - **IMU stream ctrl (0xA1)** — `packet_imu_handle()` in `Hiwonder/System/packet_handle.c` (lines 901–937) parses the optional `txid`, calls `imu_set_stream()`, and responds with `rrc_imu_stream_ack_t`.
-- **LED set (0x20)** — `packet_led_handle()` in `Hiwonder/System/packet_handle.c` (lines 270–360) recognises legacy and WS2812 payloads, captures the optional `txid`, and emits `rrc_io_led_ack_t`.
-- **Buzzer set (0x21)** — `packet_buzzer_handle()` in `Hiwonder/System/packet_handle.c` (lines 380–455) accepts new or legacy payloads, parses the optional `txid`, and echoes it in `rrc_io_buzzer_ack_t`.
+- **LED set (FUNC 0x12, SUB 0x01)** — `packet_led_handle()` in `Hiwonder/System/packet_handle.c` (lines 270–360) recognises legacy and WS2812 payloads, captures the optional `txid`, and emits `rrc_led_ack_t` on `RRC_LED_ACK`.
+- **Buzzer set (FUNC 0x13, SUB 0x01)** — `packet_buzzer_handle()` in `Hiwonder/System/packet_handle.c` (lines 380–455) accepts new or legacy payloads, parses the optional `txid`, and echoes it in `rrc_buzz_ack_t`.
 - **Steer position set (0x01)** — `packet_serial_servo_handle()` in `Hiwonder/System/packet_handle.c` (lines 738–806) accepts legacy payloads plus an optional trailing `txid` and returns `rrc_steer_ack_t`.
 
 ## Stream sequence counters
@@ -87,8 +87,8 @@
 - `rrc_error_code_t` (`Core/Inc/rrclite_packets.h`, lines 44–51) enumerates: `InvalidArg=1`, `Busy=2`, `Timeout=3`, `IOFail=4`, `NotReady=5`, `NoDevice=6`, `CRCFail=7`, `Unsupported=8`.
 - `rrc_send_err()` call sites in `Hiwonder/System/packet_handle.c`:
   - `rrc_uart_apply_with_delay()` (lines 30–47) reports UART reconfigure failures for SYS/0xC0.
-  - `packet_led_handle()` (lines 300–361) signals invalid LED arguments (SYS/0xEE from IO/0x20).
-  - `packet_buzzer_handle()` (lines 420–455) rejects malformed buzzer payloads.
+- `packet_led_handle()` (lines 300–361) signals invalid LED arguments (SYS/0xEE from LED/0x01).
+- `packet_buzzer_handle()` (lines 420–455) rejects malformed buzzer payloads (SYS/0xEE from BUZZ/0x01).
   - `packet_motor_handle()` (lines 744–780) surfaces PWM apply failures and length errors.
   - `packet_imu_handle()` (lines 948–1040) guards the new 0xA2/0xA3/0xA4 handlers.
   - `packet_battery_limit_handle()` (lines 1172–1180) raises UNSUPPORTED for invalid baud requests before delegating to the UART helper.
@@ -96,7 +96,7 @@
 ## Status & follow-ups
 
 - IMU control handlers for 0xA2/0xA3/0xA4 now live inside `packet_imu_handle()` with local configuration shadows (`g_imu_primary`, `g_imu_preset[]`, `g_imu_bias[]`).
-- IO LED (0x20) and Buzzer (0x21) commands emit txid-aware ACKs via `rrc_send_ack()`.
+- LED (0x12) and BUZZ (0x13) commands emit txid-aware ACKs via `rrc_send_ack()`.
 - All active sub-commands dispatched by firmware are represented in the `g_*_subs` max-payload tables; no gaps remain.
 
 ## TO FIX

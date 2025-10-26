@@ -21,17 +21,16 @@
 - **Retry scheduling state:** `g_imu_retry_due_ms[source]` (declared at `imu_porting.c:32`) stores the next retry instant; `imu_schedule_failure()` updates it via `rrc_backoff_next()`.
 - **RECOVERED emission:** `imu_clear_error()` (`imu_porting.c:90-104`) and `rrc_imu_recovery_tick()` (`imu_porting.c:391-408`) emit `rrc_send_recovered(RRC_FUNC_IMU, g_imu_last_origin_sub[source], RRC_SYS_ERR_IO_FAIL, …)` when the retry succeeds.
 
-### LEDs (FUNC=0x04, SUB=0x20)
-- **First ERR emission:** On apply failure, `packet_led_handle()` (`packet_handle.c:478-484`) calls `rrc_io_recovery_schedule(&g_led_recovery, …)`, which sends `rrc_send_err(RRC_FUNC_IO, RRC_IO_LED_SET, RRC_SYS_ERR_IO_FAIL, detail, …)` the first time (`packet_handle.c:163-166`).
+### LEDs (FUNC=0x12, SUB=0x01)
+- **First ERR emission:** On apply failure, `packet_led_handle()` (`packet_handle.c:478-484`) calls `rrc_io_recovery_schedule(&g_led_recovery, …)`, which sends `rrc_send_err(RRC_FUNC_LED, RRC_LED_SET, RRC_SYS_ERR_IO_FAIL, detail, …)` the first time (`packet_handle.c:163-166`).
 - **Backoff parameters:** `rrc_io_recovery_schedule()` initialises `g_led_recovery.backoff` with `initial_ms=50`, `factor=3.0f`, `max_ms=1000` (`packet_handle.c:152-170`).
 - **Retry scheduling state:** `g_led_recovery.retry_due_ms` (`packet_handle.c:142-170`) holds the next retry deadline; retries are attempted in `rrc_io_recovery_tick_one()`.
-- **RECOVERED emission:** Successful retries through `rrc_led_try_reinit()` trigger `rrc_send_recovered(RRC_FUNC_IO, RRC_IO_LED_SET, …)` in `rrc_io_recovery_tick_one()` (`packet_handle.c:225-240`), while direct successes clear the state via `rrc_io_recovery_clear()` (`packet_handle.c:173-186`).
+- **RECOVERED emission:** Successful retries through `rrc_led_try_reinit()` trigger `rrc_send_recovered(RRC_FUNC_LED, RRC_LED_SET, …)` in `rrc_io_recovery_tick_one()` (`packet_handle.c:225-240`), while direct successes clear the state via `rrc_io_recovery_clear()` (`packet_handle.c:173-186`).
 
-### Buzzer (FUNC=0x04, SUB=0x21)
-- **First ERR emission:** `packet_buzzer_handle()` schedules recovery on apply failure (`packet_handle.c:600-639`), leading to `rrc_send_err(RRC_FUNC_IO, RRC_IO_BUZZER_SET, …)` inside `rrc_io_recovery_schedule()`.
+- **First ERR emission:** `packet_buzzer_handle()` schedules recovery on apply failure (`packet_handle.c:600-639`), leading to `rrc_send_err(RRC_FUNC_BUZZ, RRC_BUZZ_SET, …)` inside `rrc_io_recovery_schedule()`.
 - **Backoff parameters:** Same helper as LEDs — `initial_ms=50`, `factor=3.0f`, `max_ms=1000` (`packet_handle.c:152-170`).
 - **Retry scheduling state:** `g_buzzer_recovery.retry_due_ms` plus `g_buzzer_recovery.err_active` (declared at `packet_handle.c:69-70`) track retry cadence.
-- **RECOVERED emission:** `rrc_io_recovery_tick_one()` (`packet_handle.c:225-240`) calls `rrc_send_recovered(RRC_FUNC_IO, RRC_IO_BUZZER_SET, …)` after `rrc_buzzer_try_reinit()` succeeds; immediate clears use `rrc_io_recovery_clear()`.
+- **RECOVERED emission:** `rrc_io_recovery_tick_one()` (`packet_handle.c:225-240`) calls `rrc_send_recovered(RRC_FUNC_BUZZ, RRC_BUZZ_SET, …)` after `rrc_buzzer_try_reinit()` succeeds; immediate clears use `rrc_io_recovery_clear()`.
 
 ### Steering / Bus-servo (FUNC=0x11 v2, SUB=0x01)
 - **First ERR emission:** `packet_serial_servo_handle()` routes failed `serial_servo_set_position()` attempts to `rrc_io_recovery_schedule(&g_steering_recovery, RRCV2_FUNC_STEER, 0x01U, …)` (`packet_handle.c:780-787`), which in turn emits `rrc_send_err(RRCV2_FUNC_STEER, 0x01, …)` once (`packet_handle.c:160-167`).

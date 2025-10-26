@@ -18,7 +18,7 @@
 - Recovery hooks: Failures schedule `rrc_io_recovery_state_t` via `rrc_io_recovery_schedule()` (lines 780–787), and `rrc_io_recovery_service_one()` drives retries before emitting SYS/0xEF on success.
 
 ## LEDs & Buzzer
-- LED payload guards: `packet_led_handle()` (lines 430–540) checks legacy vs WS2812 lengths, rejects invalid IDs, and after successful apply sends `rrc_send_ack()` with `rrc_io_led_ack_t` (lines 503–516).
-- Buzzer payload guards: `packet_buzzer_handle()` (lines 560–676) validates `{freq,duty,duration}` or legacy payloads, clamps duty ≤100 %, and ACKs via `rrc_io_buzzer_ack_t` after latching the command (lines 628–670).
+- LED payload guards: `packet_led_handle()` (lines 430–540) checks legacy vs WS2812 lengths, rejects invalid IDs, and after successful apply sends `rrc_send_ack()` with `rrc_led_ack_t` on `RRC_LED_ACK` (lines 503–516).
+- Buzzer payload guards: `packet_buzzer_handle()` (lines 560–676) validates `{freq,duty,duration}` or legacy payloads, clamps duty ≤100 %, and ACKs via `rrc_buzz_ack_t` on `RRC_BUZZ_ACK` after latching the command (lines 628–670).
 
 **Status: A3 green.**
