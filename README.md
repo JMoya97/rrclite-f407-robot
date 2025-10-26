@@ -115,6 +115,48 @@ UART within the specified window, and resume communication at the new rate.
   with the maximum supported UART baud (1,000,000 bps) plus representative IMU
   (200 Hz) and encoder (1,000 Hz) streaming rates.
 
+### Protocol v2 (behavioral)
+
+- **Version & capabilities** — Hosts can query `SYS/0xF0` (Version) for
+  `{2,0,0}` and `SYS/0xF1` (Capabilities) for protocol flags, maximum UART baud
+  (1,000,000 bps), and representative IMU/encoder rates.
+- **ACK/NACK** — Actuator and stream-control requests accept an optional txid
+  byte that is echoed in positive ACKs. When hardware rejects a command the
+  firmware emits exactly one `SYS/0xEE` error per failure episode, enters an
+  exponential backoff, and retries until the device recovers. A successful
+  retry generates `SYS/0xEF` (Recovered) and clears the episode without sending
+  duplicate ACKs.
+- **Sequenced streaming** — Battery, encoder, button, and IMU telemetry frames
+  carry a `uint16_t seq` counter that increments per frame and wraps naturally.
+  Stream control accepts `ack_each_frame` to enable optional lightweight
+  per-frame ACKs; the default remains OFF to conserve bandwidth.
+- **Baud switching** — `SYS/0xC0` is acknowledged at the current baud rate.
+  Only 115200 and 1,000,000 bps are valid. The ACK advertises the
+  apply-after delay; once the host receives it, the MCU waits for the delay and
+  then reconfigures the UART. Hosts must re-tune their serial port within that
+  window to avoid a link drop.
+- **Failsafe** — `SYS/0xB0` programs the motor idle timeout. When no PWM command
+  arrives within the configured window the control task ramps targets to zero
+  silently (no extra ACKs/errors) and holds until a fresh command is received.
+
+#### Example payloads (little-endian unless noted)
+
+- **Motor PWM set (`MOTOR/0x10`) & ACK (`MOTOR/0x18`)**
+  - Request: `{uint8 motor_id, int16 pwm, [uint8 txid]}`
+  - ACK: `{uint8 txid, uint8 motor_id, int16 pwm_target, int16 pwm_applied}`
+- **Encoder stream control (`MOTOR/0x91`) & frame**
+  - ACK: `{uint8 txid, uint8 enable, uint16 period_ms}`
+  - Stream frame (`MOTOR/0x91` data payload): `{uint16 seq, uint16 c1, uint16 c2,
+    uint16 c3, uint16 c4}`
+- **IMU stream frame (`IMU/0xA11`)**
+  - `{uint8 source_id, uint16 seq, uint32 t_ms, float ax, ay, az, float gx, gy, gz,
+     float mx, my, mz, float temp_c}`
+- **SYS error (`SYS/0xEE`) & recovered (`SYS/0xEF`) events**
+  - Error: `{uint8 origin_func, uint8 origin_sub, uint8 err_code, uint8 detail,
+            uint32 t_ms, uint8 txid}`
+  - Recovered: `{uint8 origin_func, uint8 origin_sub, uint8 prev_err_code,
+                uint32 t_ms}`
+
 ## Repository maintenance
 
 To allow local testing of Git operations without an external host, a bare
