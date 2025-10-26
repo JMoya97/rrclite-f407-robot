@@ -171,3 +171,67 @@ bool icm20948_read_all(imu20948_raw_t* o)
 
     return true;
 }
+
+bool icm20948_configure_preset(uint8_t preset)
+{
+    uint8_t gyro_dlpf_cfg;
+    uint8_t gyro_div;
+    uint8_t accel_dlpf_cfg;
+    uint16_t accel_div;
+
+    switch (preset) {
+    default:
+        preset = 2u;
+        /* fallthrough */
+    case 2u:
+        gyro_dlpf_cfg = 1u;   /* ~196 Hz */
+        gyro_div = 1u;        /* 1125 / (1 + 1) ≈ 562 Hz */
+        accel_dlpf_cfg = 1u;  /* ~246 Hz */
+        accel_div = 1u;
+        break;
+    case 1u:
+        gyro_dlpf_cfg = 2u;   /* ~120 Hz */
+        gyro_div = 4u;        /* 1125 / (1 + 4) = 225 Hz */
+        accel_dlpf_cfg = 2u;  /* ~111 Hz */
+        accel_div = 4u;
+        break;
+    case 0u:
+        gyro_dlpf_cfg = 4u;   /* ~41 Hz */
+        gyro_div = 10u;       /* 1125 / (1 + 10) ≈ 102 Hz */
+        accel_dlpf_cfg = 4u;  /* ~45 Hz */
+        accel_div = 10u;
+        break;
+    }
+
+    if(!bank(ICM20948_BANK2)){
+        return false;
+    }
+
+    const uint8_t gyro_config = (uint8_t)((gyro_dlpf_cfg << 3) | (3u << 1) | 1u);
+    if(i2c_wr(ICM20948_GYRO_CONFIG_1, gyro_config) != HAL_OK){
+        return false;
+    }
+
+    if(i2c_wr(ICM20948_GYRO_SMPLRT_DIV, gyro_div) != HAL_OK){
+        return false;
+    }
+
+    const uint8_t accel_config = (uint8_t)((accel_dlpf_cfg << 3) | (1u << 1) | 1u);
+    if(i2c_wr(ICM20948_ACCEL_CONFIG, accel_config) != HAL_OK){
+        return false;
+    }
+
+    const uint16_t accel_div_clamped = (uint16_t)(accel_div & 0x0FFFu);
+    const uint8_t accel_div_hi = (uint8_t)((accel_div_clamped >> 8) & 0x0Fu);
+    const uint8_t accel_div_lo = (uint8_t)(accel_div_clamped & 0xFFu);
+
+    if(i2c_wr(ICM20948_ACCEL_SMPLRT_DIV_1, accel_div_hi) != HAL_OK){
+        return false;
+    }
+
+    if(i2c_wr(ICM20948_ACCEL_SMPLRT_DIV_2, accel_div_lo) != HAL_OK){
+        return false;
+    }
+
+    return bank(ICM20948_BANK0);
+}
