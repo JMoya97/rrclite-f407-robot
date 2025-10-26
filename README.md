@@ -115,6 +115,20 @@ UART within the specified window, and resume communication at the new rate.
   with the maximum supported UART baud (1,000,000 bps) plus representative IMU
   (200 Hz) and encoder (1,000 Hz) streaming rates.
 
+#### Protocol v2 ID map (target)
+
+| Function | ID |
+| -------- | -- |
+| SYS      | 0x00 |
+| MOTOR    | 0x10 |
+| STEER    | 0x11 |
+| LED      | 0x12 |
+| BUZZ     | 0x13 |
+| BUTTON   | 0x20 |
+| ENC      | 0x21 |
+| BATT     | 0x22 |
+| IMU      | 0x23 |
+
 ### Protocol v2 (behavioral)
 
 - **Version & capabilities** — Hosts can query `SYS/0xF0` (Version) for
