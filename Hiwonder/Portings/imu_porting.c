@@ -11,12 +11,14 @@
 #include <stdbool.h>
 
 extern osSemaphoreId_t IMU_data_readyHandle;
+extern osMessageQueueId_t packet_tx_queueHandle;
 extern rrc_imu_bias_store_t g_imu_bias[2];
 
 static volatile uint8_t imu_stream_enabled;
 static uint8_t imu_stream_sources_mask;
 static uint8_t imu_stream_ack_each_frame;
 static uint16_t imu0_seq;
+static uint32_t g_imu_dropped_due_queue;
 
 static bool imu0_init_done;
 static bool imu0_available;
@@ -297,6 +299,11 @@ void imu_task_entry(void *argument)
             .temp_c = sample.temp_c,
         };
 
+        if (osMessageQueueGetCount(packet_tx_queueHandle) >= 56U) {
+            g_imu_dropped_due_queue++;
+            continue;
+        }
+
         if (rrc_transport_send(RRC_FUNC_IMU, RRC_IMU_STREAM_FRAME,
                                &frame, sizeof(frame)) &&
             imu_stream_ack_each_frame) {
@@ -415,6 +422,12 @@ void rrc_imu_recovery_tick(uint32_t now_ms)
 
         g_imu_retry_pending[source] = 1U;
     }
+
+    if (applied_ack_each_frame != NULL) {
+        *applied_ack_each_frame = (mask != 0U) ? ack_mode : 0U;
+    }
+
+    return applied_period;
 }
 
 void rrc_imu_recovery_service(uint32_t now_ms)
