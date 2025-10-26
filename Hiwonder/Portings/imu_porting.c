@@ -423,11 +423,8 @@ void rrc_imu_recovery_tick(uint32_t now_ms)
         g_imu_retry_pending[source] = 1U;
     }
 
-    if (applied_ack_each_frame != NULL) {
-        *applied_ack_each_frame = (mask != 0U) ? ack_mode : 0U;
-    }
-
-    return applied_period;
+    (void)rrc_transport_send(RRC_FUNC_IMU, RRC_IMU_WHOAMI_STATUS,
+                             &resp, sizeof(resp));
 }
 
 void rrc_imu_recovery_service(uint32_t now_ms)

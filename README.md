@@ -12,6 +12,14 @@
   - IO (0x04): LEDs, buzzer, and button streaming (optional frame ACK 0x29)
   - IMU (0x07): dual-source stream support with optional frame ACK 0xA9
 
+### Slim firmware configuration
+
+`Core/Inc/rrclite_config.h` controls which legacy peripherals are compiled into
+the slim build. Set `RRC_KEEP_OLED` and `RRC_KEEP_GUI` to `0` (defaults) to skip
+creating the historical OLED display and GUI tasks so their stacks are never
+allocated. Enabling either flag reinstates the corresponding FreeRTOS thread
+and restores the classic behaviour.
+
 ## Serial protocol extensions
 
 The current slim + IMU firmware acknowledges every actuator command. Hosts may

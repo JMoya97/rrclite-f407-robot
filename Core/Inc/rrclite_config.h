@@ -20,6 +20,8 @@ extern "C" {
 #define RRC_KEEP_ENCODERS          1
 #define RRC_KEEP_IMU_PRIMARY       1
 #define RRC_KEEP_IMU_OPTIONAL      1
+#define RRC_KEEP_OLED              0
+#define RRC_KEEP_GUI               0
 
 /* Serial transport defaults */
 #define RRC_DEFAULT_BAUD_BPS       1000000U
