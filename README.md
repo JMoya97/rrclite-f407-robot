@@ -131,6 +131,7 @@ UART within the specified window, and resume communication at the new rate.
 
 | Legacy function (v1) | v2 function |
 | -------------------- | ----------- |
+| SYS battery (0xA0/0xA1) | BATT (0x22, subs 0x20/0x10/0x11) |
 | IO/LED (0x04, sub 0x20) | LED (0x12) |
 | IO/BUZZER (0x04, sub 0x21) | BUZZ (0x13) |
 | IO/BUTTON (0x04, subs 0x22/0x23) | BUTTON (0x20) |

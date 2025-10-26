@@ -20,6 +20,7 @@ typedef enum {
     RRC_FUNC_LED                = RRCV2_FUNC_LED,
     RRC_FUNC_BUZZ               = RRCV2_FUNC_BUZZ,
     RRC_FUNC_BUTTON             = RRCV2_FUNC_BUTTON,
+    RRC_FUNC_BATT               = RRCV2_FUNC_BATT,
 } rrc_func_t;
 
 /* Legacy function IDs retained for the compatibility shim. */
@@ -34,6 +35,7 @@ typedef enum {
 /* SYS (0x00) sub-commands                                                    */
 
 typedef enum {
+    /* Legacy battery sub-commands retained for the compatibility shim. */
     RRC_SYS_BATTERY_ONESHOT        = 0xA0,
     RRC_SYS_BATTERY_STREAM_CTRL    = 0xA1,
     RRC_SYS_MOTOR_FAILSAFE_SET     = 0xB0,
@@ -46,8 +48,6 @@ typedef enum {
     RRC_SYS_VERSION                = 0xF0,
     RRC_SYS_CAPABILITIES           = 0xF1,
 } rrc_sys_sub_t;
-
-#define RRC_SYS_BATTERY_STREAM_FRAME RRC_SYS_BATTERY_STREAM_CTRL
 
 #define RRC_PROTO_VERSION_MAJOR      0x02U
 #define RRC_PROTO_VERSION_MINOR      0x00U
@@ -89,16 +89,23 @@ typedef enum {
     RRC_SYS_ERR_UNSUPPORTED        = 0x08
 } rrc_error_code_t;
 
+typedef enum {
+    RRC_BATT_STREAM_CTRL  = RRCV2_SUB_STREAM_CTRL,
+    RRC_BATT_ACK          = RRCV2_SUB_ACK,
+    RRC_BATT_STREAM_FRAME = RRCV2_SUB_STREAM_FRAME,
+    RRC_BATT_ONESHOT      = RRCV2_SUB_ONE_SHOT,
+} rrc_batt_sub_t;
+
 typedef struct __attribute__((packed)) {
     uint8_t txid;
     uint8_t enable;
     uint16_t period_ms_le;
-} rrc_sys_battery_stream_ack_t;
+} rrc_batt_stream_ack_t;
 
 typedef struct __attribute__((packed)) {
     uint16_t seq;
     uint16_t millivolts_le;
-} rrc_sys_battery_stream_frame_t;
+} rrc_batt_stream_frame_t;
 
 typedef struct __attribute__((packed)) {
     uint8_t txid;

@@ -29,8 +29,6 @@ typedef struct {
 #define STREAM_PAYLOAD_MAX (RRC_MAX_PAYLOAD_LEN - 1U)
 
 static const rrc_sub_entry_t g_sys_subs[] = {
-    {RRC_SYS_BATTERY_ONESHOT, sizeof(uint16_t)},
-    {RRC_SYS_BATTERY_STREAM_CTRL, sizeof(rrc_sys_battery_stream_frame_t)},
     {RRC_SYS_MOTOR_FAILSAFE_SET, sizeof(rrc_sys_motor_failsafe_ack_t)},
     {RRC_SYS_HEALTH_PERIOD_SET, sizeof(rrc_sys_period_ack_t)},
     {RRC_SYS_UART_BAUD_SET, sizeof(rrc_sys_uart_baud_ack_t)},
@@ -45,6 +43,12 @@ static const rrc_sub_entry_t g_sys_subs[] = {
 static const rrc_sub_entry_t g_motor_subs[] = {
     {RRC_MOTOR_PWM_ACK_SINGLE, sizeof(rrc_motor_pwm_ack_t)},
     {RRC_MOTOR_PWM_ACK_MULTI, STREAM_PAYLOAD_MAX},
+};
+
+static const rrc_sub_entry_t g_batt_subs[] = {
+    {RRC_BATT_ONESHOT, sizeof(uint16_t)},
+    {RRC_BATT_ACK, sizeof(rrc_batt_stream_ack_t)},
+    {RRC_BATT_STREAM_FRAME, sizeof(rrc_batt_stream_frame_t)},
 };
 
 static const rrc_sub_entry_t g_enc_subs[] = {
@@ -88,6 +92,7 @@ static const rrc_sub_entry_t g_imu_subs[] = {
 static const rrc_func_entry_t g_func_table[] = {
     {RRC_FUNC_SYS, g_sys_subs, ARRAY_SIZE(g_sys_subs)},
     {RRC_FUNC_MOTOR, g_motor_subs, ARRAY_SIZE(g_motor_subs)},
+    {RRC_FUNC_BATT, g_batt_subs, ARRAY_SIZE(g_batt_subs)},
     {RRC_FUNC_LED, g_led_subs, ARRAY_SIZE(g_led_subs)},
     {RRC_FUNC_BUZZ, g_buzz_subs, ARRAY_SIZE(g_buzz_subs)},
     {RRC_FUNC_BUTTON, g_button_subs, ARRAY_SIZE(g_button_subs)},

@@ -4,11 +4,11 @@
 
 | FUNC | SUB | Direction | Max payload (bytes) |
 | --- | --- | --- | --- |
-| SYS (0x00) | 0xA0 Battery one-shot | req | 0 |
-| SYS (0x00) | 0xA0 Battery one-shot | resp | 2 |
-| SYS (0x00) | 0xA1 Battery stream ctrl | req | 3 (+1 txid) |
-| SYS (0x00) | 0xA1 Battery stream ctrl | resp (ACK) | 4 |
-| SYS (0x00) | 0xA1 Battery stream frame | resp (frame) | 4 |
+| BATT (0x22) | 0x20 Battery one-shot | req | 0 |
+| BATT (0x22) | 0x20 Battery one-shot | resp | 2 |
+| BATT (0x22) | 0x10 Battery stream ctrl | req | 3 (+1 txid) |
+| BATT (0x22) | 0x03 Battery stream ctrl ACK | resp (ACK) | 4 |
+| BATT (0x22) | 0x11 Battery stream frame | resp (frame) | 4 |
 | SYS (0x00) | 0xB0 Motor failsafe set | req | 2 (+1 txid) |
 | SYS (0x00) | 0xB0 Motor failsafe set | resp (ACK) | 3 |
 | SYS (0x00) | 0xB1 Heartbeat period set | req | 2 (+1 txid) |
@@ -67,7 +67,7 @@
 
 - **Motor PWM set (0x10)** — `packet_motor_handle()` in `Hiwonder/System/packet_handle.c` parses 4- or 5-byte payloads (lines 724–804) and echoes `txid` in `rrc_motor_pwm_ack_t` via `rrc_send_ack()`.
 - **Encoder stream ctrl (ENC/0x10)** — `packet_encoder_handle()` in `Hiwonder/System/packet_handle.c` (lines 1238–1273) reads the optional `txid`, configures streaming through `encoders_set_stream()`, and replies with `rrc_encoder_stream_ack_t` on `RRC_ENC_ACK`.
-- **Battery stream ctrl (0xA1)** — `packet_battery_limit_handle()` in `Hiwonder/System/packet_handle.c` (lines 1068–1102) supports both 4- and 5-byte payloads and echoes the `txid` in `rrc_sys_battery_stream_ack_t`.
+- **Battery stream ctrl (BATT/0x10)** — `packet_batt_handle()` in `Hiwonder/System/packet_handle.c` (lines 1382–1428) supports both 4- and 5-byte payloads and echoes the `txid` in `rrc_batt_stream_ack_t`.
 - **Button stream ctrl (FUNC 0x20, SUB 0x10)** — `packet_pwm_servo_handle()` in `Hiwonder/System/packet_handle.c` (lines 318–350) handles the optional `txid` and returns `rrc_button_stream_ack_t` via `RRC_BUTTON_ACK`.
 - **IMU stream ctrl (0xA1)** — `packet_imu_handle()` in `Hiwonder/System/packet_handle.c` (lines 901–937) parses the optional `txid`, calls `imu_set_stream()`, and responds with `rrc_imu_stream_ack_t`.
 - **LED set (FUNC 0x12, SUB 0x01)** — `packet_led_handle()` in `Hiwonder/System/packet_handle.c` (lines 270–360) recognises legacy and WS2812 payloads, captures the optional `txid`, and emits `rrc_led_ack_t` on `RRC_LED_ACK`.

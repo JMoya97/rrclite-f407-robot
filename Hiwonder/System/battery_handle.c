@@ -177,13 +177,13 @@ void battery_check_timer_callback(void *argument)
         if (elapsed >= battery_stream_period_ms) {
             elapsed = 0U;
 
-            const rrc_sys_battery_stream_frame_t frame = {
+            const rrc_batt_stream_frame_t frame = {
                 .seq = batt_seq++,
                 .millivolts_le = battery_latest_millivolts(),
             };
 
-            (void)rrc_transport_send(RRC_FUNC_SYS,
-                                     RRC_SYS_BATTERY_STREAM_CTRL,
+            (void)rrc_transport_send(RRC_FUNC_BATT,
+                                     RRC_BATT_STREAM_FRAME,
                                      &frame, sizeof(frame));
         }
 
