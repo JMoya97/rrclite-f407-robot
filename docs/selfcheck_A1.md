@@ -44,6 +44,8 @@
 | IO (0x04) | 0x23 Buttons stream ctrl | resp (ACK) | 4 |
 | IO (0x04) | 0x23 Buttons stream frame | resp (frame) | 3 |
 | IO (0x04) | 0x29 Buttons frame ACK | resp | 2 |
+| STEER (0x11) | 0x01 Position set | req | header + 3×servo_count (+1 txid) |
+| STEER (0x11) | 0x03 Position ACK | resp (ACK) | 2 |
 | IMU (0x07) | 0xA0 IMU one-shot | req | 1 |
 | IMU (0x07) | 0xA0 IMU one-shot | resp | 45 |
 | IMU (0x07) | 0xA1 IMU stream ctrl | req | 4 (+1 txid) |
@@ -70,6 +72,7 @@
 - **IMU stream ctrl (0xA1)** — `packet_imu_handle()` in `Hiwonder/System/packet_handle.c` (lines 901–937) parses the optional `txid`, calls `imu_set_stream()`, and responds with `rrc_imu_stream_ack_t`.
 - **LED set (0x20)** — `packet_led_handle()` in `Hiwonder/System/packet_handle.c` (lines 270–360) recognises legacy and WS2812 payloads, captures the optional `txid`, and emits `rrc_io_led_ack_t`.
 - **Buzzer set (0x21)** — `packet_buzzer_handle()` in `Hiwonder/System/packet_handle.c` (lines 380–455) accepts new or legacy payloads, parses the optional `txid`, and echoes it in `rrc_io_buzzer_ack_t`.
+- **Steer position set (0x01)** — `packet_serial_servo_handle()` in `Hiwonder/System/packet_handle.c` (lines 738–806) accepts legacy payloads plus an optional trailing `txid` and returns `rrc_steer_ack_t`.
 
 ## Stream sequence counters
 

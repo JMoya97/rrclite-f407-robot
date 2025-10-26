@@ -58,8 +58,9 @@ static const rrc_sub_entry_t g_io_subs[] = {
     {RRC_IO_BUTTON_STREAM_ACK, sizeof(rrc_button_frame_ack_t)},
 };
 
-static const rrc_sub_entry_t g_bus_servo_subs[] = {
-    {RRC_BUS_SERVO_ACK, sizeof(rrc_bus_servo_ack_t)},
+static const rrc_sub_entry_t g_steer_subs[] = {
+    {RRC_STEER_SET_POSITION, RRC_MAX_PAYLOAD_LEN},
+    {RRC_STEER_ACK, sizeof(rrc_steer_ack_t)},
 };
 
 static const rrc_sub_entry_t g_imu_subs[] = {
@@ -76,7 +77,7 @@ static const rrc_func_entry_t g_func_table[] = {
     {RRC_FUNC_SYS, g_sys_subs, ARRAY_SIZE(g_sys_subs)},
     {RRC_FUNC_MOTOR, g_motor_subs, ARRAY_SIZE(g_motor_subs)},
     {RRC_FUNC_IO, g_io_subs, ARRAY_SIZE(g_io_subs)},
-    {RRC_FUNC_BUS_SERVO, g_bus_servo_subs, ARRAY_SIZE(g_bus_servo_subs)},
+    {RRC_FUNC_STEER, g_steer_subs, ARRAY_SIZE(g_steer_subs)},
     {RRC_FUNC_IMU, g_imu_subs, ARRAY_SIZE(g_imu_subs)},
 };
 

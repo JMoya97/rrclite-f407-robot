@@ -129,6 +129,10 @@ UART within the specified window, and resume communication at the new rate.
 | BATT     | 0x22 |
 | IMU      | 0x23 |
 
+| Legacy function (v1) | v2 function |
+| -------------------- | ----------- |
+| BUS_SERVO (0x06)     | STEER (0x11) |
+
 ### Protocol v2 (behavioral)
 
 - **Version & capabilities** — Hosts can query `SYS/0xF0` (Version) for

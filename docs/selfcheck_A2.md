@@ -33,8 +33,8 @@
 - **Retry scheduling state:** `g_buzzer_recovery.retry_due_ms` plus `g_buzzer_recovery.err_active` (declared at `packet_handle.c:69-70`) track retry cadence.
 - **RECOVERED emission:** `rrc_io_recovery_tick_one()` (`packet_handle.c:225-240`) calls `rrc_send_recovered(RRC_FUNC_IO, RRC_IO_BUZZER_SET, …)` after `rrc_buzzer_try_reinit()` succeeds; immediate clears use `rrc_io_recovery_clear()`.
 
-### Steering / Bus-servo (FUNC=0x06 legacy, SUB=0x01)
-- **First ERR emission:** `packet_serial_servo_handle()` routes failed `serial_servo_set_position()` attempts to `rrc_io_recovery_schedule(&g_steering_recovery, PACKET_FUNC_BUS_SERVO, 0x01U, …)` (`packet_handle.c:700-705`), which in turn emits `rrc_send_err(PACKET_FUNC_BUS_SERVO, 0x01, …)` once (`packet_handle.c:163-166`).
-- **Backoff parameters:** `g_steering_recovery.backoff` is initialised through the same helper with `initial_ms=50`, `factor=3.0f`, `max_ms=1000` (`packet_handle.c:152-170`).
-- **Retry scheduling state:** `g_steering_recovery.retry_due_ms` (struct member) stores the next retry time, driven by `rrc_io_recovery_tick_one()` (`packet_handle.c:225-240`).
-- **RECOVERED emission:** When `rrc_steering_try_reinit()` (`packet_handle.c:213-223`) succeeds, `rrc_io_recovery_tick_one()` issues `rrc_send_recovered(PACKET_FUNC_BUS_SERVO, 0x01, …)`; direct success paths also call `rrc_io_recovery_clear()` (`packet_handle.c:711-713`).
+### Steering / Bus-servo (FUNC=0x11 v2, SUB=0x01)
+- **First ERR emission:** `packet_serial_servo_handle()` routes failed `serial_servo_set_position()` attempts to `rrc_io_recovery_schedule(&g_steering_recovery, RRCV2_FUNC_STEER, 0x01U, …)` (`packet_handle.c:780-787`), which in turn emits `rrc_send_err(RRCV2_FUNC_STEER, 0x01, …)` once (`packet_handle.c:160-167`).
+- **Backoff parameters:** `g_steering_recovery.backoff` is initialised through the same helper with `initial_ms=50`, `factor=3.0f`, `max_ms=1000` (`packet_handle.c:150-168`).
+- **Retry scheduling state:** `g_steering_recovery.retry_due_ms` (struct member) stores the next retry time, driven by `rrc_io_recovery_tick_one()` (`packet_handle.c:223-238`).
+- **RECOVERED emission:** When `rrc_steering_try_reinit()` (`packet_handle.c:213-223`) succeeds, `rrc_io_recovery_service_one()` issues `rrc_send_recovered(RRCV2_FUNC_STEER, 0x01, …)`; direct success paths also call `rrc_io_recovery_clear()` (`packet_handle.c:793-795`).

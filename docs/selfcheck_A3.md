@@ -13,9 +13,9 @@
 - Bias setters: Stored in `g_imu_bias[]` and applied inside the readers above; one-shot and stream payloads now emit bias-corrected values.
 
 ## Steering / Bus-servo
-- Apply call: `packet_serial_servo_handle()` in `Hiwonder/System/packet_handle.c` (lines 678–742) iterates targets and calls `serial_servo_set_position()`.
-- ACK coverage: On success, the handler builds `rrc_bus_servo_ack_t` and calls `rrc_send_ack(RRC_FUNC_BUS_SERVO, RRC_BUS_SERVO_ACK, …)` (lines 714–733), echoing txid and the number of accepted targets. The validator row for sub 0x03 lives in `Core/Src/rrclite_packets.c` (lines 241–246).
-- Recovery hooks: Failures schedule `rrc_io_recovery_state_t` via `rrc_io_recovery_schedule()` (lines 701–710), and `rrc_io_recovery_tick()` drives retries before emitting SYS/0xEF on success.
+- Apply call: `packet_serial_servo_handle()` in `Hiwonder/System/packet_handle.c` (lines 738–812) iterates targets and calls `serial_servo_set_position()`.
+- ACK coverage: On success, the handler builds `rrc_steer_ack_t` and calls `rrc_send_ack(RRCV2_FUNC_STEER, RRC_STEER_ACK, …)` (lines 798–805), echoing txid and the number of accepted targets. The validator row for sub 0x03 lives in `Core/Src/rrclite_packets.c` (lines 60–83).
+- Recovery hooks: Failures schedule `rrc_io_recovery_state_t` via `rrc_io_recovery_schedule()` (lines 780–787), and `rrc_io_recovery_service_one()` drives retries before emitting SYS/0xEF on success.
 
 ## LEDs & Buzzer
 - LED payload guards: `packet_led_handle()` (lines 430–540) checks legacy vs WS2812 lengths, rejects invalid IDs, and after successful apply sends `rrc_send_ack()` with `rrc_io_led_ack_t` (lines 503–516).

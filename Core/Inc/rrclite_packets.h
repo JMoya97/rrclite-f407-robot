@@ -9,12 +9,14 @@ extern "C" {
 #include <stddef.h>
 #include <stdint.h>
 
+#include "rrclite_proto.h"
+
 typedef enum {
     RRC_FUNC_SYS                = 0x00U,
     RRC_FUNC_MOTOR              = 0x03U,
     RRC_FUNC_IO                 = 0x04U,
-    RRC_FUNC_BUS_SERVO          = 0x06U,
     RRC_FUNC_IMU                = 0x07U,
+    RRC_FUNC_STEER              = RRCV2_FUNC_STEER,
 } rrc_func_t;
 
 /* Common protocol helpers */
@@ -202,18 +204,18 @@ typedef struct __attribute__((packed)) {
     uint16_t duration_ms;
 } rrc_io_buzzer_ack_t;
 
-/* BUS-SERVO (0x06) sub-commands ------------------------------------------- */
+/* STEERING (0x11) sub-commands -------------------------------------------- */
 
 typedef enum {
-    RRC_BUS_SERVO_SET_POSITION   = 0x01U,
-    RRC_BUS_SERVO_ACK            = 0x03U,
-} rrc_bus_servo_sub_t;
+    RRC_STEER_SET_POSITION       = 0x01U,
+    RRC_STEER_ACK                = 0x03U,
+} rrc_steer_sub_t;
 
 typedef struct __attribute__((packed)) {
     /* ACK echoes the host-supplied txid and the number of accepted targets. */
     uint8_t txid;
     uint8_t applied_count;
-} rrc_bus_servo_ack_t;
+} rrc_steer_ack_t;
 
 typedef struct __attribute__((packed)) {
     uint16_t seq;

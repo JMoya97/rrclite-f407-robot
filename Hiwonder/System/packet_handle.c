@@ -256,7 +256,7 @@ void rrc_io_recovery_tick(uint32_t now_ms)
                              rrc_led_try_reinit, now_ms);
     rrc_io_recovery_tick_one(&g_buzzer_recovery, RRC_FUNC_IO, RRC_IO_BUZZER_SET,
                              rrc_buzzer_try_reinit, now_ms);
-    rrc_io_recovery_tick_one(&g_steering_recovery, RRC_FUNC_BUS_SERVO, 0x01U,
+    rrc_io_recovery_tick_one(&g_steering_recovery, RRCV2_FUNC_STEER, 0x01U,
                              rrc_steering_try_reinit, now_ms);
 }
 
@@ -294,7 +294,7 @@ static void rrc_io_recovery_service(uint32_t now_ms)
                                 rrc_led_try_reinit, now_ms);
     rrc_io_recovery_service_one(&g_buzzer_recovery, RRC_FUNC_IO, RRC_IO_BUZZER_SET,
                                 rrc_buzzer_try_reinit, now_ms);
-    rrc_io_recovery_service_one(&g_steering_recovery, RRC_FUNC_BUS_SERVO, 0x01U,
+    rrc_io_recovery_service_one(&g_steering_recovery, RRCV2_FUNC_STEER, 0x01U,
                                 rrc_steering_try_reinit, now_ms);
 }
 
@@ -762,8 +762,8 @@ static void packet_serial_servo_handle(struct PacketRawFrame *frame)
                 txid = frame->data_and_checksum[expected_len];
             } else if (payload_len != expected_len) {
                 const uint32_t now = HAL_GetTick();
-                (void)rrc_send_err(RRC_FUNC_BUS_SERVO,
-                                   RRC_BUS_SERVO_SET_POSITION,
+                (void)rrc_send_err(RRCV2_FUNC_STEER,
+                                   RRC_STEER_SET_POSITION,
                                    RRC_SYS_ERR_INVALID_ARG, 0U, now, 0U);
                 break;
             }
@@ -778,7 +778,7 @@ static void packet_serial_servo_handle(struct PacketRawFrame *frame)
                                               servo_id, (int)position,
                                               duration) != 0) {
                     rrc_io_recovery_schedule(&g_steering_recovery,
-                                             RRC_FUNC_BUS_SERVO, 0x01U,
+                                             RRCV2_FUNC_STEER, 0x01U,
                                              servo_id, position, duration);
                     failure = true;
                     break;
@@ -792,15 +792,15 @@ static void packet_serial_servo_handle(struct PacketRawFrame *frame)
             }
 
             rrc_io_recovery_clear(&g_steering_recovery,
-                                  RRC_FUNC_BUS_SERVO, 0x01U);
+                                  RRCV2_FUNC_STEER, 0x01U);
 
             if (applied_count > 0U) {
-                const rrc_bus_servo_ack_t ack = {
+                const rrc_steer_ack_t ack = {
                     .txid = txid,
                     .applied_count = applied_count,
                 };
 
-                (void)rrc_send_ack(RRC_FUNC_BUS_SERVO, RRC_BUS_SERVO_ACK,
+                (void)rrc_send_ack(RRCV2_FUNC_STEER, RRC_STEER_ACK,
                                     &ack, sizeof(ack), txid);
             }
             break;
@@ -819,7 +819,7 @@ static void packet_serial_servo_handle(struct PacketRawFrame *frame)
 					                                  serial_servo_read_position(&serial_servo_controller, 
 					                                                             cmd->servo_id, &position));
             memcpy(report.args, &position, 2);
-            packet_transmit(&packet_controller, PACKET_FUNC_BUS_SERVO, &report, 5);
+            packet_transmit(&packet_controller, PACKET_FUNC_STEER, &report, 5);
             break;
         }
         case 0x07: { /* Read input voltage */
@@ -827,7 +827,7 @@ static void packet_serial_servo_handle(struct PacketRawFrame *frame)
             SerialServoCommandTypeDef *cmd = (SerialServoCommandTypeDef *)frame->data_and_checksum;
             packet_serial_servo_report_init(&report, cmd->servo_id, cmd->cmd, serial_servo_read_vin(&serial_servo_controller, cmd->servo_id, &vin));
             memcpy(report.args, &vin, 2);
-            packet_transmit(&packet_controller, PACKET_FUNC_BUS_SERVO, &report, 5);
+            packet_transmit(&packet_controller, PACKET_FUNC_STEER, &report, 5);
             break;
         }
         case 0x09: { /* Read temperature */
@@ -835,7 +835,7 @@ static void packet_serial_servo_handle(struct PacketRawFrame *frame)
             SerialServoCommandTypeDef *cmd = (SerialServoCommandTypeDef *)frame->data_and_checksum;
             packet_serial_servo_report_init(&report, cmd->servo_id, cmd->cmd,  serial_servo_read_temp(&serial_servo_controller, cmd->servo_id, &temp));
             report.args[0] = temp;
-            packet_transmit(&packet_controller, PACKET_FUNC_BUS_SERVO, &report, 4);
+            packet_transmit(&packet_controller, PACKET_FUNC_STEER, &report, 4);
             break;
         }
         case 0x0B: { /* Disable torque */
@@ -853,7 +853,7 @@ static void packet_serial_servo_handle(struct PacketRawFrame *frame)
             SerialServoCommandTypeDef *cmd = (SerialServoCommandTypeDef *)frame->data_and_checksum;
             packet_serial_servo_report_init(&report, cmd->servo_id, cmd->cmd, serial_servo_read_load_unload(&serial_servo_controller, cmd->servo_id, &load_unload));
             report.args[0] = load_unload;
-            packet_transmit(&packet_controller, PACKET_FUNC_BUS_SERVO, &report, 4);
+            packet_transmit(&packet_controller, PACKET_FUNC_STEER, &report, 4);
             break;
 		}			
         case 0x10: { /* Write ID */
@@ -866,7 +866,7 @@ static void packet_serial_servo_handle(struct PacketRawFrame *frame)
             SerialServoCommandTypeDef *cmd = (SerialServoCommandTypeDef *)frame->data_and_checksum;
             packet_serial_servo_report_init(&report, cmd->servo_id, cmd->cmd, serial_servo_read_id(&serial_servo_controller, cmd->servo_id, &servo_id));
             report.args[0] = servo_id;
-            packet_transmit(&packet_controller, PACKET_FUNC_BUS_SERVO, &report, 4);
+            packet_transmit(&packet_controller, PACKET_FUNC_STEER, &report, 4);
             break;
         }
         case 0x20: { /* Adjust offset */
@@ -879,7 +879,7 @@ static void packet_serial_servo_handle(struct PacketRawFrame *frame)
             SerialServoCommandTypeDef *cmd = (SerialServoCommandTypeDef *)frame->data_and_checksum;
             packet_serial_servo_report_init(&report, cmd->servo_id, cmd->cmd, serial_servo_read_deviation(&serial_servo_controller, cmd->servo_id, &dev));
             report.args[0] = (uint8_t)dev;
-            packet_transmit(&packet_controller, PACKET_FUNC_BUS_SERVO, &report, 4);
+            packet_transmit(&packet_controller, PACKET_FUNC_STEER, &report, 4);
             break;
         }
         case 0x24: { /* Save offset */
@@ -897,7 +897,7 @@ static void packet_serial_servo_handle(struct PacketRawFrame *frame)
             SerialServoCommandTypeDef *cmd = (SerialServoCommandTypeDef *)frame->data_and_checksum;
             packet_serial_servo_report_init(&report, cmd->servo_id, cmd->cmd, serial_servo_read_angle_limit(&serial_servo_controller, cmd->servo_id, limit));
             memcpy(&report.args, limit, 4);
-            packet_transmit(&packet_controller, PACKET_FUNC_BUS_SERVO, &report, 7);
+            packet_transmit(&packet_controller, PACKET_FUNC_STEER, &report, 7);
             break;
         }
         case 0x34: { /* Configure voltage limits */
@@ -910,7 +910,7 @@ static void packet_serial_servo_handle(struct PacketRawFrame *frame)
             SerialServoCommandTypeDef *cmd = (SerialServoCommandTypeDef *)frame->data_and_checksum;
             packet_serial_servo_report_init(&report, cmd->servo_id, cmd->cmd, serial_servo_read_vin_limit(&serial_servo_controller, cmd->servo_id, limit));
             memcpy(&report.args, limit, 4);
-            packet_transmit(&packet_controller, PACKET_FUNC_BUS_SERVO, &report, 7);
+            packet_transmit(&packet_controller, PACKET_FUNC_STEER, &report, 7);
             break;
         }
         case 0x38: { /* Configure temperature limits */
@@ -923,7 +923,7 @@ static void packet_serial_servo_handle(struct PacketRawFrame *frame)
             SerialServoCommandTypeDef *cmd = (SerialServoCommandTypeDef *)frame->data_and_checksum;
             packet_serial_servo_report_init(&report, cmd->servo_id, cmd->cmd, serial_servo_read_temp_limit(&serial_servo_controller, cmd->servo_id, &limit));
             report.args[0] = limit;
-            packet_transmit(&packet_controller, PACKET_FUNC_BUS_SERVO, &report, 4);
+            packet_transmit(&packet_controller, PACKET_FUNC_STEER, &report, 4);
             break;
         }
 
@@ -1605,7 +1605,7 @@ void packet_handle_init(void)
     packet_register_callback(&packet_controller, PACKET_FUNC_LED, packet_led_handle);
     packet_register_callback(&packet_controller, PACKET_FUNC_BUZZER, packet_buzzer_handle);
     packet_register_callback(&packet_controller, PACKET_FUNC_MOTOR, packet_motor_handle);
-    packet_register_callback(&packet_controller, PACKET_FUNC_BUS_SERVO, packet_serial_servo_handle);
+    packet_register_callback(&packet_controller, PACKET_FUNC_STEER, packet_serial_servo_handle);
     packet_register_callback(&packet_controller, PACKET_FUNC_PWM_SERVO, packet_pwm_servo_handle);
     packet_register_callback(&packet_controller, PACKET_FUNC_IMU, packet_imu_handle);
     packet_register_callback(&packet_controller, PACKET_FUNC_SYS, packet_battery_limit_handle);
