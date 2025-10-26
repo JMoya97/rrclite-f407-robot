@@ -158,6 +158,7 @@ UART within the specified window, and resume communication at the new rate.
   apply-after delay; once the host receives it, the MCU waits for the delay and
   then reconfigures the UART. Hosts must re-tune their serial port within that
   window to avoid a link drop.
+
 - **Failsafe** — `SYS/0xB0` programs the motor idle timeout. When no PWM command
   arrives within the configured window the control task ramps targets to zero
   silently (no extra ACKs/errors) and holds until a fresh command is received.
@@ -179,6 +180,12 @@ UART within the specified window, and resume communication at the new rate.
             uint32 t_ms, uint8 txid}`
   - Recovered: `{uint8 origin_func, uint8 origin_sub, uint8 prev_err_code,
                 uint32 t_ms}`
+
+## Dev checks
+
+- `make check-no-legacy` &mdash; runs `scripts/check_no_legacy.sh` to ensure no
+  legacy protocol identifiers (v1 function IDs, old SYS battery subs, etc.)
+  have crept back into the codebase outside the compatibility shim.
 
 ## Repository maintenance
 
