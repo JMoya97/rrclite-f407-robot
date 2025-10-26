@@ -15,6 +15,7 @@ typedef enum {
     RRC_FUNC_SYS                = 0x00U,
     RRC_FUNC_MOTOR              = 0x03U,
     RRC_FUNC_IMU                = 0x07U,
+    RRC_FUNC_ENC                = RRCV2_FUNC_ENC,
     RRC_FUNC_STEER              = RRCV2_FUNC_STEER,
     RRC_FUNC_LED                = RRCV2_FUNC_LED,
     RRC_FUNC_BUZZ               = RRCV2_FUNC_BUZZ,
@@ -145,13 +146,21 @@ typedef struct __attribute__((packed)) {
 typedef enum {
     RRC_MOTOR_PWM_SET              = 0x10,
     RRC_MOTOR_PWM_ACK_SINGLE       = 0x18,
-    RRC_MOTOR_PWM_ACK_MULTI        = 0x19,
-    RRC_MOTOR_ENCODER_ONESHOT      = 0x90,
-    RRC_MOTOR_ENCODER_STREAM_CTRL  = 0x91,
-    RRC_MOTOR_ENCODER_STREAM_ACK   = 0x99
+    RRC_MOTOR_PWM_ACK_MULTI        = 0x19
 } rrc_motor_sub_t;
 
-#define RRC_MOTOR_ENCODER_STREAM_FRAME RRC_MOTOR_ENCODER_STREAM_CTRL
+typedef enum {
+    RRC_ENC_STREAM_CTRL  = RRCV2_SUB_STREAM_CTRL,
+    RRC_ENC_ACK          = RRCV2_SUB_ACK,
+    RRC_ENC_STREAM_FRAME = RRCV2_SUB_STREAM_FRAME,
+    RRC_ENC_STREAM_ACK   = RRCV2_SUB_STREAM_ACK,
+    RRC_ENC_ONESHOT      = RRCV2_SUB_ONE_SHOT,
+} rrc_enc_sub_t;
+
+/* Legacy encoder sub-commands (for the RX compatibility shim). */
+#define RRC_MOTOR_ENCODER_ONESHOT_LEGACY      0x90U
+#define RRC_MOTOR_ENCODER_STREAM_CTRL_LEGACY  0x91U
+#define RRC_MOTOR_ENCODER_STREAM_ACK_LEGACY   0x99U
 
 typedef struct __attribute__((packed)) {
     uint8_t motor_id;

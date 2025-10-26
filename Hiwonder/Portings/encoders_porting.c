@@ -53,7 +53,7 @@ void encoders_timer7_cb(void) {
     }
 }
 
-/* host control (sub 0x91): enable stream and set divider in TIM7 ticks */
+/* host control (ENC/0x10): enable stream and set divider in TIM7 ticks */
 uint16_t encoders_set_stream(uint8_t enable, uint16_t period_ms) {
     enc_stream_enabled = enable ? 1U : 0U;
     if (!enc_stream_enabled) {
@@ -75,17 +75,17 @@ uint16_t encoders_set_stream(uint8_t enable, uint16_t period_ms) {
     return (uint16_t)(ticks * TIM7_PERIOD_MS);
 }
 
-/* one-shot reply (sub 0x90), called from packet handler (task context) */
+/* one-shot reply (ENC/0x20), called from packet handler (task context) */
 void encoders_read_once_and_report(uint8_t sub) {
     EncoderReadReportTypeDef rep;
-    rep.sub  = sub;            /* 0x90 */
+    rep.sub  = sub;            /* ENC/0x20 */
     rep.t_ms = HAL_GetTick();
     rep.c1   = (uint16_t)__HAL_TIM_GET_COUNTER(&htim5);
     rep.c2   = (uint16_t)__HAL_TIM_GET_COUNTER(&htim2);
     packet_transmit(&packet_controller, PACKET_FUNC_ENCODER, &rep, sizeof(rep));
 }
 
-/* stream task (waits on local semaphore; sends PACKET_FUNC_ENCODER, sub=0x91) */
+/* stream task (waits on local semaphore; sends ENC/0x11 frames) */
 void encoders_task_entry(void *argument) {
     (void)argument;
     for (;;) {
@@ -104,8 +104,8 @@ void encoders_task_entry(void *argument) {
             .c4 = 0U,
         };
 
-        (void)rrc_transport_send(RRC_FUNC_MOTOR,
-                                 RRC_MOTOR_ENCODER_STREAM_CTRL,
+        (void)rrc_transport_send(RRC_FUNC_ENC,
+                                 RRC_ENC_STREAM_FRAME,
                                  &frame, sizeof(frame));
     }
 }

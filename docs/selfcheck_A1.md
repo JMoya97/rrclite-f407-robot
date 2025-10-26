@@ -28,12 +28,12 @@
 | MOTOR (0x03) | 0x10 PWM set (single) | req | 3 (+1 txid) |
 | MOTOR (0x03) | 0x18 PWM ACK (single) | resp | 6 |
 | MOTOR (0x03) | 0x19 PWM ACK (multi) | resp | ≤254 |
-| MOTOR (0x03) | 0x90 Encoders one-shot | req | 0 |
-| MOTOR (0x03) | 0x90 Encoders one-shot | resp | 10 |
-| MOTOR (0x03) | 0x91 Encoders stream ctrl | req | 3 (+1 txid) |
-| MOTOR (0x03) | 0x91 Encoders stream ctrl | resp (ACK) | 4 |
-| MOTOR (0x03) | 0x91 Encoders stream frame | resp (frame) | 10 |
-| MOTOR (0x03) | 0x99 Encoder frame ACK | resp | 2 |
+| ENC (0x21) | 0x20 One-shot | req | 0 |
+| ENC (0x21) | 0x20 One-shot | resp | 10 |
+| ENC (0x21) | 0x10 Stream ctrl | req | 3 (+1 txid) |
+| ENC (0x21) | 0x03 Stream ctrl ACK | resp (ACK) | 4 |
+| ENC (0x21) | 0x11 Stream frame | resp (frame) | 10 |
+| ENC (0x21) | 0x12 Stream frame ACK | resp | 2 |
 | LED (0x12) | 0x01 Set | req | sizeof(LedCommandTypeDef) (+1 txid) or WS2812 length (+1 txid) |
 | LED (0x12) | 0x03 ACK | resp | 2 |
 | BUZZ (0x13) | 0x01 Set | req | 5 (+1 txid) or sizeof(BuzzerCommandTypeDef) (+1 txid) |
@@ -66,7 +66,7 @@
 ## Optional txid parsing & ACK echoing
 
 - **Motor PWM set (0x10)** — `packet_motor_handle()` in `Hiwonder/System/packet_handle.c` parses 4- or 5-byte payloads (lines 724–804) and echoes `txid` in `rrc_motor_pwm_ack_t` via `rrc_send_ack()`.
-- **Encoder stream ctrl (0x91)** — `packet_encoder_handle()` in `Hiwonder/System/packet_handle.c` (lines 1238–1273) reads the optional `txid`, configures streaming through `encoders_set_stream()`, and replies with `rrc_encoder_stream_ack_t`.
+- **Encoder stream ctrl (ENC/0x10)** — `packet_encoder_handle()` in `Hiwonder/System/packet_handle.c` (lines 1238–1273) reads the optional `txid`, configures streaming through `encoders_set_stream()`, and replies with `rrc_encoder_stream_ack_t` on `RRC_ENC_ACK`.
 - **Battery stream ctrl (0xA1)** — `packet_battery_limit_handle()` in `Hiwonder/System/packet_handle.c` (lines 1068–1102) supports both 4- and 5-byte payloads and echoes the `txid` in `rrc_sys_battery_stream_ack_t`.
 - **Button stream ctrl (FUNC 0x20, SUB 0x10)** — `packet_pwm_servo_handle()` in `Hiwonder/System/packet_handle.c` (lines 318–350) handles the optional `txid` and returns `rrc_button_stream_ack_t` via `RRC_BUTTON_ACK`.
 - **IMU stream ctrl (0xA1)** — `packet_imu_handle()` in `Hiwonder/System/packet_handle.c` (lines 901–937) parses the optional `txid`, calls `imu_set_stream()`, and responds with `rrc_imu_stream_ack_t`.

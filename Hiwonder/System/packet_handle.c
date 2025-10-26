@@ -339,9 +339,9 @@ typedef struct {
     } element[];
 } MotorPWMMultiCommandTypeDef;
 
-typedef struct { uint8_t cmd; } EncoderReadCommandTypeDef; /* 0x90 */
+typedef struct { uint8_t cmd; } EncoderReadCommandTypeDef; /* ENC/0x20 */
 typedef struct {
-    uint8_t  cmd;        /* 0x91 */
+    uint8_t  cmd;        /* ENC/0x10 */
     uint8_t  enable;     /* 0=stop,1=start */
     uint16_t period_ms;  /* >=5 */
 } EncoderStreamCtrlCommandTypeDef;
@@ -1564,11 +1564,11 @@ static void packet_RGB_Ctl_handle(struct PacketRawFrame *frame)
 static void packet_encoder_handle(struct PacketRawFrame *frame)
 {
     switch (frame->data_and_checksum[0]) {
-        case 0x90: { /* one-shot now */
-            encoders_read_once_and_report(0x90);
+        case RRC_ENC_ONESHOT: {
+            encoders_read_once_and_report(RRC_ENC_ONESHOT);
             break;
         }
-        case 0x91: { /* stream control */
+        case RRC_ENC_STREAM_CTRL: {
             const uint8_t *payload = frame->data_and_checksum;
             const size_t payload_len = frame->data_length;
             if (payload_len < 4U) {
@@ -1594,7 +1594,7 @@ static void packet_encoder_handle(struct PacketRawFrame *frame)
                 .period_ms_le = applied_period,
             };
 
-            (void)rrc_send_ack(RRC_FUNC_MOTOR, RRC_MOTOR_ENCODER_STREAM_CTRL,
+            (void)rrc_send_ack(RRC_FUNC_ENC, RRC_ENC_ACK,
                                 &ack, sizeof(ack), txid);
             break;
         }

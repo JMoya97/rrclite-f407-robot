@@ -2,8 +2,8 @@
 
 ## Encoders
 - Wrap constant: `MOTOR_JGA27_TICKS_PER_CIRCLE` defined as `1040.0f` in `Hiwonder/Portings/motors_param.h` (lines 31–33) and referenced by the encoder helpers.
-- One-shot path: `encoders_read_once_and_report()` in `Hiwonder/Portings/encoders_porting.c` (lines 79–88) latches TIM5/TIM2 counts and emits SYS/0x90.
-- Streaming path: `encoders_timer7_cb()` (lines 43–57) captures the same counters into `enc_c1..enc_c4`, and `encoders_task_entry()` (lines 96–120) wraps them into sequenced frames. Both paths use the same latched source data.
+- One-shot path: `encoders_read_once_and_report()` in `Hiwonder/Portings/encoders_porting.c` (lines 79–88) latches TIM5/TIM2 counts and emits ENC/0x20.
+- Streaming path: `encoders_timer7_cb()` (lines 43–57) captures the same counters into `enc_c1..enc_c4`, and `encoders_task_entry()` (lines 96–120) wraps them into ENC/0x11 sequenced frames. Both paths use the same latched source data.
 
 ## IMU dual-source (FUNC 0x07)
 - Default primary: `g_imu_primary` is zero-initialised in `Hiwonder/System/packet_handle.c` (lines 54–59), so source 0 (ICM-20948) is selected on boot.

@@ -55,7 +55,7 @@ uint32_t t_ms_le;
 Streaming sensors (battery, encoders, buttons, IMU) prepend a monotonically
 increasing `seq` field to each frame. Optional lightweight frame acknowledgers
 can be enabled for bring-up via the `ack_each_frame` flag in the stream control
-request. The stream ACK sub-commands (0x29, 0x99, 0xA9) simply mirror `{seq}` to
+request. The stream ACK sub-commands (0x29, 0x12, 0xA9) simply mirror `{seq}` to
 confirm delivery.
 
 Motor PWM command request and ACK payloads (little-endian) are:
@@ -134,6 +134,7 @@ UART within the specified window, and resume communication at the new rate.
 | IO/LED (0x04, sub 0x20) | LED (0x12) |
 | IO/BUZZER (0x04, sub 0x21) | BUZZ (0x13) |
 | IO/BUTTON (0x04, subs 0x22/0x23) | BUTTON (0x20) |
+| MOTOR encoder (0x03, subs 0x90/0x91/0x99) | ENC (0x21, subs 0x20/0x10/0x12) |
 | BUS_SERVO (0x06)     | STEER (0x11) |
 
 ### Protocol v2 (behavioral)
