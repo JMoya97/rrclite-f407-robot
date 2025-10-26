@@ -41,6 +41,7 @@ static const rrc_sub_entry_t g_sys_subs[] = {
 };
 
 static const rrc_sub_entry_t g_motor_subs[] = {
+    {RRC_MOTOR_PWM_SET, 4U}, /* motor_id + pwm + optional txid */
     {RRC_MOTOR_PWM_ACK_SINGLE, sizeof(rrc_motor_pwm_ack_t)},
     {RRC_MOTOR_PWM_ACK_MULTI, STREAM_PAYLOAD_MAX},
 };
@@ -59,10 +60,12 @@ static const rrc_sub_entry_t g_enc_subs[] = {
 };
 
 static const rrc_sub_entry_t g_led_subs[] = {
+    {RRC_LED_SET, 8U}, /* legacy blink struct (7B) + optional txid */
     {RRC_LED_ACK, sizeof(rrc_led_ack_t)},
 };
 
 static const rrc_sub_entry_t g_buzz_subs[] = {
+    {RRC_BUZZ_SET, 9U}, /* legacy pattern (8B) + optional txid */
     {RRC_BUZZ_ACK, sizeof(rrc_buzz_ack_t)},
 };
 
