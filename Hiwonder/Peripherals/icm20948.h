@@ -72,3 +72,4 @@ typedef struct __attribute__((packed)) {
 /* API */
 bool icm20948_begin(void);
 bool icm20948_read_all(imu20948_raw_t* out);      /* one coherent sample */
+bool icm20948_configure_preset(uint8_t preset);

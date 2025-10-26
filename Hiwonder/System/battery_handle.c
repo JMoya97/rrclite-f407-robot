@@ -5,6 +5,9 @@
 #include "packet_reports.h"
 #include "packet.h"
 #include "rgb_spi.h"
+#include "rrclite_packets.h"
+
+#include <limits.h>
 
 
 /* Battery LED thresholds (mV) for 2S LiPo - adjust as needed */
@@ -22,6 +25,52 @@ static uint16_t adc_value[2];
 
 /* 0: RED, 1: ORANGE, 2: YELLOW, 3: GREEN */
 static uint8_t battery_led_band = 255;
+
+static volatile uint8_t battery_stream_enabled;
+static uint16_t battery_stream_period_ms;
+static uint16_t battery_stream_elapsed_ms;
+static uint16_t batt_seq;
+
+extern volatile uint16_t rrc_heartbeat_period_ms;
+
+static uint16_t battery_latest_millivolts(void)
+{
+    const float v = battery_volt;
+    if (v <= 0.0f) {
+        return 0U;
+    }
+
+    const uint32_t rounded = (uint32_t)(v + 0.5f);
+    return (uint16_t)(rounded > UINT16_MAX ? UINT16_MAX : rounded);
+}
+
+uint16_t battery_set_stream(uint8_t enable, uint16_t period_ms)
+{
+    if (enable) {
+        if (period_ms < BATTERY_TASK_PERIOD) {
+            period_ms = BATTERY_TASK_PERIOD;
+        }
+
+        battery_stream_enabled = 1U;
+        battery_stream_period_ms = period_ms;
+        battery_stream_elapsed_ms = 0U;
+        batt_seq = 0U;
+
+        return period_ms;
+    }
+
+    battery_stream_enabled = 0U;
+    battery_stream_period_ms = 0U;
+    battery_stream_elapsed_ms = 0U;
+    batt_seq = 0U;
+
+    return 0U;
+}
+
+uint16_t battery_latest_millivolts_le(void)
+{
+    return battery_latest_millivolts();
+}
 
 
 extern osMessageQueueId_t lvgl_event_queueHandle;
@@ -61,8 +110,7 @@ void battery_check_timer_callback(void *argument)
         battery_volt = battery_volt == 0 ? volt : battery_volt * 0.95f + volt * 0.05f;
     }
     HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc_value, 2);
-    static int battery_report_count = 0;
-    battery_report_count++;
+    static uint32_t battery_report_elapsed_ms = 0U;
     /* BATTERY_LED_UPDATE: map voltage to color bands with hysteresis */
     int v = (int)battery_volt; /* mV */
     uint8_t next_band = battery_led_band;
@@ -81,26 +129,34 @@ void battery_check_timer_callback(void *argument)
         battery_led_band = next_band;
         battery_led_apply(battery_led_band);
     }
+    const uint16_t heartbeat_period = rrc_heartbeat_period_ms;
+    if (heartbeat_period > 0U) {
+        uint32_t elapsed = battery_report_elapsed_ms + BATTERY_TASK_PERIOD;
+        if (elapsed >= heartbeat_period) {
+            battery_report_elapsed_ms = 0U;
 
-
-    if(battery_report_count > (int)(1 * 1000 / BATTERY_TASK_PERIOD)) { /* Periodically report voltage over Bluetooth */
-        battery_report_count = 0;
-		PacketReportBatteryVoltageTypeDef report;
-		report.sub_cmd = 0x04;
-		report.voltage = (int)(battery_volt + 0.5f);
-        packet_transmit(&packet_controller, PACKET_FUNC_SYS, &report, sizeof(PacketReportBatteryVoltageTypeDef));
+            PacketReportBatteryVoltageTypeDef report;
+            report.sub_cmd = 0x04;
+            report.voltage = (int)(battery_volt + 0.5f);
+            packet_transmit(&packet_controller, PACKET_FUNC_SYS, &report,
+                            sizeof(PacketReportBatteryVoltageTypeDef));
 
 #if ENABLE_OLED
-		extern int oled_battery;
-		oled_battery = (int)(battery_volt + 0.5f);
+            extern int oled_battery;
+            oled_battery = (int)(battery_volt + 0.5f);
 #endif
-		
+
 #if ENABLE_LVGL
-        ObjectTypeDef object;
-        object.structure.type_id = OBJECT_TYPE_ID_BATTERY_VOLTAGE;
-        *((uint16_t*)object.structure.data) = (int)(battery_volt + 0.5f);
-        osMessageQueuePut(lvgl_event_queueHandle, &object, 0, 0);
+            ObjectTypeDef object;
+            object.structure.type_id = OBJECT_TYPE_ID_BATTERY_VOLTAGE;
+            *((uint16_t*)object.structure.data) = (int)(battery_volt + 0.5f);
+            osMessageQueuePut(lvgl_event_queueHandle, &object, 0, 0);
 #endif
+        } else {
+            battery_report_elapsed_ms = elapsed;
+        }
+    } else {
+        battery_report_elapsed_ms = 0U;
     }
 
 #if ENABLE_BATTERY_LOW_ALARM
@@ -115,6 +171,24 @@ void battery_check_timer_callback(void *argument)
         count = 0;
     }
 #endif
+
+    if (battery_stream_enabled) {
+        uint16_t elapsed = battery_stream_elapsed_ms + BATTERY_TASK_PERIOD;
+        if (elapsed >= battery_stream_period_ms) {
+            elapsed = 0U;
+
+            const rrc_sys_battery_stream_frame_t frame = {
+                .seq = batt_seq++,
+                .millivolts_le = battery_latest_millivolts(),
+            };
+
+            (void)rrc_transport_send(RRC_FUNC_SYS,
+                                     RRC_SYS_BATTERY_STREAM_CTRL,
+                                     &frame, sizeof(frame));
+        }
+
+        battery_stream_elapsed_ms = elapsed;
+    }
 }
 
 
