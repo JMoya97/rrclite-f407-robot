@@ -447,6 +447,9 @@ void rrc_imu_recovery_service(uint32_t now_ms)
             g_imu_retry_due_ms[source] = now_ms + delay;
         }
     }
+
+    (void)rrc_transport_send(RRC_FUNC_IMU, RRC_IMU_WHOAMI_STATUS,
+                             &resp, sizeof(resp));
 }
 
 uint8_t rrc_imu_stream_enabled(void)
