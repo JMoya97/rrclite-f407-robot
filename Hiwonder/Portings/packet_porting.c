@@ -8,6 +8,7 @@
 #include "lwmem_porting.h"
 #include "packet_handle.h"
 #include "rrclite_packets.h"
+#include "rrclite_stats.h"
 
 #define PACKET_RX_FIFO_BUFFER_SIZE 2048 /* FIFO buffer length */
 #define PACKET_RX_DMA_BUFFER_SIZE 256 /* DMA buffer length */
@@ -27,8 +28,6 @@ static uint32_t g_rrc_uart_current_baud = RRC_UART_BAUD_115200;
 extern osSemaphoreId_t packet_tx_idleHandle;
 extern osSemaphoreId_t packet_rx_not_emptyHandle;
 extern osMessageQueueId_t packet_tx_queueHandle;
-
-static uint8_t g_txq_high_water = 0U;
 
 bool rrc_transport_send(uint8_t func, uint8_t sub, const void *payload, size_t len)
 {
@@ -89,9 +88,7 @@ static int send_packet(struct PacketController *self, struct PacketRawFrame *fra
     (void)self;
 
     const uint32_t curr = osMessageQueueGetCount(packet_tx_queueHandle);
-    if (curr > g_txq_high_water) {
-        g_txq_high_water = (uint8_t)curr;
-    }
+    rrc_txq_note_depth((uint8_t)curr);
 
     return osMessageQueuePut(packet_tx_queueHandle, &frame, 0, 10);
 }

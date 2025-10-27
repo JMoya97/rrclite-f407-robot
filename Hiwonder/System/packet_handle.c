@@ -11,6 +11,7 @@
 #include "rrclite_config.h"
 #include "rrclite_packets.h"
 #include "rrclite_health.h"
+#include "rrclite_stats.h"
 #include "rrc_backoff.h"
 
 #include <stdbool.h>
@@ -188,9 +189,9 @@ static void rrc_io_recovery_schedule(rrc_io_recovery_state_t *state,
     if (state->err_active == 0U) {
         state->err_active = 1U;
         if (func == RRC_FUNC_STEER) {
-            rrc_stats_note_err_steer();
+            rrc_stats_inc_err_steer();
         } else {
-            rrc_stats_note_err_io();
+            rrc_stats_inc_err_io();
         }
         (void)rrc_send_err(func, sub, RRC_SYS_ERR_IO_FAIL, detail, now, 0U);
         rrc_backoff_reset(&state->backoff);
@@ -381,7 +382,7 @@ void rrc_recovery_service(uint32_t now_ms)
     rrc_io_recovery_service(now_ms);
 }
 
-void rrc_fill_health(rrc_health_t *out)
+void rrc_fill_health_impl(rrc_health_t *out)
 {
     if (out == NULL) {
         return;
@@ -447,7 +448,7 @@ void rrc_fill_health(rrc_health_t *out)
     out->imu_err = (imu0_err || imu1_err) ? 1U : 0U;
     out->io_err = (g_led_recovery.err_active || g_buzzer_recovery.err_active) ? 1U : 0U;
 
-    out->retry_in_ms = rrc_health_next_retry_delta(now_ms);
+    out->retry_in_ms_min = rrc_health_next_retry_delta(now_ms);
 }
 
 #pragma pack(1)
@@ -1223,7 +1224,7 @@ static void packet_motor_handle(struct PacketRawFrame *frame)
                 motor_pwm_last_error = RRC_SYS_ERR_IO_FAIL;
                 if (g_motor_err_active == 0U) {
                     g_motor_err_active = 1U;
-                    rrc_stats_note_err_motor();
+                    rrc_stats_inc_err_motor();
                     (void)rrc_send_err(RRC_FUNC_MOTOR, RRC_MOTOR_PWM_SET,
                                        RRC_SYS_ERR_IO_FAIL, raw_id,
                                        now, err_txid);

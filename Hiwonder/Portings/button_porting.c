@@ -6,6 +6,7 @@
 #include "gpio.h"
 #include "lwmem_porting.h"
 #include "rrclite_packets.h"
+#include "rrclite_stats.h"
 
 ButtonObjectTypeDef* buttons[2];
 static uint32_t button_read_pin(ButtonObjectTypeDef *self); /* Read button GPIO */
@@ -16,7 +17,6 @@ static volatile uint8_t buttons_stream_enabled;
 static uint16_t buttons_stream_period_ms;
 static uint16_t buttons_stream_elapsed_ms;
 static uint16_t buttons_seq;
-static volatile uint32_t g_drops_btn;
 
 static uint8_t buttons_current_mask(void)
 {
@@ -97,7 +97,7 @@ void button_timer_callback(void *argument)
                 elapsed = 0U;
 
                 if (osMessageQueueGetCount(packet_tx_queueHandle) >= 56U) {
-                    g_drops_btn++;
+                    rrc_stats_inc_drop_btn();
                     buttons_stream_elapsed_ms = elapsed;
                     continue;
                 }
@@ -114,11 +114,6 @@ void button_timer_callback(void *argument)
 
             buttons_stream_elapsed_ms = elapsed;
         }
-}
-
-uint32_t rrc_button_stream_drops(void)
-{
-    return g_drops_btn;
 }
 
 uint8_t rrc_button_stream_enabled(void)

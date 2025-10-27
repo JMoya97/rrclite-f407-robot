@@ -20,14 +20,7 @@ bool rrc_imu_probe_source(uint8_t source_id, uint8_t *whoami_out);
 extern uint16_t battery_latest_millivolts_le(void);
 #endif
 
-volatile uint16_t g_selftest_bits;
-
-uint16_t rrc_selftest_snapshot(void)
-{
-    return g_selftest_bits;
-}
-
-void rrc_run_selftest(void)
+void rrc_selftest_run_once(void)
 {
     uint16_t bits = 0U;
 
@@ -68,5 +61,5 @@ void rrc_run_selftest(void)
 
     bits |= ST_OK_UART;
 
-    g_selftest_bits = bits;
+    rrc_set_selftest_bits(bits);
 }

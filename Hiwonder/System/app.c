@@ -63,7 +63,7 @@ void app_task_entry(void *argument)
     packet_init();
     packet_handle_init();
 
-    rrc_run_selftest();
+    rrc_selftest_run_once();
     
     osDelay(50);
     

@@ -6,13 +6,13 @@
 #include "packet.h"
 #include "packet_reports.h"
 #include "rrclite_packets.h"
+#include "rrclite_stats.h"
 
 #define TIM7_PERIOD_MS 10
 
 /* latest latched counters (updated from TIM7 cb) */
 static uint16_t enc_c1, enc_c2;
 static uint16_t enc_seq;
-static volatile uint32_t g_drops_enc;
 
 /* paced stream state (local semaphore) */
 static osSemaphoreId_t s_enc_stream_sem;       /* local, not global */
@@ -96,7 +96,7 @@ void encoders_task_entry(void *argument) {
         // --- back-pressure guard (no vendor TX changes needed) ---
         extern osMessageQueueId_t packet_tx_queueHandle;
         if (osMessageQueueGetCount(packet_tx_queueHandle) >= 56U) {
-            g_drops_enc++;
+            rrc_stats_inc_drop_enc();
             continue;
         }
 
@@ -112,11 +112,6 @@ void encoders_task_entry(void *argument) {
                                  RRC_ENC_STREAM_FRAME,
                                  &frame, sizeof(frame));
     }
-}
-
-uint32_t rrc_enc_stream_drops(void)
-{
-    return g_drops_enc;
 }
 
 uint8_t rrc_enc_stream_enabled(void)

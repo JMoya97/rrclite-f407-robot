@@ -11,6 +11,7 @@ extern "C" {
 
 #include "rrclite_proto.h"
 #include "rrclite_health.h"
+#include "rrclite_stats.h"
 
 /* Legacy function IDs retained for the compatibility shim. */
 #define RRC_FUNC_MOTOR_LEGACY       0x03U
@@ -386,9 +387,6 @@ uint16_t rrc_payload_max_for(uint8_t func, uint8_t sub);
 
 bool rrc_dispatch_command(uint8_t func, uint8_t sub,
                           const void *payload, size_t len);
-
-uint8_t rrc_txq_depth(void);
-uint8_t rrc_txq_high_water(void);
 
 bool rrc_uart_baud_is_supported(uint32_t baud);
 uint16_t rrc_uart_baud_apply_delay_ms(uint32_t baud);

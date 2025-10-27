@@ -6,6 +6,7 @@
 #include "packet.h"
 #include "rgb_spi.h"
 #include "rrclite_packets.h"
+#include "rrclite_stats.h"
 #include "cmsis_os2.h"
 
 #include <limits.h>
@@ -31,7 +32,6 @@ static volatile uint8_t battery_stream_enabled;
 static uint16_t battery_stream_period_ms;
 static uint16_t battery_stream_elapsed_ms;
 static uint16_t batt_seq;
-static volatile uint32_t g_drops_batt;
 
 extern osMessageQueueId_t packet_tx_queueHandle;
 extern volatile uint32_t rrc_heartbeat_last_ms;
@@ -186,7 +186,7 @@ void battery_check_timer_callback(void *argument)
             elapsed = 0U;
 
             if (osMessageQueueGetCount(packet_tx_queueHandle) >= 56U) {
-                g_drops_batt++;
+                rrc_stats_inc_drop_batt();
             } else {
                 const rrc_batt_stream_frame_t frame = {
                     .seq = batt_seq++,
@@ -201,11 +201,6 @@ void battery_check_timer_callback(void *argument)
 
         battery_stream_elapsed_ms = elapsed;
     }
-}
-
-uint32_t rrc_batt_stream_drops(void)
-{
-    return g_drops_batt;
 }
 
 uint8_t rrc_batt_stream_enabled(void)

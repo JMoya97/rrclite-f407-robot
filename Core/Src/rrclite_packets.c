@@ -30,9 +30,6 @@ typedef struct {
 
 #define STREAM_PAYLOAD_MAX (RRC_MAX_PAYLOAD_LEN - 1U)
 
-extern uint8_t rrc_packet_txq_depth(void);
-extern uint8_t rrc_packet_txq_high_water(void);
-
 static const rrc_sub_entry_t g_sys_subs[] = {
     {RRC_SYS_MOTOR_FAILSAFE_SET, sizeof(rrc_sys_motor_failsafe_ack_t)},
     {RRC_SYS_HEALTH_PERIOD_SET, sizeof(rrc_sys_period_ack_t)},
@@ -215,8 +212,10 @@ static bool rrc_handle_sys_selftest(const void *payload, size_t len)
         return false;
     }
 
+    rrc_selftest_run_once();
+
     const rrc_sys_selftest_resp_t resp = {
-        .selftest_bits_le = rrc_selftest_snapshot(),
+        .selftest_bits_le = rrc_get_selftest_bits(),
     };
 
     return rrc_send_ack(RRC_FUNC_SYS, RRC_SYS_SELFTEST_GET,
@@ -376,16 +375,6 @@ bool rrc_send_recovered(uint8_t origin_func, uint8_t origin_sub,
 
     return rrc_transport_send(RRC_FUNC_SYS, RRC_SYS_RECOVERED_EVENT,
                               &evt, sizeof(evt));
-}
-
-uint8_t rrc_txq_depth(void)
-{
-    return rrc_packet_txq_depth();
-}
-
-uint8_t rrc_txq_high_water(void)
-{
-    return rrc_packet_txq_high_water();
 }
 
 bool rrc_uart_baud_is_supported(uint32_t baud)

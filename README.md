@@ -11,11 +11,14 @@
   - MOTOR (0x10) — raw PWM set (0x10) with ACK (0x03) and optional batch ACK (0x19)
   - STEER (0x11) — bus-servo position set with txid ACKs and recovery backoff
   - LED (0x12) — simple modes or WS2812 payloads with txid ACKs
-  - BUZZ (0x13) — tone frequency/duty/duration commands with txid ACKs
-  - BUTTON (0x20) — one-shot reads and sequenced stream frames with optional frame ACK
-  - ENC (0x21) — encoder one-shot, stream control, and sequenced frames
-  - BATT (0x22) — battery one-shot and sequenced stream frames
-  - IMU (0x23) — dual-source streams with optional frame ACK 0xA9
+- BUZZ (0x13) — tone frequency/duty/duration commands with txid ACKs
+- BUTTON (0x20) — one-shot reads and sequenced stream frames with optional frame ACK
+- ENC (0x21) — encoder one-shot, stream control, and sequenced frames
+- BATT (0x22) — battery one-shot and sequenced stream frames
+- IMU (0x23) — dual-source streams with optional frame ACK 0xA9
+- SYS diagnostics — `0xF3` (stats), `0xF4` (health snapshot), `0xF5` (self-test bits)
+
+See **docs/raspi_quickstart.md** for byte-level examples and a host-side Python outline.
 
 ### Slim firmware configuration
 
