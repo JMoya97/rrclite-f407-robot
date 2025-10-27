@@ -4,8 +4,10 @@
 #include "packet.h"
 #include "cmsis_os2.h"
 #include <stdio.h>
+#include <string.h>
 #include "lwmem_porting.h"
 #include "packet_handle.h"
+#include "rrclite_packets.h"
 
 #define PACKET_RX_FIFO_BUFFER_SIZE 2048 /* FIFO buffer length */
 #define PACKET_RX_DMA_BUFFER_SIZE 256 /* DMA buffer length */
@@ -19,16 +21,48 @@ static void packet_dma_transmit_finished(UART_HandleTypeDef *huart);
 static int send_packet(struct PacketController *self, struct PacketRawFrame *frame);
 static void packet_uart_error_callblack(UART_HandleTypeDef *huart);
 
+static uint32_t g_rrc_uart_current_baud = RRC_UART_BAUD_115200;
+
 /* External dependencies for UART control */
 extern osSemaphoreId_t packet_tx_idleHandle;
 extern osSemaphoreId_t packet_rx_not_emptyHandle;
 extern osMessageQueueId_t packet_tx_queueHandle;
+
+bool rrc_transport_send(uint8_t func, uint8_t sub, const void *payload, size_t len)
+{
+    if (!rrc_func_is_supported(func)) {
+        return false;
+    }
+
+    if (!rrc_sub_is_supported(func, sub)) {
+        return false;
+    }
+
+    if (!rrc_payload_len_valid_for(func, sub, len)) {
+        return false;
+    }
+
+    const size_t total = len + 1U;
+    uint8_t frame[RRC_MAX_PAYLOAD_LEN];
+
+    frame[0] = sub;
+    if (len > 0U) {
+        if (payload == NULL) {
+            return false;
+        }
+        memcpy(&frame[1], payload, len);
+    }
+
+    return packet_transmit(&packet_controller, func, frame, total) == 0;
+}
 
 void packet_init(void)
 {
     memset(&packet_controller, 0, sizeof(packet_controller));
     packet_controller.state = PACKET_CONTROLLER_STATE_STARTBYTE1;
     packet_controller.data_index = 0;
+
+    g_rrc_uart_current_baud = huart1.Init.BaudRate;
 
     /* Initialize DMA receive buffers */
     static uint8_t rx_dma_buffer1[PACKET_RX_DMA_BUFFER_SIZE];
@@ -74,6 +108,34 @@ void packet_start_recv(void)
     /* Receive via ReceiveToIdle_DMA: triggers on full buffer or idle and invokes the callback */
     HAL_UARTEx_ReceiveToIdle_DMA(&huart1, packet_controller.rx_dma_buffers[packet_controller.rx_dma_buffer_index], PACKET_RX_DMA_BUFFER_SIZE);
     /* Start receiving */
+}
+
+uint32_t rrc_uart_current_baud(void)
+{
+    return g_rrc_uart_current_baud;
+}
+
+bool rrc_uart_runtime_reconfigure(uint32_t baud)
+{
+    if (baud == g_rrc_uart_current_baud) {
+        return true;
+    }
+
+    HAL_UART_AbortTransmit(&huart1);
+    HAL_UART_AbortReceive(&huart1);
+
+    if (HAL_UART_DeInit(&huart1) != HAL_OK) {
+        return false;
+    }
+
+    huart1.Init.BaudRate = baud;
+    if (HAL_UART_Init(&huart1) != HAL_OK) {
+        return false;
+    }
+
+    g_rrc_uart_current_baud = baud;
+    packet_start_recv();
+    return true;
 }
 
 static void packet_uart_error_callblack(UART_HandleTypeDef *huart)

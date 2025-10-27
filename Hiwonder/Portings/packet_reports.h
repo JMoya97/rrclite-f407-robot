@@ -45,7 +45,7 @@ typedef struct {
 } PacketReportIMU_Raw_V2_TypeDef;
 
 typedef struct {
-    uint8_t  sub;          /* 0x18 */
+    uint8_t  sub;          /* MOTOR/0x03 ACK sub-id */
     uint32_t t_ms;         /* HAL_GetTick() */
     uint8_t  motor_id;     /* 0..3 (we use 0..1) */
     int16_t  pwm_target;   /* clamped target we accepted */
@@ -64,7 +64,7 @@ typedef struct {
 } PacketReportMotorPwmAck_Multi;
 
 typedef struct {
-    uint8_t  sub;     /* 0x90 (one-shot) or 0x91 (stream) */
+    uint8_t  sub;     /* ENC/0x20 (one-shot) or ENC/0x11 (stream frame) */
     uint32_t t_ms;    /* HAL_GetTick() timestamp */
     uint16_t c1;      /* M1 encoder raw counter (TIM5) */
     uint16_t c2;      /* M2 encoder raw counter (TIM2) */
