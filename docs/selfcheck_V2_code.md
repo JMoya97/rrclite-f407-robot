@@ -12,7 +12,7 @@ pattern with line references and brief context.
 | IO function 0x04 (LED/BUZZ/BUTTON) | 3 | README.md |
 | Encoder subs 0x90/0x91/0x99 | 11 | Core/Inc/rrclite_packets.h; docs/PROTO_V2_MAP.md; README.md; Hiwonder/Misc/checksum.c |
 | SYS battery 0xA0/0xA1 | 25 | Core/Inc/rrclite_packets.h; docs/PROTO_V2_MAP.md; docs/selfcheck_A1.md; README.md; Hiwonder/Misc/checksum.c; Core/Src/system_stm32f4xx.c |
-| IMU legacy func 0x07 | 28 | Core/Inc/rrclite_packets.h; Core/Src/rrclite_legacy_shim.c; Hiwonder/System/packet_handle.c; various peripheral headers |
+| IMU legacy func 0x07 | 27 | Core/Inc/rrclite_packets.h; Hiwonder/System/packet_handle.c; various peripheral headers |
 
 ## Detailed findings
 
@@ -60,7 +60,6 @@ pattern with line references and brief context.
 - Core/Inc/rrclite_packets.h:29 — `#define RRC_FUNC_IMU_LEGACY 0x07U` (compat shim constant).
 - Core/Inc/rrclite_packets.h:282 — comment header “IMU (0x07) sub-commands” from legacy block.
 - Core/Inc/rrclite_packets.h:285-288 — IMU legacy sub-IDs retain `0xA0/0xA1` etc under the legacy header.
-- Core/Src/rrclite_legacy_shim.c:36-41 — translation entries accept `RRC_FUNC_IMU_LEGACY`.
 - Hiwonder/System/packet_handle.c:827 — unrelated bus-servo case `0x07` (servo voltage read; legacy peripheral command).
 - Hiwonder/System/packet_handle.c:1009 — servo offset case `0x07` (non-IMU command).
 - Hiwonder/Misc/checksum.c:37 — CRC table includes `0x07`.

@@ -1,10 +1,9 @@
 # Protocol v2 Mapping (Scaffolding)
 
-## Version & Compatibility Flags
+## Version
 
 - `RRC_PROTO_VERSION_MAJOR = 2`
 - `RRC_PROTO_VERSION_MINOR = 0`
-- `RRC_PROTO_COMPAT_LEGACY = 1` (compile-time gate for translating legacy v1 packets)
 
 ## Function ID Allocation
 
@@ -33,8 +32,6 @@ Common sub-ID conventions:
 
 ## Legacy (v1) → v2 Translation Table
 
-`rrc_legacy_translate_rx()` rewrites host-originated v1 packets before validation when `RRC_PROTO_COMPAT_LEGACY == 1`.
-
 | Legacy func/sub | v2 func/sub | Notes |
 |-----------------|-------------|-------|
 | SYS / `0xA0` | BATT / `0x20` (`ONE_SHOT`) | Battery millivolt query |
@@ -61,4 +58,4 @@ Common sub-ID conventions:
 | IMU / `0xA4` | IMU / `0x32` | Bias calibration |
 | IMU / `0xA5` | IMU / `0x02` (`GET`) | WHOAMI / status |
 
-This scaffold does not modify runtime behaviour; the shim is currently defined but not yet invoked.
+Hosts must now emit the v2 function IDs directly; legacy frames are no longer translated on the MCU.
