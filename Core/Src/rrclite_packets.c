@@ -48,12 +48,14 @@ static const rrc_sub_entry_t g_motor_subs[] = {
 
 static const rrc_sub_entry_t g_batt_subs[] = {
     {RRC_BATT_ONESHOT, sizeof(uint16_t)},
+    {RRC_BATT_STREAM_CTRL, sizeof(rrc_batt_stream_ack_t)},
     {RRC_BATT_ACK, sizeof(rrc_batt_stream_ack_t)},
     {RRC_BATT_STREAM_FRAME, sizeof(rrc_batt_stream_frame_t)},
 };
 
 static const rrc_sub_entry_t g_enc_subs[] = {
     {RRC_ENC_ONESHOT, sizeof(rrc_encoder_stream_frame_t)},
+    {RRC_ENC_STREAM_CTRL, sizeof(rrc_encoder_stream_ack_t)},
     {RRC_ENC_ACK, sizeof(rrc_encoder_stream_ack_t)},
     {RRC_ENC_STREAM_FRAME, sizeof(rrc_encoder_stream_frame_t)},
     {RRC_ENC_STREAM_ACK, sizeof(rrc_encoder_frame_ack_t)},
@@ -71,8 +73,8 @@ static const rrc_sub_entry_t g_buzz_subs[] = {
 
 static const rrc_sub_entry_t g_button_subs[] = {
     {RRC_BUTTON_ONESHOT, sizeof(uint8_t)},
-    {RRC_BUTTON_ACK, sizeof(rrc_button_stream_ack_t)},
     {RRC_BUTTON_STREAM_CTRL, sizeof(rrc_button_stream_ack_t)},
+    {RRC_BUTTON_ACK, sizeof(rrc_button_stream_ack_t)},
     {RRC_BUTTON_STREAM_FRAME, sizeof(rrc_button_stream_frame_t)},
     {RRC_BUTTON_STREAM_ACK, sizeof(rrc_button_frame_ack_t)},
 };
