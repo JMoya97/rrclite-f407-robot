@@ -4,7 +4,7 @@ Source: `Core/Src/rrclite_packets.c` (lookup tables `g_*_subs` + `g_func_table`)
 entries below reference the protocol v2 function identifiers defined in
 `Core/Inc/rrclite_packets.h` / `rrclite_proto.h`.
 
-## RRCV2_FUNC_SYS (0x00)
+## RRC_FUNC_SYS (0x00)
 
 | Sub-command | Hex | Direction | Max payload (bytes) | Notes |
 | --- | --- | --- | --- | --- |
@@ -18,33 +18,33 @@ entries below reference the protocol v2 function identifiers defined in
 | RRC_SYS_VERSION | 0xF0 | TX (RESP) | 4 | `{major, minor, patch}`
 | RRC_SYS_CAPABILITIES | 0xF1 | TX (RESP) | 16 | Capability bitmap & limits
 
-## RRCV2_FUNC_MOTOR (0x10)
+## RRC_FUNC_MOTOR (0x10)
 
 | Sub-command | Hex | Direction | Max payload (bytes) | Notes |
 | --- | --- | --- | --- | --- |
 | RRC_MOTOR_PWM_ACK_SINGLE | 0x03 | TX (ACK) | 6 | `{txid, motor_id, pwm_target, pwm_applied}`
 | RRC_MOTOR_PWM_ACK_MULTI | 0x19 | TX (RESP) | 254 | Batch ACK list
 
-## RRCV2_FUNC_STEER (0x11)
+## RRC_FUNC_STEER (0x11)
 
 | Sub-command | Hex | Direction | Max payload (bytes) | Notes |
 | --- | --- | --- | --- | --- |
 | RRC_STEER_SET_POSITION | 0x01 | RX (REQ) | 255 | Parsed + validated in handler
 | RRC_STEER_ACK | 0x03 | TX (ACK) | 2 | `{txid, applied_count}`
 
-## RRCV2_FUNC_LED (0x12)
+## RRC_FUNC_LED (0x12)
 
 | Sub-command | Hex | Direction | Max payload (bytes) | Notes |
 | --- | --- | --- | --- | --- |
 | RRC_LED_ACK | 0x03 | TX (ACK) | 2 | `{txid, mode_or_onoff}`
 
-## RRCV2_FUNC_BUZZ (0x13)
+## RRC_FUNC_BUZZ (0x13)
 
 | Sub-command | Hex | Direction | Max payload (bytes) | Notes |
 | --- | --- | --- | --- | --- |
 | RRC_BUZZ_ACK | 0x03 | TX (ACK) | 6 | `{txid, freq_hz, duty_pct, duration_ms}`
 
-## RRCV2_FUNC_BUTTON (0x20)
+## RRC_FUNC_BUTTON (0x20)
 
 | Sub-command | Hex | Direction | Max payload (bytes) | Notes |
 | --- | --- | --- | --- | --- |
@@ -54,7 +54,7 @@ entries below reference the protocol v2 function identifiers defined in
 | RRC_BUTTON_STREAM_ACK | 0x12 | TX (FRAME-ACK) | 2 | `{seq}`
 | RRC_BUTTON_ONESHOT | 0x20 | TX (RESP) | 1 | `{mask}`
 
-## RRCV2_FUNC_ENC (0x21)
+## RRC_FUNC_ENC (0x21)
 
 | Sub-command | Hex | Direction | Max payload (bytes) | Notes |
 | --- | --- | --- | --- | --- |
@@ -64,7 +64,7 @@ entries below reference the protocol v2 function identifiers defined in
 | RRC_ENC_STREAM_ACK | 0x12 | TX (FRAME-ACK) | 2 | `{seq}`
 | RRC_ENC_ONESHOT | 0x20 | TX (RESP) | 10 | `{c1..c4}`
 
-## RRCV2_FUNC_BATT (0x22)
+## RRC_FUNC_BATT (0x22)
 
 | Sub-command | Hex | Direction | Max payload (bytes) | Notes |
 | --- | --- | --- | --- | --- |
@@ -73,7 +73,7 @@ entries below reference the protocol v2 function identifiers defined in
 | RRC_BATT_STREAM_FRAME | 0x11 | TX (FRAME) | 4 | `{seq, millivolts}`
 | RRC_BATT_ONESHOT | 0x20 | TX (RESP) | 2 | `{millivolts}`
 
-## RRCV2_FUNC_IMU (0x23)
+## RRC_FUNC_IMU (0x23)
 
 | Sub-command | Hex | Direction | Max payload (bytes) | Notes |
 | --- | --- | --- | --- | --- |

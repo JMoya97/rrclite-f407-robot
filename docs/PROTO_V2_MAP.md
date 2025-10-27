@@ -10,15 +10,15 @@
 
 | v2 Function | Value | Legacy coverage |
 |-------------|-------|-----------------|
-| `RRCV2_FUNC_SYS`    | `0x00` | System commands, heartbeat, version, capabilities |
-| `RRCV2_FUNC_MOTOR`  | `0x10` | Motor PWM set / telemetry |
-| `RRCV2_FUNC_STEER`  | `0x11` | Bus-servo steering commands |
-| `RRCV2_FUNC_LED`    | `0x12` | LED output commands |
-| `RRCV2_FUNC_BUZZ`   | `0x13` | Buzzer output commands |
-| `RRCV2_FUNC_BUTTON` | `0x20` | Button one-shot & stream control |
-| `RRCV2_FUNC_ENC`    | `0x21` | Encoder one-shot & stream control |
-| `RRCV2_FUNC_BATT`   | `0x22` | Battery one-shot & stream control |
-| `RRCV2_FUNC_IMU`    | `0x23` | IMU data & configuration |
+| `RRC_FUNC_SYS`    | `0x00` | System commands, heartbeat, version, capabilities |
+| `RRC_FUNC_MOTOR`  | `0x10` | Motor PWM set / telemetry |
+| `RRC_FUNC_STEER`  | `0x11` | Bus-servo steering commands |
+| `RRC_FUNC_LED`    | `0x12` | LED output commands |
+| `RRC_FUNC_BUZZ`   | `0x13` | Buzzer output commands |
+| `RRC_FUNC_BUTTON` | `0x20` | Button one-shot & stream control |
+| `RRC_FUNC_ENC`    | `0x21` | Encoder one-shot & stream control |
+| `RRC_FUNC_BATT`   | `0x22` | Battery one-shot & stream control |
+| `RRC_FUNC_IMU`    | `0x23` | IMU data & configuration |
 
 Common sub-ID conventions:
 

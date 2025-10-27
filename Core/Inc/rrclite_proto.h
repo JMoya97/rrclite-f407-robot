@@ -1,16 +1,16 @@
 #pragma once
 
 typedef enum {
-    RRCV2_FUNC_SYS = 0x00,
-    RRCV2_FUNC_MOTOR = 0x10,
-    RRCV2_FUNC_STEER = 0x11,
-    RRCV2_FUNC_LED = 0x12,
-    RRCV2_FUNC_BUZZ = 0x13,
-    RRCV2_FUNC_BUTTON = 0x20,
-    RRCV2_FUNC_ENC = 0x21,
-    RRCV2_FUNC_BATT = 0x22,
-    RRCV2_FUNC_IMU = 0x23,
-} rrc_func_v2_t;
+    RRC_FUNC_SYS = 0x00,
+    RRC_FUNC_MOTOR = 0x10,
+    RRC_FUNC_STEER = 0x11,
+    RRC_FUNC_LED = 0x12,
+    RRC_FUNC_BUZZ = 0x13,
+    RRC_FUNC_BUTTON = 0x20,
+    RRC_FUNC_ENC = 0x21,
+    RRC_FUNC_BATT = 0x22,
+    RRC_FUNC_IMU = 0x23,
+} rrc_func_t;
 
 /*
  * Subcommand conventions (target mapping):

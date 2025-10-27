@@ -256,7 +256,7 @@ void rrc_io_recovery_tick(uint32_t now_ms)
                              rrc_led_try_reinit, now_ms);
     rrc_io_recovery_tick_one(&g_buzzer_recovery, RRC_FUNC_BUZZ, RRC_BUZZ_SET,
                              rrc_buzzer_try_reinit, now_ms);
-    rrc_io_recovery_tick_one(&g_steering_recovery, RRCV2_FUNC_STEER,
+    rrc_io_recovery_tick_one(&g_steering_recovery, RRC_FUNC_STEER,
                              RRC_STEER_SET_POSITION,
                              rrc_steering_try_reinit, now_ms);
 }
@@ -295,7 +295,7 @@ static void rrc_io_recovery_service(uint32_t now_ms)
                                 rrc_led_try_reinit, now_ms);
     rrc_io_recovery_service_one(&g_buzzer_recovery, RRC_FUNC_BUZZ, RRC_BUZZ_SET,
                                 rrc_buzzer_try_reinit, now_ms);
-    rrc_io_recovery_service_one(&g_steering_recovery, RRCV2_FUNC_STEER,
+    rrc_io_recovery_service_one(&g_steering_recovery, RRC_FUNC_STEER,
                                 RRC_STEER_SET_POSITION,
                                 rrc_steering_try_reinit, now_ms);
 }
@@ -764,7 +764,7 @@ static void packet_serial_servo_handle(struct PacketRawFrame *frame)
                 txid = frame->data_and_checksum[expected_len];
             } else if (payload_len != expected_len) {
                 const uint32_t now = HAL_GetTick();
-                (void)rrc_send_err(RRCV2_FUNC_STEER,
+                (void)rrc_send_err(RRC_FUNC_STEER,
                                    RRC_STEER_SET_POSITION,
                                    RRC_SYS_ERR_INVALID_ARG, 0U, now, 0U);
                 break;
@@ -780,7 +780,7 @@ static void packet_serial_servo_handle(struct PacketRawFrame *frame)
                                               servo_id, (int)position,
                                               duration) != 0) {
                     rrc_io_recovery_schedule(&g_steering_recovery,
-                                             RRCV2_FUNC_STEER, 0x01U,
+                                             RRC_FUNC_STEER, 0x01U,
                                              servo_id, position, duration);
                     failure = true;
                     break;
@@ -794,7 +794,7 @@ static void packet_serial_servo_handle(struct PacketRawFrame *frame)
             }
 
             rrc_io_recovery_clear(&g_steering_recovery,
-                                  RRCV2_FUNC_STEER, 0x01U);
+                                  RRC_FUNC_STEER, 0x01U);
 
             if (applied_count > 0U) {
                 const rrc_steer_ack_t ack = {
@@ -802,7 +802,7 @@ static void packet_serial_servo_handle(struct PacketRawFrame *frame)
                     .applied_count = applied_count,
                 };
 
-                (void)rrc_send_ack(RRCV2_FUNC_STEER, RRC_STEER_ACK,
+                (void)rrc_send_ack(RRC_FUNC_STEER, RRC_STEER_ACK,
                                     &ack, sizeof(ack), txid);
             }
             break;

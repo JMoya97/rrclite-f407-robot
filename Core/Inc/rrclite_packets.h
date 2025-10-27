@@ -11,18 +11,6 @@ extern "C" {
 
 #include "rrclite_proto.h"
 
-typedef enum {
-    RRC_FUNC_SYS                = 0x00U,
-    RRC_FUNC_MOTOR              = RRCV2_FUNC_MOTOR,
-    RRC_FUNC_IMU                = RRCV2_FUNC_IMU,
-    RRC_FUNC_ENC                = RRCV2_FUNC_ENC,
-    RRC_FUNC_STEER              = RRCV2_FUNC_STEER,
-    RRC_FUNC_LED                = RRCV2_FUNC_LED,
-    RRC_FUNC_BUZZ               = RRCV2_FUNC_BUZZ,
-    RRC_FUNC_BUTTON             = RRCV2_FUNC_BUTTON,
-    RRC_FUNC_BATT               = RRCV2_FUNC_BATT,
-} rrc_func_t;
-
 /* Legacy function IDs retained for the compatibility shim. */
 #define RRC_FUNC_MOTOR_LEGACY       0x03U
 #define RRC_FUNC_IO_LEGACY          0x04U
