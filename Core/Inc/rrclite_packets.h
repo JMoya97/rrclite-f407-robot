@@ -39,7 +39,7 @@ typedef enum {
 } rrc_sys_sub_t;
 
 #define RRC_PROTO_VERSION_MAJOR      0x02U
-#define RRC_PROTO_VERSION_MINOR      0x00U
+#define RRC_PROTO_VERSION_MINOR      0x01U
 #define RRC_PROTO_VERSION_PATCH      0x0000U
 
 typedef enum {
@@ -49,6 +49,7 @@ typedef enum {
     RRC_SYS_CAP_DUAL_IMU           = (1U << 3),
     RRC_SYS_CAP_BAUD_1M            = (1U << 4),
     RRC_SYS_CAP_FAILSAFE           = (1U << 5),
+    RRC_SYS_CAP_IDS_STABLE         = (1U << 6),
 } rrc_sys_capability_flags_t;
 
 typedef struct __attribute__((packed)) {

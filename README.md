@@ -107,15 +107,16 @@ current rate with `{txid, baud_le, apply_after_ms_le}` (default 100 ms) and
 switches once the delay expires. Hosts must wait for the ACK, reconfigure their
 UART within the specified window, and resume communication at the new rate.
 
-### Protocol v2 scaffolding
+### Protocol 2 scaffolding
 
-- `SYS/0xF0` reports the firmware protocol revision `{major=2, minor=0, patch=0}`.
+- `SYS/0xF0` reports the firmware protocol revision `{major=2, minor=1, patch=0}`.
 - `SYS/0xF1` exposes capability bits (txid ACKs, sequenced streams, optional
-  frame ACKs, dual-IMU streaming, 1 Mbaud support, and motor failsafe) along
-  with the maximum supported UART baud (1,000,000 bps) plus representative IMU
-  (200 Hz) and encoder (1,000 Hz) streaming rates.
+  frame ACKs, dual-IMU streaming, 1 Mbaud support, motor failsafe, and a
+  stability flag indicating the function/sub-id set is final) along with the
+  maximum supported UART baud (1,000,000 bps) plus representative IMU (200 Hz)
+  and encoder (1,000 Hz) streaming rates.
 
-#### Protocol v2 ID map (target)
+#### Protocol 2 ID map (target)
 
 | Function | ID |
 | -------- | -- |
@@ -138,10 +139,11 @@ UART within the specified window, and resume communication at the new rate.
 | MOTOR encoder (0x03, subs 0x90/0x91/0x99) | ENC (0x21, subs 0x20/0x10/0x12) |
 | BUS_SERVO (0x06)     | STEER (0x11) |
 
-### Protocol v2 (behavioral)
+### Protocol 2 (behavioral)
 
 - **Version & capabilities** — Hosts can query `SYS/0xF0` (Version) for
-  `{2,0,0}` and `SYS/0xF1` (Capabilities) for protocol flags, maximum UART baud
+  `{2,1,0}` and `SYS/0xF1` (Capabilities) for protocol flags (including the
+  `ids_stable` bit), maximum UART baud
   (1,000,000 bps), and representative IMU/encoder rates.
 - **ACK/NACK** — Actuator and stream-control requests accept an optional txid
   byte that is echoed in positive ACKs. When hardware rejects a command the
