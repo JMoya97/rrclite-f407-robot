@@ -6,6 +6,7 @@
 #include "stm32f4xx_hal.h"
 #include "rrclite_packets.h"
 #include "rrclite_stats.h"
+#include "packet_porting.h"
 #include "rrc_backoff.h"
 #include "QMI8658.h"
 
@@ -14,6 +15,8 @@
 extern osSemaphoreId_t IMU_data_readyHandle;
 extern osMessageQueueId_t packet_tx_queueHandle;
 extern rrc_imu_bias_store_t g_imu_bias[2];
+
+void rrc_imu_recovery_tick(uint32_t now_ms);
 
 static volatile uint8_t imu_stream_enabled;
 static uint8_t imu_stream_sources_mask;
@@ -47,8 +50,6 @@ static bool imu0_ensure_init(void);
 static bool imu1_ensure_init(void);
 static bool imu0_read_sample(rrc_imu_sample_t *out);
 static bool imu1_read_sample(rrc_imu_sample_t *out);
-static bool icm20948_apply_preset(uint8_t preset);
-
 #if ENABLE_IMU
 static void imu_backoff_init_once(uint8_t source_id)
 {
@@ -246,11 +247,6 @@ static bool imu1_read_sample(rrc_imu_sample_t *out)
     out->temp_c = 0.0f;
 
     return true;
-}
-
-static bool icm20948_apply_preset(uint8_t preset)
-{
-    return icm20948_configure_preset(preset);
 }
 
 void imu_task_entry(void *argument)
@@ -451,6 +447,9 @@ void rrc_imu_recovery_service(uint32_t now_ms)
             g_imu_retry_due_ms[source] = now_ms + delay;
         }
     }
+
+    (void)rrc_transport_send(RRC_FUNC_IMU, RRC_IMU_WHOAMI_STATUS,
+                             &resp, sizeof(resp));
 }
 
 uint8_t rrc_imu_stream_enabled(void)

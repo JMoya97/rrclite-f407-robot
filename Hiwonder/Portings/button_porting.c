@@ -7,6 +7,7 @@
 #include "lwmem_porting.h"
 #include "rrclite_packets.h"
 #include "rrclite_stats.h"
+#include "packet_porting.h"
 
 ButtonObjectTypeDef* buttons[2];
 static uint32_t button_read_pin(ButtonObjectTypeDef *self); /* Read button GPIO */
@@ -99,7 +100,7 @@ void button_timer_callback(void *argument)
                 if (osMessageQueueGetCount(packet_tx_queueHandle) >= 56U) {
                     rrc_stats_inc_drop_btn();
                     buttons_stream_elapsed_ms = elapsed;
-                    continue;
+                    return;
                 }
 
                 const rrc_button_stream_frame_t frame = {

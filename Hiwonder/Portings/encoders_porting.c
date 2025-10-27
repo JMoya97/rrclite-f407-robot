@@ -7,6 +7,7 @@
 #include "packet_reports.h"
 #include "rrclite_packets.h"
 #include "rrclite_stats.h"
+#include "packet_porting.h"
 
 #define TIM7_PERIOD_MS 10
 

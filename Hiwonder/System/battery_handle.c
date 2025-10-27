@@ -8,6 +8,7 @@
 #include "rrclite_packets.h"
 #include "rrclite_stats.h"
 #include "cmsis_os2.h"
+#include "packet_porting.h"
 
 #include <limits.h>
 

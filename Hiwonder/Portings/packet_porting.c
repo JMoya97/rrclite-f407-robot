@@ -2,6 +2,7 @@
 #include "lwrb.h"
 #include "usart.h"
 #include "packet.h"
+#include "packet_porting.h"
 #include "cmsis_os2.h"
 #include <stdio.h>
 #include <string.h>
