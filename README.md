@@ -6,11 +6,16 @@
   - Hiwonder/Portings/motor_porting.c
   - Hiwonder/System/packet_handle.c
   - Core/Src/tim.c
-- Protocol:
-  - SYS (0x00): telemetry/control plus ACK/NACK helpers
-  - MOTOR (0x10): raw PWM set (0x10) with ACK (0x03) and optional batch ACK (0x19); encoder stream frames carry `seq`
-  - LED (0x12) / BUZZ (0x13) / BUTTON (0x20): discrete IO controls with txid ACKs and sequenced streams
-  - IMU (0x23): dual-source stream support with optional frame ACK 0xA9
+- Protocol 2 quick start:
+  - SYS (0x00) — telemetry/control plus ACK/NACK helpers
+  - MOTOR (0x10) — raw PWM set (0x10) with ACK (0x03) and optional batch ACK (0x19)
+  - STEER (0x11) — bus-servo position set with txid ACKs and recovery backoff
+  - LED (0x12) — simple modes or WS2812 payloads with txid ACKs
+  - BUZZ (0x13) — tone frequency/duty/duration commands with txid ACKs
+  - BUTTON (0x20) — one-shot reads and sequenced stream frames with optional frame ACK
+  - ENC (0x21) — encoder one-shot, stream control, and sequenced frames
+  - BATT (0x22) — battery one-shot and sequenced stream frames
+  - IMU (0x23) — dual-source streams with optional frame ACK 0xA9
 
 ### Slim firmware configuration
 
@@ -116,7 +121,7 @@ UART within the specified window, and resume communication at the new rate.
   maximum supported UART baud (1,000,000 bps) plus representative IMU (200 Hz)
   and encoder (1,000 Hz) streaming rates.
 
-#### Protocol 2 ID map (target)
+#### Protocol 2 ID map
 
 | Function | ID |
 | -------- | -- |
@@ -130,14 +135,6 @@ UART within the specified window, and resume communication at the new rate.
 | BATT     | 0x22 |
 | IMU      | 0x23 |
 
-| Legacy function (v1) | v2 function |
-| -------------------- | ----------- |
-| SYS battery (0xA0/0xA1) | BATT (0x22, subs 0x20/0x10/0x11) |
-| IO/LED (0x04, sub 0x20) | LED (0x12) |
-| IO/BUZZER (0x04, sub 0x21) | BUZZ (0x13) |
-| IO/BUTTON (0x04, subs 0x22/0x23) | BUTTON (0x20) |
-| MOTOR encoder (0x03, subs 0x90/0x91/0x99) | ENC (0x21, subs 0x20/0x10/0x12) |
-| BUS_SERVO (0x06)     | STEER (0x11) |
 
 ### Protocol 2 (behavioral)
 
@@ -187,7 +184,12 @@ UART within the specified window, and resume communication at the new rate.
 
 - `make check-no-legacy` &mdash; runs `scripts/check_no_legacy.sh` to ensure no
   legacy protocol identifiers (v1 function IDs, old SYS battery subs, etc.)
-  have crept back into the codebase outside the compatibility shim.
+  have crept back into the codebase.
+
+## History
+
+- Historical protocol mapping notes live in
+  [`docs/archive/PROTO_2_MAPPING.md`](docs/archive/PROTO_2_MAPPING.md).
 
 ## Repository maintenance
 
