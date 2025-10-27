@@ -39,6 +39,7 @@ typedef enum {
     RRC_SYS_CAPABILITIES           = 0xF1,
     RRC_SYS_STATS_GET              = 0xF3,
     RRC_SYS_HEALTH_GET             = 0xF4,
+    RRC_SYS_SELFTEST_GET           = 0xF5,
 } rrc_sys_sub_t;
 
 #define RRC_PROTO_VERSION_MAJOR      0x02U
@@ -70,6 +71,10 @@ typedef struct __attribute__((packed)) {
     uint16_t max_imu_hz_le;
     uint16_t max_enc_hz_le;
 } rrc_sys_capabilities_resp_t;
+
+typedef struct __attribute__((packed)) {
+    uint16_t selftest_bits_le;
+} rrc_sys_selftest_resp_t;
 
 typedef enum {
     RRC_SYS_ERR_INVALID_ARG        = 0x01,

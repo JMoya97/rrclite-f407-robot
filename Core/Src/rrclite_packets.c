@@ -45,6 +45,7 @@ static const rrc_sub_entry_t g_sys_subs[] = {
     {RRC_SYS_CAPABILITIES, sizeof(rrc_sys_capabilities_resp_t)},
     {RRC_SYS_STATS_GET, sizeof(rrc_stats_snapshot_t)},
     {RRC_SYS_HEALTH_GET, sizeof(rrc_health_t)},
+    {RRC_SYS_SELFTEST_GET, sizeof(rrc_sys_selftest_resp_t)},
 };
 
 static const rrc_sub_entry_t g_motor_subs[] = {
@@ -206,6 +207,22 @@ static bool rrc_handle_sys_health(const void *payload, size_t len)
                         &health, sizeof(health), RRC_TXID_NONE);
 }
 
+static bool rrc_handle_sys_selftest(const void *payload, size_t len)
+{
+    (void)payload;
+
+    if (len != 0U) {
+        return false;
+    }
+
+    const rrc_sys_selftest_resp_t resp = {
+        .selftest_bits_le = rrc_selftest_snapshot(),
+    };
+
+    return rrc_send_ack(RRC_FUNC_SYS, RRC_SYS_SELFTEST_GET,
+                        &resp, sizeof(resp), RRC_TXID_NONE);
+}
+
 static bool rrc_dispatch_sys(uint8_t sub, const void *payload, size_t len)
 {
     switch (sub) {
@@ -217,6 +234,8 @@ static bool rrc_dispatch_sys(uint8_t sub, const void *payload, size_t len)
         return rrc_handle_sys_stats(payload, len);
     case RRC_SYS_HEALTH_GET:
         return rrc_handle_sys_health(payload, len);
+    case RRC_SYS_SELFTEST_GET:
+        return rrc_handle_sys_selftest(payload, len);
     default:
         break;
     }

@@ -2,6 +2,15 @@
 
 #include <stdint.h>
 
+#define ST_OK_IMU0      (1u << 0)
+#define ST_OK_IMU1      (1u << 1)
+#define ST_OK_ENCODERS  (1u << 2)
+#define ST_OK_BATTERY   (1u << 3)
+#define ST_OK_UART      (1u << 4)
+#define ST_WARN_WS2812  (1u << 5)
+
+extern volatile uint16_t g_selftest_bits;
+
 typedef struct __attribute__((packed)) {
     uint8_t  system_state;
     uint8_t  uart_apply_pending;
@@ -41,3 +50,6 @@ void rrc_stats_note_err_motor(void);
 void rrc_stats_note_err_steer(void);
 void rrc_stats_note_err_imu(void);
 void rrc_stats_note_err_io(void);
+
+void rrc_run_selftest(void);
+uint16_t rrc_selftest_snapshot(void);

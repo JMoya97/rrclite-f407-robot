@@ -494,6 +494,27 @@ uint32_t rrc_imu_next_retry_ms(uint8_t source_id)
     return g_imu_retry_due_ms[source_id];
 }
 
+bool rrc_imu_probe_source(uint8_t source_id, uint8_t *whoami_out)
+{
+    bool available = false;
+
+    if (source_id == 0U) {
+        available = imu0_ensure_init();
+        if (whoami_out != NULL) {
+            *whoami_out = imu0_whoami;
+        }
+    } else if (source_id == 1U) {
+        available = imu1_ensure_init();
+        if (whoami_out != NULL) {
+            *whoami_out = imu1_whoami;
+        }
+    } else if (whoami_out != NULL) {
+        *whoami_out = 0U;
+    }
+
+    return available;
+}
+
 #else
 
 uint32_t imu_stream_queue_drops(void)
@@ -522,6 +543,15 @@ uint32_t rrc_imu_next_retry_ms(uint8_t source_id)
 {
     (void)source_id;
     return 0U;
+}
+
+bool rrc_imu_probe_source(uint8_t source_id, uint8_t *whoami_out)
+{
+    (void)source_id;
+    if (whoami_out != NULL) {
+        *whoami_out = 0U;
+    }
+    return false;
 }
 
 #endif // ENABLE_IMU

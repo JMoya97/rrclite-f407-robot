@@ -6,6 +6,7 @@
 #include "u8g2_porting.h"
 #include "packet_reports.h"
 #include "packet_handle.h"
+#include "rrclite_health.h"
 #include "serial_servo.h"
 #include "rgb_spi.h"
 #include "encoder_motor.h"
@@ -61,6 +62,8 @@ void app_task_entry(void *argument)
 
     packet_init();
     packet_handle_init();
+
+    rrc_run_selftest();
     
     osDelay(50);
     
