@@ -10,10 +10,13 @@
 ButtonObjectTypeDef* buttons[2];
 static uint32_t button_read_pin(ButtonObjectTypeDef *self); /* Read button GPIO */
 
+extern osMessageQueueId_t packet_tx_queueHandle;
+
 static volatile uint8_t buttons_stream_enabled;
 static uint16_t buttons_stream_period_ms;
 static uint16_t buttons_stream_elapsed_ms;
 static uint16_t buttons_seq;
+static volatile uint32_t g_drops_btn;
 
 static uint8_t buttons_current_mask(void)
 {
@@ -93,6 +96,12 @@ void button_timer_callback(void *argument)
             if (elapsed >= buttons_stream_period_ms) {
                 elapsed = 0U;
 
+                if (osMessageQueueGetCount(packet_tx_queueHandle) >= 56U) {
+                    g_drops_btn++;
+                    buttons_stream_elapsed_ms = elapsed;
+                    continue;
+                }
+
                 const rrc_button_stream_frame_t frame = {
                     .seq = buttons_seq++,
                     .mask = buttons_current_mask(),
@@ -105,4 +114,14 @@ void button_timer_callback(void *argument)
 
             buttons_stream_elapsed_ms = elapsed;
         }
+}
+
+uint32_t rrc_button_stream_drops(void)
+{
+    return g_drops_btn;
+}
+
+uint8_t rrc_button_stream_enabled(void)
+{
+    return buttons_stream_enabled;
 }

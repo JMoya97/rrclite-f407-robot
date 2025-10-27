@@ -18,7 +18,7 @@ static volatile uint8_t imu_stream_enabled;
 static uint8_t imu_stream_sources_mask;
 static uint8_t imu_stream_ack_each_frame;
 static uint16_t imu0_seq;
-static uint32_t g_imu_dropped_due_queue;
+static volatile uint32_t g_drops_imu;
 
 static bool imu0_init_done;
 static bool imu0_available;
@@ -77,6 +77,7 @@ static void imu_schedule_failure(uint8_t source_id, uint8_t origin_sub,
 
     if (g_imu_err_active[source_id] == 0U) {
         g_imu_err_active[source_id] = 1U;
+        rrc_stats_note_err_imu();
         (void)rrc_send_err(RRC_FUNC_IMU, origin_sub, err_code, source_id, now,
                            0U);
         rrc_backoff_reset(&g_imu_backoff[source_id]);
@@ -300,7 +301,7 @@ void imu_task_entry(void *argument)
         };
 
         if (osMessageQueueGetCount(packet_tx_queueHandle) >= 56U) {
-            g_imu_dropped_due_queue++;
+            g_drops_imu++;
             continue;
         }
 
@@ -422,9 +423,6 @@ void rrc_imu_recovery_tick(uint32_t now_ms)
 
         g_imu_retry_pending[source] = 1U;
     }
-
-    (void)rrc_transport_send(RRC_FUNC_IMU, RRC_IMU_WHOAMI_STATUS,
-                             &resp, sizeof(resp));
 }
 
 void rrc_imu_recovery_service(uint32_t now_ms)
@@ -453,6 +451,77 @@ void rrc_imu_recovery_service(uint32_t now_ms)
             g_imu_retry_due_ms[source] = now_ms + delay;
         }
     }
+}
+
+uint32_t imu_stream_queue_drops(void)
+{
+    return g_drops_imu;
+}
+
+uint8_t rrc_imu_stream_enabled(void)
+{
+    return imu_stream_enabled;
+}
+
+uint8_t rrc_imu_source_available(uint8_t source_id)
+{
+    if (source_id == 0U) {
+        return imu0_available ? 1U : 0U;
+    }
+
+    if (source_id == 1U) {
+        return imu1_available ? 1U : 0U;
+    }
+
+    return 0U;
+}
+
+uint8_t rrc_imu_error_active(uint8_t source_id)
+{
+    if (source_id >= 2U) {
+        return 0U;
+    }
+
+    return g_imu_err_active[source_id];
+}
+
+uint32_t rrc_imu_next_retry_ms(uint8_t source_id)
+{
+    if (source_id >= 2U) {
+        return 0U;
+    }
+
+    return g_imu_retry_due_ms[source_id];
+}
+
+#else
+
+uint32_t imu_stream_queue_drops(void)
+{
+    return 0U;
+}
+
+uint8_t rrc_imu_stream_enabled(void)
+{
+    return 0U;
+}
+
+uint8_t rrc_imu_source_available(uint8_t source_id)
+{
+    (void)source_id;
+    return 0U;
+}
+
+uint8_t rrc_imu_error_active(uint8_t source_id)
+{
+    (void)source_id;
+    return 0U;
+}
+
+uint32_t rrc_imu_next_retry_ms(uint8_t source_id)
+{
+    (void)source_id;
+    return 0U;
 }
 
 #endif // ENABLE_IMU

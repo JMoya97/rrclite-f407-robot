@@ -10,6 +10,7 @@ extern "C" {
 #include <stdint.h>
 
 #include "rrclite_proto.h"
+#include "rrclite_health.h"
 
 /* Legacy function IDs retained for the compatibility shim. */
 #define RRC_FUNC_MOTOR_LEGACY       0x03U
@@ -36,6 +37,8 @@ typedef enum {
     RRC_SYS_RECOVERED_EVENT        = 0xEF,
     RRC_SYS_VERSION                = 0xF0,
     RRC_SYS_CAPABILITIES           = 0xF1,
+    RRC_SYS_STATS_GET              = 0xF3,
+    RRC_SYS_HEALTH_GET             = 0xF4,
 } rrc_sys_sub_t;
 
 #define RRC_PROTO_VERSION_MAJOR      0x02U
@@ -378,6 +381,9 @@ uint16_t rrc_payload_max_for(uint8_t func, uint8_t sub);
 
 bool rrc_dispatch_command(uint8_t func, uint8_t sub,
                           const void *payload, size_t len);
+
+uint8_t rrc_txq_depth(void);
+uint8_t rrc_txq_high_water(void);
 
 bool rrc_uart_baud_is_supported(uint32_t baud);
 uint16_t rrc_uart_baud_apply_delay_ms(uint32_t baud);

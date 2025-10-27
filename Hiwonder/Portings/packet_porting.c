@@ -28,6 +28,8 @@ extern osSemaphoreId_t packet_tx_idleHandle;
 extern osSemaphoreId_t packet_rx_not_emptyHandle;
 extern osMessageQueueId_t packet_tx_queueHandle;
 
+static uint8_t g_txq_high_water = 0U;
+
 bool rrc_transport_send(uint8_t func, uint8_t sub, const void *payload, size_t len)
 {
     if (!rrc_func_is_supported(func)) {
@@ -84,6 +86,13 @@ void packet_init(void)
 
 static int send_packet(struct PacketController *self, struct PacketRawFrame *frame)
 {
+    (void)self;
+
+    const uint32_t curr = osMessageQueueGetCount(packet_tx_queueHandle);
+    if (curr > g_txq_high_water) {
+        g_txq_high_water = (uint8_t)curr;
+    }
+
     return osMessageQueuePut(packet_tx_queueHandle, &frame, 0, 10);
 }
 
@@ -176,5 +185,15 @@ static void packet_dma_transmit_finished(UART_HandleTypeDef * huart)
     } else {
         osSemaphoreRelease(packet_tx_idleHandle); /* Signal transmit idle */
     }
+}
+
+uint8_t rrc_packet_txq_depth(void)
+{
+    return (uint8_t)osMessageQueueGetCount(packet_tx_queueHandle);
+}
+
+uint8_t rrc_packet_txq_high_water(void)
+{
+    return g_txq_high_water;
 }
 

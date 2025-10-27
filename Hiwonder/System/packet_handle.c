@@ -10,12 +10,14 @@
 #include "cmsis_os2.h"
 #include "rrclite_config.h"
 #include "rrclite_packets.h"
+#include "rrclite_health.h"
 #include "rrc_backoff.h"
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
+#include <limits.h>
 
 extern uint16_t encoders_set_stream(uint8_t enable, uint16_t period_ms);
 extern void encoders_read_once_and_report(uint8_t sub);
@@ -29,11 +31,19 @@ extern uint16_t battery_set_stream(uint8_t enable, uint16_t period_ms);
 extern uint16_t battery_latest_millivolts_le(void);
 extern uint16_t buttons_set_stream(uint8_t enable, uint16_t period_ms);
 extern uint8_t buttons_read_mask(void);
+extern uint8_t rrc_enc_stream_enabled(void);
+extern uint8_t rrc_batt_stream_enabled(void);
+extern uint8_t rrc_button_stream_enabled(void);
+extern uint8_t rrc_imu_stream_enabled(void);
+extern uint8_t rrc_imu_source_available(uint8_t source_id);
+extern uint8_t rrc_imu_error_active(uint8_t source_id);
+extern uint32_t rrc_imu_next_retry_ms(uint8_t source_id);
 extern void rrc_imu_recovery_service(uint32_t now_ms);
 
 volatile uint16_t rrc_motor_failsafe_timeout_ms;
 volatile uint32_t rrc_motor_last_cmd_ms;
 volatile uint16_t rrc_heartbeat_period_ms = RRC_HEARTBEAT_MS;
+volatile uint32_t rrc_heartbeat_last_ms;
 
 static bool motor_pwm_fault_active;
 static rrc_error_code_t motor_pwm_last_error;
@@ -41,6 +51,7 @@ static rrc_backoff_t g_motor_backoff;
 static uint8_t g_motor_err_active;
 static uint32_t g_motor_retry_due_ms;
 static volatile uint8_t g_motor_retry_pending;
+static volatile uint8_t g_uart_apply_pending;
 
 /* IMU configuration shadow (RAM only, reset on boot). */
 static uint8_t g_imu_primary;
@@ -69,6 +80,8 @@ static void rrc_uart_apply_with_delay(uint32_t baud, uint16_t delay_ms,
         delay_ms = rrc_uart_baud_apply_delay_ms(baud);
     }
 
+    g_uart_apply_pending = 1U;
+
     if (delay_ms != 0U) {
         osDelay(delay_ms);
     }
@@ -79,6 +92,8 @@ static void rrc_uart_apply_with_delay(uint32_t baud, uint16_t delay_ms,
         (void)rrc_send_err(RRC_FUNC_SYS, RRC_SYS_UART_BAUD_SET,
                            RRC_SYS_ERR_IO_FAIL, 0U, now, err_txid);
     }
+
+    g_uart_apply_pending = 0U;
 }
 
 static bool motor_pwm_try_reinit(void)
@@ -172,6 +187,11 @@ static void rrc_io_recovery_schedule(rrc_io_recovery_state_t *state,
 
     if (state->err_active == 0U) {
         state->err_active = 1U;
+        if (func == RRC_FUNC_STEER) {
+            rrc_stats_note_err_steer();
+        } else {
+            rrc_stats_note_err_io();
+        }
         (void)rrc_send_err(func, sub, RRC_SYS_ERR_IO_FAIL, detail, now, 0U);
         rrc_backoff_reset(&state->backoff);
     }
@@ -300,11 +320,134 @@ static void rrc_io_recovery_service(uint32_t now_ms)
                                 rrc_steering_try_reinit, now_ms);
 }
 
+static uint16_t rrc_health_next_retry_delta(uint32_t now_ms)
+{
+    uint32_t next_delay = UINT32_MAX;
+
+    if (g_motor_err_active != 0U) {
+        const uint32_t due = g_motor_retry_due_ms;
+        uint32_t delta = (due <= now_ms) ? 0U : (due - now_ms);
+        if (delta < next_delay) {
+            next_delay = delta;
+        }
+    }
+
+    const rrc_io_recovery_state_t *io_states[] = {
+        &g_led_recovery,
+        &g_buzzer_recovery,
+        &g_steering_recovery,
+    };
+
+    for (size_t i = 0; i < (sizeof(io_states) / sizeof(io_states[0])); ++i) {
+        const rrc_io_recovery_state_t *state = io_states[i];
+        if ((state == NULL) || (state->err_active == 0U)) {
+            continue;
+        }
+
+        const uint32_t due = state->retry_due_ms;
+        uint32_t delta = (due <= now_ms) ? 0U : (due - now_ms);
+        if (delta < next_delay) {
+            next_delay = delta;
+        }
+    }
+
+    for (uint8_t source = 0U; source < 2U; ++source) {
+        if (rrc_imu_error_active(source) == 0U) {
+            continue;
+        }
+
+        const uint32_t due = rrc_imu_next_retry_ms(source);
+        uint32_t delta = (due <= now_ms) ? 0U : (due - now_ms);
+        if (delta < next_delay) {
+            next_delay = delta;
+        }
+    }
+
+    if (next_delay == UINT32_MAX) {
+        return 0U;
+    }
+
+    if (next_delay > UINT16_MAX) {
+        return UINT16_MAX;
+    }
+
+    return (uint16_t)next_delay;
+}
+
 void rrc_recovery_service(uint32_t now_ms)
 {
     rrc_motor_recovery_service(now_ms);
     rrc_imu_recovery_service(now_ms);
     rrc_io_recovery_service(now_ms);
+}
+
+void rrc_fill_health(rrc_health_t *out)
+{
+    if (out == NULL) {
+        return;
+    }
+
+    memset(out, 0, sizeof(*out));
+
+    const uint32_t now_ms = HAL_GetTick();
+
+    out->system_state = 1U; /* RUN */
+    out->uart_apply_pending = g_uart_apply_pending;
+
+    uint32_t hb_age = 0U;
+    if (rrc_heartbeat_last_ms != 0U) {
+        hb_age = (rrc_heartbeat_last_ms <= now_ms)
+                     ? (now_ms - rrc_heartbeat_last_ms)
+                     : 0U;
+    }
+    if (hb_age > UINT16_MAX) {
+        hb_age = UINT16_MAX;
+    }
+    out->heartbeat_age_ms = (uint16_t)hb_age;
+
+    out->failsafe_ms = rrc_motor_failsafe_timeout_ms;
+
+    uint8_t motor_state = 1U;
+    if ((rrc_motor_failsafe_timeout_ms > 0U) &&
+        (rrc_motor_last_cmd_ms != 0U) &&
+        ((int32_t)(now_ms - rrc_motor_last_cmd_ms) >=
+         (int32_t)rrc_motor_failsafe_timeout_ms)) {
+        motor_state = 0U;
+    }
+    if (g_motor_err_active != 0U) {
+        motor_state = 2U;
+    }
+    out->motor_state = motor_state;
+    out->motor_err = (g_motor_err_active != 0U) || motor_pwm_fault_active;
+
+    out->steer_state = g_steering_recovery.err_active ? 2U : 1U;
+    out->steer_err = g_steering_recovery.err_active ? 1U : 0U;
+
+    out->enc_state = rrc_enc_stream_enabled() ? 1U : 0U;
+    out->batt_state = rrc_batt_stream_enabled() ? 1U : 0U;
+    out->btn_state = rrc_button_stream_enabled() ? 1U : 0U;
+
+    const uint8_t imu_stream_on = rrc_imu_stream_enabled();
+    const uint8_t imu0_err = rrc_imu_error_active(0U);
+    const uint8_t imu1_err = rrc_imu_error_active(1U);
+    const uint8_t imu0_available = rrc_imu_source_available(0U);
+    const uint8_t imu1_available = rrc_imu_source_available(1U);
+
+    out->imu0_state = imu0_err ? 2U : (imu0_available ? 1U : 0U);
+    out->imu1_state = imu1_err ? 2U : (imu1_available ? 1U : 0U);
+    if (imu_stream_on == 0U) {
+        if (out->imu0_state == 1U) {
+            out->imu0_state = 0U;
+        }
+        if (out->imu1_state == 1U) {
+            out->imu1_state = 0U;
+        }
+    }
+
+    out->imu_err = (imu0_err || imu1_err) ? 1U : 0U;
+    out->io_err = (g_led_recovery.err_active || g_buzzer_recovery.err_active) ? 1U : 0U;
+
+    out->retry_in_ms = rrc_health_next_retry_delta(now_ms);
 }
 
 #pragma pack(1)
@@ -1080,6 +1223,7 @@ static void packet_motor_handle(struct PacketRawFrame *frame)
                 motor_pwm_last_error = RRC_SYS_ERR_IO_FAIL;
                 if (g_motor_err_active == 0U) {
                     g_motor_err_active = 1U;
+                    rrc_stats_note_err_motor();
                     (void)rrc_send_err(RRC_FUNC_MOTOR, RRC_MOTOR_PWM_SET,
                                        RRC_SYS_ERR_IO_FAIL, raw_id,
                                        now, err_txid);

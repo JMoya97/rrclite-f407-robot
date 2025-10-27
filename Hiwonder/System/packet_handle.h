@@ -31,6 +31,7 @@ void encoders_read_once_and_report(uint8_t sub);
 extern volatile uint16_t rrc_motor_failsafe_timeout_ms;
 extern volatile uint32_t rrc_motor_last_cmd_ms;
 extern volatile uint16_t rrc_heartbeat_period_ms;
+extern volatile uint32_t rrc_heartbeat_last_ms;
 
 void rrc_motor_recovery_tick(uint32_t now_ms);
 void rrc_imu_recovery_tick(uint32_t now_ms);

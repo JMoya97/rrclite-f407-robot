@@ -1,5 +1,6 @@
 #include "rrclite_packets.h"
 
+#include "rrc_diag.h"
 #include "stm32f4xx_hal.h"
 
 #include <string.h>
@@ -29,6 +30,9 @@ typedef struct {
 
 #define STREAM_PAYLOAD_MAX (RRC_MAX_PAYLOAD_LEN - 1U)
 
+extern uint8_t rrc_packet_txq_depth(void);
+extern uint8_t rrc_packet_txq_high_water(void);
+
 static const rrc_sub_entry_t g_sys_subs[] = {
     {RRC_SYS_MOTOR_FAILSAFE_SET, sizeof(rrc_sys_motor_failsafe_ack_t)},
     {RRC_SYS_HEALTH_PERIOD_SET, sizeof(rrc_sys_period_ack_t)},
@@ -39,6 +43,8 @@ static const rrc_sub_entry_t g_sys_subs[] = {
     {RRC_SYS_RECOVERED_EVENT, sizeof(rrc_sys_recovered_report_t)},
     {RRC_SYS_VERSION, sizeof(rrc_sys_version_resp_t)},
     {RRC_SYS_CAPABILITIES, sizeof(rrc_sys_capabilities_resp_t)},
+    {RRC_SYS_STATS_GET, sizeof(rrc_stats_snapshot_t)},
+    {RRC_SYS_HEALTH_GET, sizeof(rrc_health_t)},
 };
 
 static const rrc_sub_entry_t g_motor_subs[] = {
@@ -170,6 +176,36 @@ static bool rrc_handle_sys_capabilities(const void *payload, size_t len)
                         &resp, sizeof(resp), RRC_TXID_NONE);
 }
 
+static bool rrc_handle_sys_stats(const void *payload, size_t len)
+{
+    (void)payload;
+
+    if (len != 0U) {
+        return false;
+    }
+
+    rrc_stats_snapshot_t snapshot;
+    rrc_fill_stats(&snapshot);
+
+    return rrc_send_ack(RRC_FUNC_SYS, RRC_SYS_STATS_GET,
+                        &snapshot, sizeof(snapshot), RRC_TXID_NONE);
+}
+
+static bool rrc_handle_sys_health(const void *payload, size_t len)
+{
+    (void)payload;
+
+    if (len != 0U) {
+        return false;
+    }
+
+    rrc_health_t health;
+    rrc_fill_health(&health);
+
+    return rrc_send_ack(RRC_FUNC_SYS, RRC_SYS_HEALTH_GET,
+                        &health, sizeof(health), RRC_TXID_NONE);
+}
+
 static bool rrc_dispatch_sys(uint8_t sub, const void *payload, size_t len)
 {
     switch (sub) {
@@ -177,6 +213,10 @@ static bool rrc_dispatch_sys(uint8_t sub, const void *payload, size_t len)
         return rrc_handle_sys_version(payload, len);
     case RRC_SYS_CAPABILITIES:
         return rrc_handle_sys_capabilities(payload, len);
+    case RRC_SYS_STATS_GET:
+        return rrc_handle_sys_stats(payload, len);
+    case RRC_SYS_HEALTH_GET:
+        return rrc_handle_sys_health(payload, len);
     default:
         break;
     }
@@ -253,6 +293,8 @@ bool rrc_dispatch_command(uint8_t func, uint8_t sub,
 bool rrc_send_ack(uint8_t func, uint8_t sub, const void *payload, size_t len,
                   uint8_t txid)
 {
+    RRC_ASSERT(!rrc_in_isr());
+
     if (txid == RRC_TXID_NONE) {
         return rrc_transport_send(func, sub, payload, len);
     }
@@ -286,6 +328,8 @@ bool rrc_send_err(uint8_t origin_func, uint8_t origin_sub,
                   rrc_error_code_t err_code, uint8_t detail,
                   uint32_t t_ms, uint8_t txid_or_0)
 {
+    RRC_ASSERT(!rrc_in_isr());
+
     rrc_sys_error_report_t evt = {
         .origin_func = origin_func,
         .origin_sub = origin_sub,
@@ -302,6 +346,8 @@ bool rrc_send_err(uint8_t origin_func, uint8_t origin_sub,
 bool rrc_send_recovered(uint8_t origin_func, uint8_t origin_sub,
                         rrc_error_code_t prev_err_code, uint32_t t_ms)
 {
+    RRC_ASSERT(!rrc_in_isr());
+
     rrc_sys_recovered_report_t evt = {
         .origin_func = origin_func,
         .origin_sub = origin_sub,
@@ -311,6 +357,16 @@ bool rrc_send_recovered(uint8_t origin_func, uint8_t origin_sub,
 
     return rrc_transport_send(RRC_FUNC_SYS, RRC_SYS_RECOVERED_EVENT,
                               &evt, sizeof(evt));
+}
+
+uint8_t rrc_txq_depth(void)
+{
+    return rrc_packet_txq_depth();
+}
+
+uint8_t rrc_txq_high_water(void)
+{
+    return rrc_packet_txq_high_water();
 }
 
 bool rrc_uart_baud_is_supported(uint32_t baud)

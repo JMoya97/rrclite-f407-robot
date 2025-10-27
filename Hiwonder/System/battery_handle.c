@@ -6,6 +6,7 @@
 #include "packet.h"
 #include "rgb_spi.h"
 #include "rrclite_packets.h"
+#include "cmsis_os2.h"
 
 #include <limits.h>
 
@@ -30,6 +31,10 @@ static volatile uint8_t battery_stream_enabled;
 static uint16_t battery_stream_period_ms;
 static uint16_t battery_stream_elapsed_ms;
 static uint16_t batt_seq;
+static volatile uint32_t g_drops_batt;
+
+extern osMessageQueueId_t packet_tx_queueHandle;
+extern volatile uint32_t rrc_heartbeat_last_ms;
 
 extern volatile uint16_t rrc_heartbeat_period_ms;
 
@@ -102,6 +107,8 @@ static void battery_led_apply(uint8_t band)
 }
 void battery_check_timer_callback(void *argument)
 {
+    const uint32_t now_ms = HAL_GetTick();
+
     if(adc_value[0] != 0 && adc_value[0] != 4095) { /* Internal reference must be non-zero to calculate voltage */
         //float vdda = 3300.0f * ((float)(*((__IO uint16_t*)(0x1FFF7A2A)))) / ((float)adc_value[0]);
         //float volt = vdda / 4095.0f * ((float)adc_value[1]) * 11.0f ; /* 100k + 10k resistor divider; actual voltage is 11x the measurement */
@@ -140,6 +147,7 @@ void battery_check_timer_callback(void *argument)
             report.voltage = (int)(battery_volt + 0.5f);
             packet_transmit(&packet_controller, PACKET_FUNC_SYS, &report,
                             sizeof(PacketReportBatteryVoltageTypeDef));
+            rrc_heartbeat_last_ms = now_ms;
 
 #if ENABLE_OLED
             extern int oled_battery;
@@ -177,18 +185,32 @@ void battery_check_timer_callback(void *argument)
         if (elapsed >= battery_stream_period_ms) {
             elapsed = 0U;
 
-            const rrc_batt_stream_frame_t frame = {
-                .seq = batt_seq++,
-                .millivolts_le = battery_latest_millivolts(),
-            };
+            if (osMessageQueueGetCount(packet_tx_queueHandle) >= 56U) {
+                g_drops_batt++;
+            } else {
+                const rrc_batt_stream_frame_t frame = {
+                    .seq = batt_seq++,
+                    .millivolts_le = battery_latest_millivolts(),
+                };
 
-            (void)rrc_transport_send(RRC_FUNC_BATT,
-                                     RRC_BATT_STREAM_FRAME,
-                                     &frame, sizeof(frame));
+                (void)rrc_transport_send(RRC_FUNC_BATT,
+                                         RRC_BATT_STREAM_FRAME,
+                                         &frame, sizeof(frame));
+            }
         }
 
         battery_stream_elapsed_ms = elapsed;
     }
+}
+
+uint32_t rrc_batt_stream_drops(void)
+{
+    return g_drops_batt;
+}
+
+uint8_t rrc_batt_stream_enabled(void)
+{
+    return battery_stream_enabled;
 }
 
 
