@@ -5,11 +5,14 @@
 
 #include "packet.h"
 #include "packet_reports.h"
+#include "rrclite_packets.h"
+#include "rrclite_stats.h"
 
 #define TIM7_PERIOD_MS 10
 
 /* latest latched counters (updated from TIM7 cb) */
 static uint16_t enc_c1, enc_c2;
+static uint16_t enc_seq;
 
 /* paced stream state (local semaphore) */
 static osSemaphoreId_t s_enc_stream_sem;       /* local, not global */
@@ -51,44 +54,67 @@ void encoders_timer7_cb(void) {
     }
 }
 
-/* host control (sub 0x91): enable stream and set divider in TIM7 ticks */
-void encoders_set_stream(uint8_t enable, uint16_t period_ms) {
-    enc_stream_enabled = enable ? 1 : 0;
-    if (!enc_stream_enabled) { enc_stream_cnt = 0; return; }
+/* host control (ENC/0x10): enable stream and set divider in TIM7 ticks */
+uint16_t encoders_set_stream(uint8_t enable, uint16_t period_ms) {
+    enc_stream_enabled = enable ? 1U : 0U;
+    if (!enc_stream_enabled) {
+        enc_stream_cnt = 0U;
+        enc_stream_div = 0U;
+        enc_seq = 0U;
+        return 0U;
+    }
 
-    uint16_t ticks = (uint16_t)((period_ms + (TIM7_PERIOD_MS/2)) / TIM7_PERIOD_MS);
-    if (ticks < 1) ticks = 1;
+    uint16_t ticks = (uint16_t)((period_ms + (TIM7_PERIOD_MS / 2U)) / TIM7_PERIOD_MS);
+    if (ticks < 1U) {
+        ticks = 1U;
+    }
+
     enc_stream_div = ticks;
-    enc_stream_cnt = 0;
+    enc_stream_cnt = 0U;
+    enc_seq = 0U;
+
+    return (uint16_t)(ticks * TIM7_PERIOD_MS);
 }
 
-/* one-shot reply (sub 0x90), called from packet handler (task context) */
+/* one-shot reply (ENC/0x20), called from packet handler (task context) */
 void encoders_read_once_and_report(uint8_t sub) {
     EncoderReadReportTypeDef rep;
-    rep.sub  = sub;            /* 0x90 */
+    rep.sub  = sub;            /* ENC/0x20 */
     rep.t_ms = HAL_GetTick();
     rep.c1   = (uint16_t)__HAL_TIM_GET_COUNTER(&htim5);
     rep.c2   = (uint16_t)__HAL_TIM_GET_COUNTER(&htim2);
     packet_transmit(&packet_controller, PACKET_FUNC_ENCODER, &rep, sizeof(rep));
 }
 
-/* stream task (waits on local semaphore; sends PACKET_FUNC_ENCODER, sub=0x91) */
+/* stream task (waits on local semaphore; sends ENC/0x11 frames) */
 void encoders_task_entry(void *argument) {
     (void)argument;
     for (;;) {
         osSemaphoreAcquire(s_enc_stream_sem, osWaitForever);
         if (!enc_stream_enabled) continue;
 
-        EncoderReadReportTypeDef rep;
-        rep.sub  = 0x91;
-        rep.t_ms = HAL_GetTick();
-        rep.c1   = enc_c1;
-        rep.c2   = enc_c2;
-
         // --- back-pressure guard (no vendor TX changes needed) ---
         extern osMessageQueueId_t packet_tx_queueHandle;
-        if (osMessageQueueGetCount(packet_tx_queueHandle) >= 56) continue;
+        if (osMessageQueueGetCount(packet_tx_queueHandle) >= 56U) {
+            rrc_stats_inc_drop_enc();
+            continue;
+        }
 
-        packet_transmit(&packet_controller, PACKET_FUNC_ENCODER, &rep, sizeof(rep));
+        const rrc_encoder_stream_frame_t frame = {
+            .seq = enc_seq++,
+            .c1 = enc_c1,
+            .c2 = enc_c2,
+            .c3 = 0U,
+            .c4 = 0U,
+        };
+
+        (void)rrc_transport_send(RRC_FUNC_ENC,
+                                 RRC_ENC_STREAM_FRAME,
+                                 &frame, sizeof(frame));
     }
+}
+
+uint8_t rrc_enc_stream_enabled(void)
+{
+    return enc_stream_enabled;
 }
