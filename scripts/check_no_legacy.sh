@@ -19,6 +19,7 @@ for pattern in "${PATTERNS[@]}"; do
   if matches=$(rg --color=never --line-number --no-heading \
       --glob '!Third_Party/**' --glob '!docs/**' \
       --glob '!scripts/check_no_legacy.sh' \
+      --glob '!scripts/check_protocol2_promotion.sh' \
       --glob '!Core/Src/rrclite_legacy_shim.c' \
       -- "$pattern" .); then
     printf 'Legacy pattern "%s" matches:\n' "$pattern" >&2
