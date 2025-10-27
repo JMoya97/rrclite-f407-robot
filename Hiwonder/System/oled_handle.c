@@ -3,11 +3,12 @@
 #include "object.h"
 #include "lwmem_porting.h"
 #include "global_conf.h"
+#include "rrclite_config.h"
 #include "u8g2_porting.h"
 
 
 
-#if ENABLE_OLED
+#if RRC_KEEP_OLED && ENABLE_OLED
 char oled_l1[24] = "---.---.---.---";
 char oled_l2[24] = "---.---.---.---";
 int oled_battery = 0;

@@ -6,9 +6,11 @@
 #include "u8g2_porting.h"
 #include "packet_reports.h"
 #include "packet_handle.h"
+#include "rrclite_health.h"
 #include "serial_servo.h"
 #include "rgb_spi.h"
 #include "encoder_motor.h"
+#include "stm32f4xx_hal.h"
 
 extern void packet_init(void);
 void buzzers_init(void);
@@ -60,6 +62,8 @@ void app_task_entry(void *argument)
 
     packet_init();
     packet_handle_init();
+
+    rrc_selftest_run_once();
     
     osDelay(50);
     
@@ -101,8 +105,9 @@ void app_task_entry(void *argument)
 //        pwm_servo_set_position(pwm_servos[3] , 2500 , 1000);
 //        osDelay(1000);
 //        pwm_servo_set_position(pwm_servos[3] , 500 , 1000);
-        osDelay(10000);
-        printf("test\n");
+        const uint32_t now_ms = HAL_GetTick();
+        rrc_recovery_service(now_ms);
+        osDelay(10);
 //        rgb[0] = 0;
 //        rgb[1] = 0;
 //        rgb[2] = 255;
