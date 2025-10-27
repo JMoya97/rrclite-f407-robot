@@ -422,6 +422,9 @@ void rrc_imu_recovery_tick(uint32_t now_ms)
 
         g_imu_retry_pending[source] = 1U;
     }
+
+    (void)rrc_transport_send(RRC_FUNC_IMU, RRC_IMU_WHOAMI_STATUS,
+                             &resp, sizeof(resp));
 }
 
 void rrc_imu_recovery_service(uint32_t now_ms)
