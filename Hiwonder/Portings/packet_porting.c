@@ -206,3 +206,13 @@ static void packet_dma_transmit_finished(UART_HandleTypeDef * huart)
     }
 }
 
+uint8_t rrc_packet_txq_depth(void)
+{
+    return (uint8_t)osMessageQueueGetCount(packet_tx_queueHandle);
+}
+
+uint8_t rrc_packet_txq_high_water(void)
+{
+    return g_txq_high_water;
+}
+
