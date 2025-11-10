@@ -470,6 +470,24 @@ uint8_t rrc_imu_source_available(uint8_t source_id)
     return 0U;
 }
 
+uint8_t rrc_imu_stream_enabled(void)
+{
+    return imu_stream_enabled;
+}
+
+uint8_t rrc_imu_source_available(uint8_t source_id)
+{
+    if (source_id == 0U) {
+        return imu0_available ? 1U : 0U;
+    }
+
+    if (source_id == 1U) {
+        return imu1_available ? 1U : 0U;
+    }
+
+    return 0U;
+}
+
 uint8_t rrc_imu_error_active(uint8_t source_id)
 {
     if (source_id >= 2U) {

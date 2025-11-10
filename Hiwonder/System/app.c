@@ -41,8 +41,6 @@ void app_task_entry(void *argument)
     extern osTimerId_t buzzer_timerHandle;
     extern osTimerId_t button_timerHandle;
     extern osTimerId_t battery_check_timerHandle;
-    extern osMessageQueueId_t moving_ctrl_queueHandle;
-
     leds_init();
     motors_init();
     pwm_servos_init();

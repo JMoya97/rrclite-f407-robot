@@ -9,7 +9,7 @@
 - Default primary: `g_imu_primary` is zero-initialised in `Hiwonder/System/packet_handle.c` (lines 54–59), so source 0 (ICM-20948) is selected on boot.
 - WHOAMI/Status: `imu_emit_whoami()` in `Hiwonder/Portings/imu_porting.c` (lines 342–380) reports cached `imu0_whoami` (`0xEA`) for the primary and the onboard value for source 1.
 - ONE_SHOT/STREAM packing: `imu0_read_sample()` (lines 192–226) and `imu1_read_sample()` (lines 229–266) subtract `g_imu_bias[source]` for accel/gyro/mag components before returning samples; `imu_task_entry()` (lines 289–360) reuses those corrected structs when publishing stream frames.
-- Preset setters: `icm20948_configure_preset()` in `Hiwonder/Peripherals/icm20948.c` (lines 175–236) writes gyro/accel DLPF and sample-rate registers for presets 0/1/2. `packet_imu_handle()` calls `icm20948_apply_preset()` for source 0 before ACKing (lines 1189–1235).
+- Preset setters: `icm20948_configure_preset()` in `Hiwonder/Peripherals/icm20948.c` (lines 175–236) writes gyro/accel DLPF and sample-rate registers for presets 0/1/2. `packet_imu_handle()` calls `icm20948_configure_preset()` for source 0 before ACKing (lines 1189–1235).
 - Bias setters: Stored in `g_imu_bias[]` and applied inside the readers above; one-shot and stream payloads now emit bias-corrected values.
 
 ## Steering / Bus-servo

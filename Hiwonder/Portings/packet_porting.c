@@ -88,8 +88,8 @@ static int send_packet(struct PacketController *self, struct PacketRawFrame *fra
 {
     (void)self;
 
-    const uint32_t curr = osMessageQueueGetCount(packet_tx_queueHandle);
-    rrc_txq_note_depth((uint8_t)curr);
+    const uint8_t curr = rrc_txq_depth();
+    rrc_txq_note_depth(curr);
 
     return osMessageQueuePut(packet_tx_queueHandle, &frame, 0, 10);
 }
