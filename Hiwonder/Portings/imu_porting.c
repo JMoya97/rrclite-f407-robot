@@ -312,6 +312,8 @@ void imu_task_entry(void *argument)
                                      &ack, sizeof(ack));
         }
     }
+
+    return applied_period;
 }
 
 void imu_emit_oneshot(uint8_t sources_mask)
@@ -337,8 +339,6 @@ void imu_emit_oneshot(uint8_t sources_mask)
             imu_schedule_failure(1U, RRC_IMU_ONESHOT, RRC_SYS_ERR_IO_FAIL);
         }
     }
-
-    return applied_period;
 }
 
 void imu_set_stream(uint8_t sources_mask, uint16_t period_ms,
@@ -512,7 +512,7 @@ bool rrc_imu_probe_source(uint8_t source_id, uint8_t *whoami_out)
 
 void imu_emit_oneshot(uint8_t sources_mask)
 {
-    (void)sources_mask;
+    UNUSED(sources_mask);
 }
 
 void imu_set_stream(uint8_t sources_mask, uint16_t period_ms,
@@ -520,9 +520,9 @@ void imu_set_stream(uint8_t sources_mask, uint16_t period_ms,
                     uint8_t *applied_ack_each_frame,
                     uint16_t *applied_period_ms)
 {
-    (void)sources_mask;
-    (void)period_ms;
-    (void)ack_each_frame;
+    UNUSED(sources_mask);
+    UNUSED(period_ms);
+    UNUSED(ack_each_frame);
 
     if (applied_mask != NULL) {
         *applied_mask = 0U;
