@@ -88,10 +88,15 @@ static int send_packet(struct PacketController *self, struct PacketRawFrame *fra
 {
     (void)self;
 
-    const uint8_t curr = rrc_txq_depth();
-    rrc_txq_note_depth(curr);
+    const uint8_t depth_before = rrc_txq_depth();
+    rrc_txq_note_depth(depth_before);
 
-    return osMessageQueuePut(packet_tx_queueHandle, &frame, 0, 10);
+    osStatus_t status = osMessageQueuePut(packet_tx_queueHandle, &frame, 0, 10);
+    if (status == osOK) {
+        rrc_txq_note_depth(rrc_txq_depth());
+    }
+
+    return status;
 }
 
 static void packet_dma_receive_event_callback(UART_HandleTypeDef *huart, uint16_t length)

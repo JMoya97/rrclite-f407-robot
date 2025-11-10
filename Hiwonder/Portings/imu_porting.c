@@ -337,6 +337,8 @@ void imu_emit_oneshot(uint8_t sources_mask)
             imu_schedule_failure(1U, RRC_IMU_ONESHOT, RRC_SYS_ERR_IO_FAIL);
         }
     }
+
+    return applied_period;
 }
 
 uint16_t imu_set_stream(uint8_t sources_mask, uint16_t period_ms,
@@ -439,6 +441,8 @@ void rrc_imu_recovery_service(uint32_t now_ms)
             g_imu_err_active[source] = 0U;
             rrc_backoff_reset(&g_imu_backoff[source]);
             g_imu_retry_due_ms[source] = 0U;
+            /* Recovery notification is delivered via SYS/0xEF elsewhere; do not
+             * emit IMU frames from the recovery context. */
             (void)rrc_send_recovered(RRC_FUNC_IMU,
                                      g_imu_last_origin_sub[source],
                                      RRC_SYS_ERR_IO_FAIL, now_ms);
@@ -455,19 +459,6 @@ void rrc_imu_recovery_service(uint32_t now_ms)
 uint8_t rrc_imu_stream_enabled(void)
 {
     return imu_stream_enabled;
-}
-
-uint8_t rrc_imu_source_available(uint8_t source_id)
-{
-    if (source_id == 0U) {
-        return imu0_available ? 1U : 0U;
-    }
-
-    if (source_id == 1U) {
-        return imu1_available ? 1U : 0U;
-    }
-
-    return 0U;
 }
 
 uint8_t rrc_imu_stream_enabled(void)

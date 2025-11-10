@@ -65,10 +65,6 @@ void app_task_entry(void *argument)
     
     osDelay(50);
     
-//    char msg = '\0';
-//    uint8_t msg_prio;
-//    osMessageQueueReset(moving_ctrl_queueHandle);
-
 //    chassis_init();
       set_chassis_type(CHASSIS_TYPE_TI4WD);
       led_on(leds[0]);
