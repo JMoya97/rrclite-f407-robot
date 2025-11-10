@@ -337,6 +337,8 @@ void imu_emit_oneshot(uint8_t sources_mask)
             imu_schedule_failure(1U, RRC_IMU_ONESHOT, RRC_SYS_ERR_IO_FAIL);
         }
     }
+
+    return applied_period;
 }
 
 uint16_t imu_set_stream(uint8_t sources_mask, uint16_t period_ms,
@@ -449,6 +451,14 @@ void rrc_imu_recovery_service(uint32_t now_ms)
             g_imu_retry_due_ms[source] = now_ms + delay;
         }
     }
+
+    (void)rrc_transport_send(RRC_FUNC_IMU, RRC_IMU_WHOAMI_STATUS,
+                             &resp, sizeof(resp));
+}
+
+uint8_t rrc_imu_stream_enabled(void)
+{
+    return imu_stream_enabled;
 }
 
 uint8_t rrc_imu_stream_enabled(void)
