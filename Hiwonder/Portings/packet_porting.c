@@ -67,7 +67,11 @@ bool rrc_transport_send(uint8_t func, uint8_t sub, const void *payload, size_t l
 
 uint8_t rrc_packet_txq_high_water(void)
 {
+#if __has_include("rrclite_stats.h")
     return rrc_txq_high_water();
+#else
+    return 0U;
+#endif
 }
 
 void packet_init(void)
