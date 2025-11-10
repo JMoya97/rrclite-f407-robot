@@ -58,6 +58,11 @@ bool rrc_transport_send(uint8_t func, uint8_t sub, const void *payload, size_t l
     return packet_transmit(&packet_controller, func, frame, total) == 0;
 }
 
+uint8_t rrc_packet_txq_high_water(void)
+{
+    return rrc_txq_high_water();
+}
+
 void packet_init(void)
 {
     memset(&packet_controller, 0, sizeof(packet_controller));

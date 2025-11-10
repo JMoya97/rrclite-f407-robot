@@ -23,9 +23,10 @@
 
 extern uint16_t encoders_set_stream(uint8_t enable, uint16_t period_ms);
 extern void encoders_read_once_and_report(uint8_t sub);
-extern uint16_t imu_set_stream(uint8_t sources_mask, uint16_t period_ms,
-                               uint8_t ack_each_frame, uint8_t *applied_mask,
-                               uint8_t *applied_ack_each_frame);
+extern void imu_set_stream(uint8_t sources_mask, uint16_t period_ms,
+                           uint8_t ack_each_frame, uint8_t *applied_mask,
+                           uint8_t *applied_ack_each_frame,
+                           uint16_t *applied_period_ms);
 extern void imu_emit_oneshot(uint8_t sources_mask);
 extern void imu_emit_whoami(uint8_t source_id);
 extern volatile int motors_pwm_current[2];
@@ -1378,9 +1379,9 @@ static void packet_imu_handle(struct PacketRawFrame *frame)
 
         uint8_t applied_mask = 0U;
         uint8_t applied_ack = 0U;
-        const uint16_t applied_period =
-            imu_set_stream(requested_mask, requested_period, requested_ack,
-                           &applied_mask, &applied_ack);
+        uint16_t applied_period = 0U;
+        imu_set_stream(requested_mask, requested_period, requested_ack,
+                       &applied_mask, &applied_ack, &applied_period);
 
         rrc_imu_stream_ack_t ack = {
             .txid = txid,

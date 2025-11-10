@@ -341,9 +341,10 @@ void imu_emit_oneshot(uint8_t sources_mask)
     return applied_period;
 }
 
-uint16_t imu_set_stream(uint8_t sources_mask, uint16_t period_ms,
-                        uint8_t ack_each_frame, uint8_t *applied_mask,
-                        uint8_t *applied_ack_each_frame)
+void imu_set_stream(uint8_t sources_mask, uint16_t period_ms,
+                    uint8_t ack_each_frame, uint8_t *applied_mask,
+                    uint8_t *applied_ack_each_frame,
+                    uint16_t *applied_period_ms)
 {
     uint8_t mask = (uint8_t)(sources_mask & 0x01U);
     uint8_t ack_mode = (uint8_t)(ack_each_frame ? 1U : 0U);
@@ -381,7 +382,9 @@ uint16_t imu_set_stream(uint8_t sources_mask, uint16_t period_ms,
         *applied_ack_each_frame = (mask != 0U) ? ack_mode : 0U;
     }
 
-    return applied_period;
+    if (applied_period_ms != NULL) {
+        *applied_period_ms = applied_period;
+    }
 }
 
 void imu_emit_whoami(uint8_t source_id)
@@ -506,6 +509,38 @@ bool rrc_imu_probe_source(uint8_t source_id, uint8_t *whoami_out)
 }
 
 #else
+
+void imu_emit_oneshot(uint8_t sources_mask)
+{
+    (void)sources_mask;
+}
+
+void imu_set_stream(uint8_t sources_mask, uint16_t period_ms,
+                    uint8_t ack_each_frame, uint8_t *applied_mask,
+                    uint8_t *applied_ack_each_frame,
+                    uint16_t *applied_period_ms)
+{
+    (void)sources_mask;
+    (void)period_ms;
+    (void)ack_each_frame;
+
+    if (applied_mask != NULL) {
+        *applied_mask = 0U;
+    }
+
+    if (applied_ack_each_frame != NULL) {
+        *applied_ack_each_frame = 0U;
+    }
+
+    if (applied_period_ms != NULL) {
+        *applied_period_ms = 0U;
+    }
+}
+
+void imu_emit_whoami(uint8_t source_id)
+{
+    (void)source_id;
+}
 
 uint8_t rrc_imu_source_available(uint8_t source_id)
 {

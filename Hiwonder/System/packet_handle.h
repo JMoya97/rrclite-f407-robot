@@ -18,9 +18,10 @@ void packet_handle_init(void) ;
 
 void imu_emit_oneshot(uint8_t sources_mask);
 
-uint16_t imu_set_stream(uint8_t sources_mask, uint16_t period_ms,
-                        uint8_t ack_each_frame, uint8_t *applied_mask,
-                        uint8_t *applied_ack_each_frame);
+void imu_set_stream(uint8_t sources_mask, uint16_t period_ms,
+                    uint8_t ack_each_frame, uint8_t *applied_mask,
+                    uint8_t *applied_ack_each_frame,
+                    uint16_t *applied_period_ms);
 
 void imu_emit_whoami(uint8_t source_id);
 
