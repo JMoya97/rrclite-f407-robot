@@ -312,6 +312,8 @@ void imu_task_entry(void *argument)
                                      &ack, sizeof(ack));
         }
     }
+
+    return applied_period;
 }
 
 void imu_emit_oneshot(uint8_t sources_mask)
