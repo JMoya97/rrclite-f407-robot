@@ -313,7 +313,8 @@ void imu_task_entry(void *argument)
         }
     }
 
-    return applied_period;
+    /* void task: nothing to return */
+    return;
 }
 
 void imu_emit_oneshot(uint8_t sources_mask)

@@ -9,7 +9,14 @@
 #include "lwmem_porting.h"
 #include "packet_handle.h"
 #include "rrclite_packets.h"
+
+#if __has_include("rrclite_stats.h")
 #include "rrclite_stats.h"
+#else
+static inline uint8_t rrc_txq_depth(void) { return 0U; }
+static inline void rrc_txq_note_depth(uint8_t depth) { (void)depth; }
+static inline uint8_t rrc_txq_high_water(void) { return 0U; }
+#endif
 
 #define PACKET_RX_FIFO_BUFFER_SIZE 2048 /* FIFO buffer length */
 #define PACKET_RX_DMA_BUFFER_SIZE 256 /* DMA buffer length */
@@ -56,6 +63,11 @@ bool rrc_transport_send(uint8_t func, uint8_t sub, const void *payload, size_t l
     }
 
     return packet_transmit(&packet_controller, func, frame, total) == 0;
+}
+
+uint8_t rrc_packet_txq_high_water(void)
+{
+    return rrc_txq_high_water();
 }
 
 void packet_init(void)
