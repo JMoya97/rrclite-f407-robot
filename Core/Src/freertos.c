@@ -26,7 +26,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "rrclite_config.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -87,12 +87,14 @@ const osThreadAttr_t packet_rx_task_attributes = {
   .priority = (osPriority_t) osPriorityAboveNormal,
 };
 /* Definitions for gui_task */
+#if RRC_KEEP_GUI
 osThreadId_t gui_taskHandle;
 const osThreadAttr_t gui_task_attributes = {
   .name = "gui_task",
   .stack_size = 1500 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
+#endif /* RRC_KEEP_GUI */
 /* Definitions for app_task */
 osThreadId_t app_taskHandle;
 const osThreadAttr_t app_task_attributes = {
@@ -101,12 +103,14 @@ const osThreadAttr_t app_task_attributes = {
   .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for oled_task */
+#if RRC_KEEP_OLED
 osThreadId_t oled_taskHandle;
 const osThreadAttr_t oled_task_attributes = {
   .name = "oled_task",
   .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityBelowNormal,
 };
+#endif /* RRC_KEEP_OLED */
 /* Definitions for packet_tx_queue */
 osMessageQueueId_t packet_tx_queueHandle;
 uint8_t packet_tx_queueBuffer[ 64 * sizeof( void* ) ];
@@ -163,9 +167,11 @@ const osTimerAttr_t battery_check_timer_attributes = {
 };
 /* Definitions for oled_mutex */
 osMutexId_t oled_mutexHandle;
+#if RRC_KEEP_OLED
 const osMutexAttr_t oled_mutex_attributes = {
   .name = "oled_mutex"
 };
+#endif /* RRC_KEEP_OLED */
 /* Definitions for packet_tx_idle */
 osSemaphoreId_t packet_tx_idleHandle;
 osStaticSemaphoreDef_t packet_tx_ControlBlock;
@@ -222,9 +228,13 @@ void imu_task_entry(void *argument);
 void encoders_task_entry(void *argument);
 void packet_tx_task_entry(void *argument);
 void packet_rx_task_entry(void *argument);
+#if RRC_KEEP_GUI
 void gui_task_entry(void *argument);
+#endif
 void app_task_entry(void *argument);
+#if RRC_KEEP_OLED
 void oled_task_entry(void *argument);
+#endif
 void button_timer_callback(void *argument);
 void led_timer_callback(void *argument);
 void buzzer_timer_callback(void *argument);
@@ -273,7 +283,9 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE END Init */
   /* Create the mutex(es) */
   /* creation of oled_mutex */
+#if RRC_KEEP_OLED
   oled_mutexHandle = osMutexNew(&oled_mutex_attributes);
+#endif
 
   /* USER CODE BEGIN RTOS_MUTEX */
     /* add mutexes, ... */
@@ -347,13 +359,17 @@ void MX_FREERTOS_Init(void) {
   packet_rx_taskHandle = osThreadNew(packet_rx_task_entry, NULL, &packet_rx_task_attributes);
 
   /* creation of gui_task */
+#if RRC_KEEP_GUI
   gui_taskHandle = osThreadNew(gui_task_entry, NULL, &gui_task_attributes);
+#endif
 
   /* creation of app_task */
   app_taskHandle = osThreadNew(app_task_entry, NULL, &app_task_attributes);
 
   /* creation of oled_task */
+#if RRC_KEEP_OLED
   oled_taskHandle = osThreadNew(oled_task_entry, NULL, &oled_task_attributes);
+#endif
 
   /* USER CODE BEGIN RTOS_THREADS */
     /* add threads, ... */
@@ -443,6 +459,7 @@ __weak void packet_rx_task_entry(void *argument)
   /* USER CODE END packet_rx_task_entry */
 }
 
+#if RRC_KEEP_GUI
 /* USER CODE BEGIN Header_gui_task_entry */
 /**
 * @brief Function implementing the gui_task thread.
@@ -460,6 +477,7 @@ __weak void gui_task_entry(void *argument)
   }
   /* USER CODE END gui_task_entry */
 }
+#endif /* RRC_KEEP_GUI */
 
 /* USER CODE BEGIN Header_app_task_entry */
 /**
@@ -479,6 +497,7 @@ __weak void app_task_entry(void *argument)
   /* USER CODE END app_task_entry */
 }
 
+#if RRC_KEEP_OLED
 /* USER CODE BEGIN Header_oled_task_entry */
 /**
 * @brief Function implementing the oled_task thread.
@@ -496,6 +515,7 @@ __weak void oled_task_entry(void *argument)
   }
   /* USER CODE END oled_task_entry */
 }
+#endif /* RRC_KEEP_OLED */
 
 /* button_timer_callback function */
 __weak void button_timer_callback(void *argument)
