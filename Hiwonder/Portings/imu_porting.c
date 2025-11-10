@@ -451,19 +451,6 @@ void rrc_imu_recovery_service(uint32_t now_ms)
             g_imu_retry_due_ms[source] = now_ms + delay;
         }
     }
-
-    (void)rrc_transport_send(RRC_FUNC_IMU, RRC_IMU_WHOAMI_STATUS,
-                             &resp, sizeof(resp));
-}
-
-uint8_t rrc_imu_stream_enabled(void)
-{
-    return imu_stream_enabled;
-}
-
-uint8_t rrc_imu_stream_enabled(void)
-{
-    return imu_stream_enabled;
 }
 
 uint8_t rrc_imu_source_available(uint8_t source_id)
@@ -520,11 +507,6 @@ bool rrc_imu_probe_source(uint8_t source_id, uint8_t *whoami_out)
 
 #else
 
-uint8_t rrc_imu_stream_enabled(void)
-{
-    return 0U;
-}
-
 uint8_t rrc_imu_source_available(uint8_t source_id)
 {
     (void)source_id;
@@ -553,3 +535,12 @@ bool rrc_imu_probe_source(uint8_t source_id, uint8_t *whoami_out)
 }
 
 #endif // ENABLE_IMU
+
+uint8_t rrc_imu_stream_enabled(void)
+{
+#if ENABLE_IMU
+    return imu_stream_enabled;
+#else
+    return 0U;
+#endif
+}
