@@ -337,6 +337,8 @@ void imu_emit_oneshot(uint8_t sources_mask)
             imu_schedule_failure(1U, RRC_IMU_ONESHOT, RRC_SYS_ERR_IO_FAIL);
         }
     }
+
+    return applied_period;
 }
 
 uint16_t imu_set_stream(uint8_t sources_mask, uint16_t period_ms,
